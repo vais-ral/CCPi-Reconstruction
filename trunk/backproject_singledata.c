@@ -59,7 +59,7 @@ void backproject_singledata(int im_size, double *start, double *end, float *ray_
     double p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
     
     int x_defined, y_defined, z_defined;
-    int i,j,k;
+    long i,j,k;
     
     double alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max, 
 	alpha_z_max, alpha_min, alpha_max, alpha_x, alpha_y, alpha_z, alpha_c;
@@ -67,7 +67,7 @@ void backproject_singledata(int im_size, double *start, double *end, float *ray_
     double l_ij;
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
     
-    int ray_index;
+    long ray_index;
 	
     p1_x = start[0];
     p1_y = start[1];
