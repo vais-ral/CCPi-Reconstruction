@@ -84,7 +84,8 @@ static inline double floor_j(const double arg)
 
 void backproject_singledata(const double start[], const double end[],
 			    const double ray_data, float vol_data[],
-			    const struct jacobs_options *options)
+			    const struct jacobs_options *options,
+			    const long z_offset)
 {
     
     int N_x, N_y, N_z, N_p, im_size_x, im_size_y, im_size_z;
@@ -321,7 +322,7 @@ void backproject_singledata(const double start[], const double end[],
 
 
 	alpha_c=alpha_min;
-	ray_index = k*im_size_y*im_size_x + j*im_size_x + i;
+	ray_index = (k+z_offset)*im_size_y*im_size_x + j*im_size_x + i;
 	i_step = i_u;
 	j_step = j_u * im_size_x;
 	k_step = k_u * im_size_y * im_size_x;
