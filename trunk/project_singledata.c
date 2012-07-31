@@ -29,27 +29,62 @@ $Date: 2008/09/08 13:20:38 $
 
 #include "jacobs_rays.h"
 
+static inline double alpha_fn(const int n, const double p1, const double p2,
+			      const double b, const double d)
+{
+    return ( (b+n*d) - p1)/(p2-p1);
+}
 
-int equal_to_precision(double x, double y, double precision);
-double alpha_fn(int n, double p1, double p2, double b, double d);
-double p(double alpha, double p1, double p2);
-double phi(double alpha, double p1, double p2, double b, double d);
+static inline double p(const double alpha, const double p1, const double p2)
+{
+    return p1+alpha*(p2-p1);
+}
 
-double min_dbl(double a, double b) { return a < b ? a : b; };
-double max_dbl(double a, double b) { return a > b ? a : b; };
+static inline double phi(const double alpha, const double p1, const double p2,
+			 const double b, const double d)
+{
+    return ( p(alpha, p1, p2)-b)/d;
+}
 
-double min3_dbl(double a, double b, double c) { return a < b ? min_dbl(a,c) : min_dbl(b,c); };
-double max3_dbl(double a, double b, double c) { return a > b ? max_dbl(a,c) : max_dbl(b,c); };
+static inline int equal_to_precision(const double x, const double y,
+				     const double prec)
+{
+    return fabs(x-y) < prec;
+}
 
-/*double floor_j( double arg ) { return arg == (int)arg ? arg-1 : floor( arg ); };/**/
-double ceil_j( double arg ) { return arg == (int)arg ? arg+1 : ceil( arg ); };/**/
-double floor_j( double arg ) { return floor( arg ); };/**/
-/*double ceil_j( double arg ) { return ceil( arg ); };/**/
+static inline double min_dbl(const double a, const double b)
+{
+  return a < b ? a : b;
+}
 
+static inline double max_dbl(const double a, const double b)
+{
+  return a > b ? a : b;
+}
 
+static inline double min3_dbl(const double a, const double b, const double c)
+{
+  return a < b ? min_dbl(a,c) : min_dbl(b,c);
+}
 
+static inline double max3_dbl(const double a, const double b, const double c)
+{
+  return a > b ? max_dbl(a,c) : max_dbl(b,c);
+}
 
-void project_singledata(int im_size, double *start, double *end, float *ray_data, float *vol_data, struct jacobs_options *options)
+static inline double ceil_j(const double arg)
+{
+  return arg == (int)arg ? arg+1 : ceil( arg );
+}
+
+static inline double floor_j(const double arg)
+{
+  return floor( arg );
+}
+
+void project_singledata(const double start[], const double end[],
+			float *ray_data, const float const vol_data[],
+			const struct jacobs_options *options)
 {
     
     int N_x, N_y, N_z, N_p, im_size_x, im_size_y, im_size_z;
@@ -66,6 +101,8 @@ void project_singledata(int im_size, double *start, double *end, float *ray_data
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
     
     long ray_index;
+    long i_step, j_step, k_step;
+    double data;
 	
     p1_x = start[0];
     p1_y = start[1];
@@ -283,6 +320,11 @@ void project_singledata(int im_size, double *start, double *end, float *ray_data
 
 
 	alpha_c=alpha_min;
+	ray_index = k*im_size_y*im_size_x + j*im_size_x + i;
+	i_step = i_u;
+	j_step = j_u * im_size_x;
+	k_step = k_u * im_size_y * im_size_x;
+	data = 0.0;
 
 	for (n_count=1; n_count<N_p+1;n_count++) {
 
@@ -291,22 +333,24 @@ void project_singledata(int im_size, double *start, double *end, float *ray_data
 	    if (x_defined && alpha_x <= alpha_y && alpha_x <= alpha_z) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
-		ray_index = k*im_size_y*im_size_x + j*im_size_x + i;
-        (*ray_data) += ((float) ((alpha_x-alpha_c)*d_conv)) * vol_data[ray_index];
+        data += (alpha_x-alpha_c)*d_conv * vol_data[ray_index];
 
 		if( y_defined && alpha_x == alpha_y) {
 		    j += j_u;
+		    ray_index += j_step;
 		    n_count++;
 		    alpha_y += alpha_y_u;
 		}
 
 		if( z_defined && alpha_x == alpha_z) {
 		    k += k_u;
+		    ray_index += k_step;
 		    n_count++;
 		    alpha_z += alpha_z_u;
 		}
 
 		i += i_u;
+		ray_index += i_step;
 		alpha_c=alpha_x;
 		alpha_x += alpha_x_u;
 	    }
@@ -315,16 +359,17 @@ void project_singledata(int im_size, double *start, double *end, float *ray_data
 	    else if (y_defined && alpha_y <= alpha_z) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
-		ray_index = k*im_size_y*im_size_x + j*im_size_x + i;
-		(*ray_data) += ((float) ((alpha_y-alpha_c)*d_conv)) * vol_data[ray_index];
+		data += (alpha_y-alpha_c)*d_conv * vol_data[ray_index];
 
 		if( z_defined && alpha_y == alpha_z) {
 		    k += k_u;
+		    ray_index += k_step;
 		    n_count++;
 		    alpha_z += alpha_z_u;
 		}
 
 		j=j+j_u;
+		ray_index += j_step;
 		alpha_c=alpha_y;
 		alpha_y += alpha_y_u;
 	    }
@@ -333,10 +378,10 @@ void project_singledata(int im_size, double *start, double *end, float *ray_data
 	    else if (z_defined) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
-		ray_index = k*im_size_y*im_size_x + j*im_size_x + i;
-		(*ray_data) += ((float) ((alpha_z-alpha_c)*d_conv)) * vol_data[ray_index];
+		data += (alpha_z-alpha_c)*d_conv * vol_data[ray_index];
 
 		k += k_u;
+		ray_index += k_step;
 		alpha_c=alpha_z;
 		alpha_z += alpha_z_u;
 	    }
@@ -356,41 +401,11 @@ void project_singledata(int im_size, double *start, double *end, float *ray_data
 	    /* this is the last step so don't need to worry about incrementing i or j*/
 	    l_ij=(alpha_max-alpha_c)*d_conv;
 	    
-	    ray_index = k*im_size_y*im_size_x + j*im_size_y + i;
-	    (*ray_data) += ((float) l_ij) * vol_data[ray_index];
+	    data += l_ij * vol_data[ray_index];
 	}
+	*ray_data += (float)data;
 	
     } /* of alpha_min < alpha_max */
     
     return;
 }
-
-
-
-
-
-
-double alpha_fn(int n, double p1, double p2, double b, double d)
-{
-    return ( (b+n*d) - p1)/(p2-p1);
-}
-
-
-double phi(double alpha, double p1, double p2, double b, double d)
-{
-    return ( p(alpha, p1, p2)-b)/d;
-}
-
-
-double p(double alpha, double p1, double p2)
-{
-    return p1+alpha*(p2-p1);
-}
-
-
-
-int equal_to_precision(double x, double y, double prec)
-{
-    return fabs(x-y) < prec;
-}
-
