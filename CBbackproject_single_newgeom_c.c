@@ -16,6 +16,11 @@
 #include "jacobs_rays.h"
 #include "omp.h"
 
+extern
+void backproject_singledata(const double start[], const double end[],
+			    const double ray_data, float vol_data[],
+			    const struct jacobs_options *options);
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 	/* check number of arguments */
@@ -119,7 +124,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             {
                 end[2] = det_z[curr_ray_z];
 
-                backproject_singledata(im_size, start, end, &ray_data[ray_offset + curr_ray_z*n_rays_y + curr_ray_y], vol_data, &options);
+                backproject_singledata(start, end, (double)ray_data[ray_offset + curr_ray_z*n_rays_y + curr_ray_y], vol_data, &options);
             }
         }
     }
