@@ -39,6 +39,17 @@ static inline double max_dbl(double a, double b)
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
+	int i, curr_angle, im_size, curr_ray_y, curr_ray_z, n_angles;
+	long n_rays_y, n_rays_z, ray_offset;
+	mwSize im_size_matlab[3];
+	double *source_x, *source_y, *source_z, *det_x, *det_y, *det_z;
+    double cos_curr_angle, sin_curr_angle;
+	double start[3], end[3], *voxel_size, *grid_offset, *angles;
+    float *ray_data, *vol_data;
+    double *size_doubles;
+
+	struct jacobs_options options;
+	
 	/* check number of arguments */
 	if(nrhs != 11)
     {
@@ -51,19 +62,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		return;
 	}
 
-
-
-	int i, curr_angle, im_size, curr_ray_y, curr_ray_z, n_angles;
-	long n_rays_y, n_rays_z, ray_offset;
-	mwSize im_size_matlab[3];
-	double *source_x, *source_y, *source_z, *det_x, *det_y, *det_z;
-    double cos_curr_angle, sin_curr_angle;
-	double start[3], end[3], *voxel_size, *grid_offset, *angles;
-    float *ray_data, *vol_data;
-    double *size_doubles;
-
-	struct jacobs_options options;
-	
 	/* read variables */
 	size_doubles = mxGetPr(prhs[0]);
 	for(i = 0; i < 3; i++)

@@ -38,7 +38,8 @@ struct jacobs_options {
     double b_x, b_y, b_z, d_x, d_y, d_z;
 };
 
-/*void backproject(int im_size, double *start, double *end, double *ray_data, double *vol_data, struct jacobs_options *options)
+#ifdef WINDOWS
+#  define inline
+#endif // WINDOWS
 
-*/
 #endif
