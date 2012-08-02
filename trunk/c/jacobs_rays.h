@@ -39,7 +39,7 @@ struct jacobs_options {
 };
 
 #ifdef WINDOWS
-#  define inline
+#  define inline __inline
 #endif // WINDOWS
 
 #endif
