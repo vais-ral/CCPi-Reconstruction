@@ -21,5 +21,5 @@
 
 % 03/04/2012
 
-mex c/CBbackproject_single_newgeom_c.c c/backproject_singledata.c -largeArrayDims CFLAGS="$CFLAGS /openmp /DWINDOWS" LDFLAGS="$LDFLAGS /openmp"
-mex c/CBproject_single_newgeom_c.c c/project_singledata.c -largeArrayDims CFLAGS="$CFLAGS /openmp /DWINDOWS" LDFLAGS="$LDFLAGS /openmp"
+mex c/CBbackproject_single_newgeom_c.c c/backproject_singledata.c -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS"
+mex c/CBproject_single_newgeom_c.c c/project_singledata.c -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS"
