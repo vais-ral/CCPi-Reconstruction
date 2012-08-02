@@ -13,6 +13,12 @@ function centre = find_centre(data, geom)
 
 % 21/10/2011
 
+% Update to only include a ray if its opposite is contained within the
+% detector region.  Instead of the 2-norm of the image error, find the
+% average of the 2-norm of the error for the ray pairs.
+% N. Wadeson 15/05/2012
+% ***NOTE*** could set largest precision to depend on data size - or quit
+% if not enough entries in nonzero.
 
 % set up coordinate grids for testing the fit to data
 [alpha s] = meshgrid(geom.angles,geom.dets.y);
@@ -25,6 +31,8 @@ test_data = double(repmat(data,1,3));
 
 midpoint = 0;   % start search using midpoint at zero
 precision = [1 0.1 0.01 0.001 0.0001];   % vector of precision values to search at
+
+figure
 
 for i = 1:length(precision)
     COR = (midpoint - 10*precision(i)):precision(i):(midpoint + 10*precision(i)); % values for centre of rotation
@@ -47,8 +55,10 @@ for i = 1:length(precision)
         angles = repmat(geom.angles', geom.dets.ny, 1) + repmat(beta, 1, length(geom.angles));
 
         test = interp2(alpha, s, test_data, angles, s2, 'linear', 0);
-
-        M(j) = sum((test(:) - data(:)).^2);
+        
+        nonzero = find(test > 0);
+        M(j) = sum((test(nonzero) - data(nonzero)).^2)*(1/sum(nonzero));
+        %M(j) = sum((test(:) - data(:)).^2);
     end
     
     plot(COR * geom.source.x / geom.d_sd, M, '.') % plot to see if results are sensible
@@ -56,11 +66,10 @@ for i = 1:length(precision)
     drawnow
     
     [minM indM] = min(M);   % minimum value and index
-    
+
     fprintf('Precision %1.4f: COR = %1.4f, M = %4.4f\n', precision(i), COR(indM) * geom.source.x / geom.d_sd, minM)
     
     midpoint = COR(indM);   % set midpoint for next search
-    
 end
 
 % transform centre to required value
