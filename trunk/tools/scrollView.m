@@ -4,8 +4,8 @@ function hh = scrollView(vol, dim, limits)
 % slider to scroll through the missing dimension
 % 
 % scrollView(vol) scrolls thruogh the last dimension
-% scrollViwe(vol, n) scrolls through dimension n
-% scrollViwe(vol, n, limits) sets the colorlimits on each
+% scrollView(vol, n) scrolls through dimension n
+% scrollView(vol, n, limits) sets the colorlimits on each
 % slice. use limits = 0 for max/min (vol(:))
   
 % by David Szotten

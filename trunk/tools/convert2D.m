@@ -6,7 +6,8 @@ function [b geom] = convert2D(data, geom)
 
 % 29/11/2011
 
-c_slice = geom.dets.nz/2 + 1;
+%c_slice = geom.dets.nz/2 + 1;
+c_slice = floor(geom.dets.nz/2 + 1);
 
 b = squeeze(data(:,c_slice,:));
 
