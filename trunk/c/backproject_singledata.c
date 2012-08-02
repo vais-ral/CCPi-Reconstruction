@@ -150,7 +150,7 @@ void backproject_singledata(const double start[], const double end[],
     else {
 	alpha_x_min=-2;
 	alpha_x_max=2;
-	i=(int) floor_j( phi(0, p1_x, p2_x, b_x, d_x));
+	i=(int) floor_j( phi(0.0, p1_x, p2_x, b_x, d_x));
 	if ( i < 0 || i >= im_size_x)
 	    return;
 	alpha_x=2;
@@ -165,7 +165,7 @@ void backproject_singledata(const double start[], const double end[],
     else {
 	alpha_y_min=-2;
 	alpha_y_max=2;
-	j=(int) floor_j( phi(0, p1_y, p2_y, b_y, d_y));
+	j=(int) floor_j( phi(0.0, p1_y, p2_y, b_y, d_y));
 	if ( j < 0 || j >= im_size_y)
 	    return;
 	alpha_y=2;
@@ -181,7 +181,7 @@ void backproject_singledata(const double start[], const double end[],
     else {
 	alpha_z_min=-2;
 	alpha_z_max=2;
-	k=(int) floor_j( phi(0, p1_z, p2_z, b_z, d_z));
+	k=(int) floor_j( phi(0.0, p1_z, p2_z, b_z, d_z));
 	if ( k < 0 || k >= im_size_z)
 	    return;
 	alpha_z=2;
