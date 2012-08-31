@@ -113,12 +113,16 @@ if (nargin > 2)
 
 end
 
+% create waitbar
+h = waitbar(0,'Loading Data...');
 
 % load projection data
 data = uint16(zeros(DetectorPixelsY, DetectorPixelsX, nProjections));
 for i = 1:nProjections
     data(:,:,i) = imread([pathname filename '_' dec2base(i,10,4) '.tif']);
+    waitbar(i/nProjections,h);
 end
+close(h)
 
 % reshape array
 data = permute(data,[2 1 3]);
@@ -129,14 +133,3 @@ data = single(data);
 % scale and take -log
 data = data/65535; % max value for 16bit integer
 data = -log(data);
-
-
-
-
-
-
-
-
-
-
-
