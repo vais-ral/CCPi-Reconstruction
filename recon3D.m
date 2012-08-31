@@ -40,7 +40,7 @@
 pixels_nY = 1000;
 pixels_nZ = 1000;
 iterations = 10;
-voxels = [664 645 413];
+voxels = [500 500 500];
 %------------------------------------------------------------------------
 
 addpath c/
@@ -48,23 +48,23 @@ addpath tools/
 
 % Load data and geometrical parameters from file
 % Use this if you are using a reconstruction.xtekct file from FDK reconstruction
-[data geom] = load_data(pathname, filename, pathname2, filename2);
+%[data geom] = load_data(pathname, filename, pathname2, filename2);
 % Use this otherwise
-%[data geom] = load_data(pathname, filename);
+[data geom] = load_data(pathname, filename);
 
 % Cut down detector region if only reconstructing a sub-section
-aY = (2000 - pixels_nY)/2;
-aZ = (2000 - pixels_nZ)/2;
-geom.dets.z = geom.dets.z(aZ+1:aZ+pixels_nZ);
-geom.dets.nz = length(geom.dets.z);
-geom.dets.y = geom.dets.y(aY+1:aY+pixels_nY);
-geom.dets.ny = length(geom.dets.y);
+%aY = (2000 - pixels_nY)/2;
+%aZ = (2000 - pixels_nZ)/2;
+%geom.dets.z = geom.dets.z(aZ+1:aZ+pixels_nZ);
+%geom.dets.nz = length(geom.dets.z);
+%geom.dets.y = geom.dets.y(aY+1:aY+pixels_nY);
+%geom.dets.ny = length(geom.dets.y);
 
 % Option to overwrite the original data
 % data = foam_minus_casing;
 
 % Cut down data to only include the chosen detectors
-data = data(aY+1:aY+pixels_nY, aZ+1:aZ+pixels_nZ,:);
+%data = data(aY+1:aY+pixels_nY, aZ+1:aZ+pixels_nZ,:);
 
 % Find centre of rotation
 geom = centre_geom(data, geom);

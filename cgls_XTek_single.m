@@ -21,9 +21,10 @@ if nargin < 4
 end
 
 if (length(fieldnames(geom)) == 5) % data from file (only one file loaded)
-    maxDets_y = 2000;
-    geom.voxel_size = ((2*geom.mask_radius)/maxDets_y)*[1 1 1];
+    %maxDets_y = 2000;
+    %geom.voxel_size = ((2*geom.mask_radius)/maxDets_y)*[1 1 1];
     %voxel_size = (2*(geom.mask_radius*(geom.dets.ny/maxDets_y))/voxels(1))*[1 1 1];
+    voxel_size = (2*geom.mask_radius/voxels(1))*[1 1 1];
     geom.offset = [0.0 0.0 0.0];
 elseif (length(fieldnames(geom)) == 6) % using phantom data
     geom.offset = [0.0 0.0 0.0];
@@ -107,16 +108,3 @@ end
 x = x_stored;
 
 disp('Reconstruction successfully completed.')
-
-
-
-
-
-
-
-
-
-
-
-
-
