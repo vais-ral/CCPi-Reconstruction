@@ -15,6 +15,7 @@
 #include <string.h>
 #include "jacobs_rays.h"
 #include "omp.h"
+#include <sys/time.h>
 
 extern
 void backproject_singledata(const double start[], const double end[],
@@ -48,7 +49,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	double start[3], end[3], *voxel_size, *grid_offset, *angles;
     float *ray_data, *vol_data;
     double *size_doubles;
-    int nthreads, threadid;
 
 	struct jacobs_options options;
 	
@@ -102,20 +102,43 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 #pragma omp parallel shared(source_x, source_y, source_z, det_x, det_y, det_z, im_size, vol_data, angles, im_size_matlab, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, cos_curr_angle, sin_curr_angle, start, end, ray_offset, options), firstprivate(n_rays_y, n_rays_z, n_angles, ray_data)
   {
-    int nz_offset, nz_step;
+    int nz_offset = 0;
+    int nz_step = 0;
     int nthreads = omp_get_num_threads();
     int threadid = omp_get_thread_num();
-
     int nzblocks = nthreads;
     int nz_size = im_size_matlab[2] / nzblocks;
-    if (nz_size * nzblocks < im_size_matlab[2])
-      nz_size++;
-    nz_offset = threadid * nz_size;
-    nz_step = nz_size;
-    if (nz_offset + nz_step > im_size_matlab[2])
-      nz_step = im_size_matlab[2] - nz_offset;
+    int extra = im_size_matlab[2] - nz_size * nzblocks;
+    int half = (nthreads - 1) / 2;
+    if (threadid <= half) {
+      extra = (extra + 1) / 2;
+      for (i = 0; i <= half; i++) {
+	if (i > half - extra)
+	  nz_step = nz_size + 1;
+	else
+	  nz_step = nz_size;
+	if (i == threadid)
+	  break;
+	nz_offset += nz_step;
+      }
+    } else {
+      nz_offset = im_size_matlab[2];
+      extra = extra / 2;
+      for (i = nthreads - 1; i > half; i--) {
+	if (i <= half + extra)
+	  nz_step = nz_size + 1;
+	else
+	  nz_step = nz_size;
+	nz_offset -= nz_step;
+	if (i == threadid)
+	  break;
+      }
+    }
+
     if (nz_step > 0) {
-      /*printf("  z %d %d\n", nz_offset, nz_step);*/
+      fprintf(stderr, "%d z %d %d\n", threadid, nz_offset, nz_step);
+      struct timeval t, u;
+      gettimeofday(&t, 0);
 
       options.im_size_default = 0;
       options.im_size_x = im_size_matlab[0];
@@ -169,16 +192,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	  }
 	}
       }
+      gettimeofday(&u, 0);
+      {
+	float cost = 1e-6 * (float)(u.tv_usec - t.tv_usec);
+	if (u.tv_usec < t.tv_usec)
+	  cost += 1.0;
+	cost += (float)(u.tv_sec - t.tv_sec);
+	fprintf(stderr, "thread %d cost %f\n", threadid, cost);
+      }
     }
   }    
 }
-
-
-
-
-
-
-
-
-
-
