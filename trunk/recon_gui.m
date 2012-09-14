@@ -36,6 +36,13 @@ if ok
 % Call cgls main function
   [cglsOut rho eta cancel] = cgls_XTek_single(b, iterations, geom, voxels);
 
+  [m index] = min(rho);
+  
+  if index < size(rho,2)
+      h = warndlg('Iterations diverged', 'CGLS', modal);
+      uiwait(h);
+  end
+  
   if not(cancel)
     [filetype basename] = save_recon();
 
