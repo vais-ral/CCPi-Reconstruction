@@ -13,10 +13,10 @@ function [] = write_tiff(w, pathname, filename, nvoxels, nbits)
   % shift to 0.0
   x(:) = x(:) - dxmin;
   if nbits == 8
-    x(:) = x(:) * (255 / dxmax);
+    x(:) = x(:) * (127 / dxmax);
   else
     % scale to max of uint16
-    x(:) = x(:) * (65535 / dxmax);
+    x(:) = x(:) * (32767 / dxmax);
   end
   x = reshape(x,nvoxels);
   % write projection data

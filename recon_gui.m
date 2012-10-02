@@ -34,7 +34,7 @@ if ok
   end
 
 % Call cgls main function
-  [cglsOut rho eta cancel] = cgls_XTek_single(b, iterations, geom, voxels);
+  [cglsOut rho eta cancel vs] = cgls_XTek_single(b, iterations, geom, voxels);
 
   [m index] = min(rho);
   
@@ -51,7 +51,7 @@ if ok
     elseif filetype == 2
       write_tiff(cglsOut(:,end), pathname, basename, voxels, 8);
     else
-      write_float(cglsOut(:,end), pathname, basename, voxels);
+      write_float(cglsOut(:,end), pathname, basename, voxels, vs);
     end
 
   end
