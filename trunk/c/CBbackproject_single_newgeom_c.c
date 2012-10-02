@@ -15,7 +15,6 @@
 #include <string.h>
 #include "jacobs_rays.h"
 #include "omp.h"
-#include <sys/time.h>
 
 extern
 void backproject_singledata(const double start[], const double end[],
@@ -136,10 +135,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
 
     if (nz_step > 0) {
-      fprintf(stderr, "%d z %d %d\n", threadid, nz_offset, nz_step);
-      struct timeval t, u;
-      gettimeofday(&t, 0);
-
       options.im_size_default = 0;
       options.im_size_x = im_size_matlab[0];
       options.im_size_y = im_size_matlab[1];
@@ -191,14 +186,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	    }
 	  }
 	}
-      }
-      gettimeofday(&u, 0);
-      {
-	float cost = 1e-6 * (float)(u.tv_usec - t.tv_usec);
-	if (u.tv_usec < t.tv_usec)
-	  cost += 1.0;
-	cost += (float)(u.tv_sec - t.tv_sec);
-	fprintf(stderr, "thread %d cost %f\n", threadid, cost);
       }
     }
   }    
