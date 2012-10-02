@@ -1,4 +1,4 @@
-function [x rho eta cancel] = cgls_XTek_single(b, iterations, geom, voxels)
+function [x rho eta cancel vs] = cgls_XTek_single(b, iterations, geom, voxels)
 % CGLS reconstruction code for the XTek circular scan geometry
 
 % 22/08/2011
@@ -59,6 +59,8 @@ x = single(zeros(n_vox,1)); % storage for solution
 
 rho = zeros(iterations,1);
 eta = zeros(iterations,1);
+
+vs = geom.voxel_size;
 
 outputIts = 10; % output solution after every 10 iterations
 
