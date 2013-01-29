@@ -83,7 +83,7 @@ static inline double floor_j(const double arg)
 }
 
 void backproject_singledata(const double start[], const double end[],
-			    const double ray_data, float vol_data[],
+			    const double ray_data, REAL vol_data[],
 			    const struct jacobs_options *options,
 			    const long z_offset)
 {
@@ -334,7 +334,7 @@ void backproject_singledata(const double start[], const double end[],
 	    if (x_defined && alpha_x <= alpha_y && alpha_x <= alpha_z) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
-	      vol_data[ray_index] += (float)((alpha_x-alpha_c)*d_conv * ray_data);
+	      vol_data[ray_index] += (REAL)((alpha_x-alpha_c)*d_conv * ray_data);
 
 		if( y_defined && alpha_x == alpha_y) {
 		    j += j_u;
@@ -360,7 +360,7 @@ void backproject_singledata(const double start[], const double end[],
 	    else if (y_defined && alpha_y <= alpha_z) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
-	      vol_data[ray_index] += (float)((alpha_y-alpha_c)*d_conv * ray_data);
+	      vol_data[ray_index] += (REAL)((alpha_y-alpha_c)*d_conv * ray_data);
 
 		if( z_defined && alpha_y == alpha_z) {
 		    k += k_u;
@@ -379,7 +379,7 @@ void backproject_singledata(const double start[], const double end[],
 	    else if (z_defined) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
-	      vol_data[ray_index] += (float)((alpha_z-alpha_c)*d_conv * ray_data);
+	      vol_data[ray_index] += (REAL)((alpha_z-alpha_c)*d_conv * ray_data);
 
 		k += k_u;
 		ray_index += k_step;
@@ -402,10 +402,109 @@ void backproject_singledata(const double start[], const double end[],
 	    /* this is the last step so don't need to worry about incrementing i or j*/
 	    l_ij=(alpha_max-alpha_c)*d_conv;
 	    
-	    vol_data[ray_index] += (float)(l_ij * ray_data);
+	    vol_data[ray_index] += (REAL)(l_ij * ray_data);
 	}
 	
     } /* of alpha_min < alpha_max */
     
     return;
+}
+
+static inline double r_i(const long i, const double r_0, const double step)
+{
+  // coord at grid index i
+  return r_0 + i * step;
+}
+
+void backwardProjection(double *source_x, double *source_y, double *source_z,
+			double *det_x, double *det_y, double *det_z,
+			REAL *ray_data, REAL *vol_data, double *angles,
+			struct jacobs_options *options, int n_angles,
+			long n_rays_y, long n_rays_z, int size_z,
+			double grid_offset[], double voxel_size[])
+{
+  int i, curr_angle, curr_ray_y, curr_ray_z;
+  long ray_offset;
+  double cos_curr_angle, sin_curr_angle;
+  double start[3], end[3];
+#pragma omp parallel shared(source_x, source_y, source_z, det_x, det_y, det_z, vol_data, angles, size_z, options, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, cos_curr_angle, sin_curr_angle, start, end, ray_offset), firstprivate(n_rays_y, n_rays_z, n_angles, ray_data)
+  {
+    struct jacobs_options local_opts = *options;
+    int nz_offset = 0;
+    int nz_step = 0;
+    int nthreads = omp_get_num_threads();
+    int threadid = omp_get_thread_num();
+    int nzblocks = nthreads;
+    int nz_size = size_z / nzblocks;
+    int extra = size_z - nz_size * nzblocks;
+    int half = (nthreads - 1) / 2;
+    if (threadid <= half) {
+      extra = (extra + 1) / 2;
+      for (i = 0; i <= half; i++) {
+	if (i > half - extra)
+	  nz_step = nz_size + 1;
+	else
+	  nz_step = nz_size;
+	if (i == threadid)
+	  break;
+	nz_offset += nz_step;
+      }
+    } else {
+      nz_offset = size_z;
+      extra = extra / 2;
+      for (i = nthreads - 1; i > half; i--) {
+	if (i <= half + extra)
+	  nz_step = nz_size + 1;
+	else
+	  nz_step = nz_size;
+	nz_offset -= nz_step;
+	if (i == threadid)
+	  break;
+      }
+    }
+
+    if (nz_step > 0) {
+      local_opts.im_size_z = nz_step;
+      local_opts.b_z = grid_offset[2] + voxel_size[2] * nz_offset;
+
+      for(curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
+	double delta_z, alpha_z_0, alpha_z_N;
+	double alpha_z_min, alpha_z_max, alpha_min, alpha_max;
+	start[2] = *source_z;
+	end[2] = det_z[curr_ray_z];
+
+	delta_z = end[2] - start[2];
+	alpha_z_0 = (r_i(0, local_opts.b_z, voxel_size[2]) - start[2]) / delta_z;
+	alpha_z_N = (r_i(nz_step, local_opts.b_z, voxel_size[2]) - start[2]) / delta_z;
+	alpha_z_min = min_dbl(alpha_z_0, alpha_z_N);
+	alpha_z_max = max_dbl(alpha_z_0, alpha_z_N);
+	alpha_min = max_dbl(0.0, alpha_z_min);
+	alpha_max = min_dbl(1.0, alpha_z_max);
+
+	if (alpha_min < alpha_max) {
+	  for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
+	    /* rotate source and detector positions by current angle */
+	    cos_curr_angle = cos(angles[curr_angle]);
+	    sin_curr_angle = sin(angles[curr_angle]);
+        
+	    start[0] = cos_curr_angle * (*source_x) - sin_curr_angle * (*source_y);
+	    start[1] = sin_curr_angle * (*source_x) + cos_curr_angle * (*source_y);
+        
+	    ray_offset = curr_angle * n_rays_y * n_rays_z + curr_ray_z*n_rays_y;
+        
+	    /* loop over y values on detector */
+	    for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
+	      end[0] = cos_curr_angle * (*det_x) - sin_curr_angle * det_y[curr_ray_y];
+	      end[1] = sin_curr_angle * (*det_x) + cos_curr_angle * det_y[curr_ray_y];
+            
+	      /* loop over z values on detector */
+	      backproject_singledata(start, end,
+				     (double)ray_data[ray_offset + curr_ray_y],
+				     vol_data, &local_opts, nz_offset);
+	    }
+	  }
+	}
+      }
+    }
+  }    
 }

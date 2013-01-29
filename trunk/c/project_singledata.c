@@ -26,7 +26,6 @@ $Date: 2008/09/08 13:20:38 $
 
 /* 09/09/2011 this version operates on single precision ray and volume data, but performs internal calculations in double precision */
 
-
 #include "jacobs_rays.h"
 
 static inline double alpha_fn(const int n, const double p1, const double p2,
@@ -83,7 +82,7 @@ static inline double floor_j(const double arg)
 }
 
 void project_singledata(const double start[], const double end[],
-			float *ray_data, const float const vol_data[],
+			REAL *ray_data, const REAL const vol_data[],
 			const struct jacobs_options *options)
 {
     
@@ -403,9 +402,49 @@ void project_singledata(const double start[], const double end[],
 	    
 	    data += l_ij * vol_data[ray_index];
 	}
-	*ray_data += (float)data;
+	*ray_data += (REAL)data;
 	
     } /* of alpha_min < alpha_max */
     
     return;
+}
+
+void forwardProjection(double *source_x, double *source_y, double *source_z,
+		       double *det_x, double *det_y, double *det_z,
+		       REAL *ray_data, REAL *vol_data, double *angles,
+		       struct jacobs_options *options, int n_angles,
+		       long n_rays_y, long n_rays_z)
+{
+  int i, curr_angle, curr_ray_y, curr_ray_z;
+  long ray_offset;
+  double cos_curr_angle, sin_curr_angle;
+  double start[3], end[3];
+#pragma omp parallel for shared(source_x, source_y, source_z, det_x, det_y, det_z, ray_data, angles, options) private(curr_angle, curr_ray_y, curr_ray_z, cos_curr_angle, sin_curr_angle, start, end, ray_offset), firstprivate(vol_data, n_angles, n_rays_y, n_rays_z) schedule(dynamic)
+
+  for(curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
+    start[2] = *source_z;
+    end[2] = det_z[curr_ray_z];
+
+    for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
+      /* rotate source and detector positions by current angle */
+      cos_curr_angle = cos(angles[curr_angle]);
+      sin_curr_angle = sin(angles[curr_angle]);
+	  
+      start[0] = cos_curr_angle * (*source_x) - sin_curr_angle * (*source_y);
+      start[1] = sin_curr_angle * (*source_x) + cos_curr_angle * (*source_y);
+	  
+      ray_offset = curr_angle * n_rays_y * n_rays_z + curr_ray_z*n_rays_y;
+	  
+      /* loop over y values on detector */
+      for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
+	end[0] = cos_curr_angle * (*det_x) - sin_curr_angle * det_y[curr_ray_y];
+	end[1] = sin_curr_angle * (*det_x) + cos_curr_angle * det_y[curr_ray_y];
+	  
+	/* loop over z values on detector */
+	    
+	project_singledata(start, end, &ray_data[ray_offset + curr_ray_y],
+			   vol_data, options);
+      }
+    }
+  }
 }
