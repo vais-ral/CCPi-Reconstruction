@@ -14,28 +14,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "jacobs_rays.h"
-#include "omp.h"
 
-extern
-void project_singledata(const double start[], const double end[],
-			float *ray_data, const float const vol_data[],
-			const struct jacobs_options *options);
-
-static inline double r_i(const long i, const double r_0, const double step)
-{
-  // coord at grid index i
-  return r_0 + i * step;
-}
-
-static inline double min_dbl(double a, double b)
-{
-  return a < b ? a : b;
-}
-
-static inline double max_dbl(double a, double b)
-{
-  return a > b ? a : b;
-}
+extern void forwardProjection(double *source_x, double *source_y,
+			      double *source_z, double *det_x, double *det_y,
+			      double *det_z, float *ray_data, float *vol_data,
+			      double *angles, struct jacobs_options *options,
+			      int n_angles, long n_rays_y, long n_rays_z);
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -113,34 +97,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   options.d_y = voxel_size[1];
   options.d_z = voxel_size[2];
 
-#pragma omp parallel for shared(source_x, source_y, source_z, det_x, det_y, det_z, im_size, ray_data, angles, options) private(curr_angle, curr_ray_y, curr_ray_z, cos_curr_angle, sin_curr_angle, start, end, ray_offset), firstprivate(vol_data, n_angles, n_rays_y, n_rays_z) schedule(dynamic)
-
-  for(curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
-    start[2] = *source_z;
-    end[2] = det_z[curr_ray_z];
-
-    for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
-      /* rotate source and detector positions by current angle */
-      cos_curr_angle = cos(angles[curr_angle]);
-      sin_curr_angle = sin(angles[curr_angle]);
-	  
-      start[0] = cos_curr_angle * (*source_x) - sin_curr_angle * (*source_y);
-      start[1] = sin_curr_angle * (*source_x) + cos_curr_angle * (*source_y);
-	  
-      ray_offset = curr_angle * n_rays_y * n_rays_z + curr_ray_z*n_rays_y;
-	  
-      /* loop over y values on detector */
-      for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
-	end[0] = cos_curr_angle * (*det_x) - sin_curr_angle * det_y[curr_ray_y];
-	end[1] = sin_curr_angle * (*det_x) + cos_curr_angle * det_y[curr_ray_y];
-	  
-	/* loop over z values on detector */
-	    
-	project_singledata(start, end, &ray_data[ray_offset + curr_ray_y],
-			   vol_data, &options);
-      }
-    }
-  }
+  forwardProjection(source_x, source_y, source_z, det_x, det_y, det_z,
+		    ray_data, vol_data, angles, &options, n_angles, n_rays_y,
+		    n_rays_z);
 }
 
 

@@ -21,6 +21,7 @@
 
 % 03/04/2012
 
-mex c/CBbackproject_single_newgeom_c.c c/backproject_singledata.c -largeArrayDims CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-mex c/CBproject_single_newgeom_c.c c/project_singledata.c -largeArrayDims CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+mex c/CBbackproject_single_newgeom_c.c c/backproject_singledata.c -largeArrayDims CFLAGS="\$CFLAGS -DREAL=float -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+mex c/CBproject_single_newgeom_c.c c/project_singledata.c -largeArrayDims CFLAGS="\$CFLAGS -DREAL=float -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+mex c/tvreg_upc.c c/tv_core.c c/tools.c c/project_singledata.c c/backproject_singledata.c -largeArrayDims CFLAGS="\$CFLAGS -DREAL=double -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
 

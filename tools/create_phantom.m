@@ -56,8 +56,10 @@ end
 
 x = x(:);
 
+tic
 % perform projection step
 b = CBproject_single(x, geom, voxels, geom.voxel_size, image_offset);
+toc
 
 % add noise
 noise_level = 0.01;
