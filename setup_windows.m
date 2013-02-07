@@ -21,6 +21,6 @@
 
 % 03/04/2012
 
-mex c/CBbackproject_single_newgeom_c.c c/backproject_singledata.c -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS /DREAL=float"
-mex c/CBproject_single_newgeom_c.c c/project_singledata.c -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS /DREAL=float"
-mex c/tvreg_upc.c c/tv_core.c c/tools.c c/project_singledata.c c/backproject_singledata.c -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS /DREAL=double"
+mex mex/CBbackproject_single_newgeom_c.c c/backproject_singledata.c -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS /DREAL=float"
+mex mex/CBproject_single_newgeom_c.c c/project_singledata.c -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS /DREAL=float"
+mex mex/tvreg_upc.c c/tv_core.c c/tools.c c/project_singledata.c c/backproject_singledata.c -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /openmp /DWINDOWS /DREAL=double"

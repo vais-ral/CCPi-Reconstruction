@@ -1,0 +1,57 @@
+
+#ifndef CCPI_XTEK_FORWARD
+#define CCPI_XTEK_FORWARD
+
+template <class pixel_t, class voxel_t>
+void CCPi::Nikon_XTek::forward_project(const real source_x, const real source_y,
+				       const real source_z, const real det_x,
+				       const real det_y[], const real det_z[],
+				       const real angles[],
+				       pixel_t ray_data[],
+				       voxel_t *const vol_data,
+				       const int n_angles, const int n_rays_y,
+				       const int n_rays_z,
+				       const real grid_offset[3],
+				       const real voxel_size[3],
+				       const int nx_voxels,
+				       const int ny_voxels,
+				       const int nz_voxels)
+{
+  int curr_angle, curr_ray_y, curr_ray_z;
+  long ray_offset;
+  real cos_curr_angle, sin_curr_angle;
+  real start[3], end[3];
+#pragma omp parallel for shared(det_y, det_z, ray_data, angles) private(curr_angle, curr_ray_y, curr_ray_z, cos_curr_angle, sin_curr_angle, start, end, ray_offset), firstprivate(source_x, source_y, source_z, det_x, vol_data, n_angles, n_rays_y, n_rays_z, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
+
+  for(curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
+    start[2] = source_z;
+    end[2] = det_z[curr_ray_z];
+
+    for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
+      /* rotate source and detector positions by current angle */
+      cos_curr_angle = std::cos(angles[curr_angle]);
+      sin_curr_angle = std::sin(angles[curr_angle]);
+
+      start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
+      start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
+
+      ray_offset = curr_angle * n_rays_y * n_rays_z + curr_ray_z*n_rays_y;
+
+      /* loop over y values on detector */
+      for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
+	end[0] = cos_curr_angle * det_x - sin_curr_angle * det_y[curr_ray_y];
+	end[1] = sin_curr_angle * det_x + cos_curr_angle * det_y[curr_ray_y];
+
+	/* loop over z values on detector */
+
+	project_singledata<pixel_t, voxel_t, false>(start, end,
+			   ray_data[ray_offset + curr_ray_y],
+			   vol_data, grid_offset[0], grid_offset[1],
+			   grid_offset[2], voxel_size[0], voxel_size[1],
+			   voxel_size[2], nx_voxels, ny_voxels, nz_voxels, 0);
+      }
+    }
+  }
+}
+
+#endif // CCPI_XTEK_FORWARD
