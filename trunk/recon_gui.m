@@ -4,7 +4,7 @@
 
 [filename pathname] = uigetfile({'*.xtekct'}, 'Select XTek data');
 
-addpath c/
+addpath mex/
 addpath tools/
 
 % add trailing directory separator to pathname
