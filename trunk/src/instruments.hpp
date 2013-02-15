@@ -8,13 +8,29 @@ namespace CCPi {
 
   class instrument {
   public:
-    virtual bool setup_experimental_geometry(const std::string file,
+    virtual bool setup_experimental_geometry(const std::string path,
+					     const std::string file,
 					     const bool phantom = false) = 0;
-    virtual bool read_scans(const bool phantom = false) = 0;
-    virtual void forward_project(voxel_data &voxels, const real origin[3],
-				 const real width[3]) = 0;
-    virtual void backward_project(voxel_data &voxels, const real origin[3],
-				  const real width[3]) = 0;
+    virtual bool read_scans(const std::string path,
+			    const bool phantom = false) = 0;
+    virtual bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
+				       const voxel_data &voxels) const = 0;
+    virtual void apply_beam_hardening() = 0;
+    virtual void forward_project(pixel_type *pixels, voxel_type *const voxels,
+				 const real origin[3], const real width[3],
+				 const int nx, const int ny,
+				 const int nz) const = 0;
+    virtual void backward_project(pixel_type *pixels, voxel_type *const voxels,
+				  const real origin[3], const real width[3],
+				  const int nx, const int ny,
+				  const int nz) const = 0;
+    virtual void backward_project(voxel_type *const voxels,
+				  const real origin[3], const real width[3],
+				  const int nx, const int ny,
+				  const int nz) const = 0;
+
+    virtual long get_data_size() const = 0;
+    virtual pixel_type *const get_pixel_data() const = 0;
   };
 
   // Todo - do these serve any purpose?
@@ -26,24 +42,48 @@ namespace CCPi {
 
   class Diamond : public parallel_beam {
   public:
-    bool setup_experimental_geometry(const std::string file,
+    bool setup_experimental_geometry(const std::string path,
+				     const std::string file,
 				     const bool phantom);
-    bool read_scans(const bool phantom);
-    void forward_project(voxel_data &voxels, const real origin[3],
-			 const real width[3]);
-    void backward_project(voxel_data &voxels, const real origin[3],
-			  const real width[3]);
+    bool read_scans(const std::string path, const bool phantom);
+    bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
+			       const voxel_data &voxels) const;
+    void apply_beam_hardening();
+    void forward_project(pixel_type *pixels, voxel_type *const voxels,
+			 const real origin[3], const real width[3],
+			 const int nx, const int ny, const int nz) const;
+    void backward_project(pixel_type *pixels, voxel_type *const voxels,
+			  const real origin[3], const real width[3],
+			  const int nx, const int ny, const int nz) const;
+    void backward_project(voxel_type *const voxels,
+			  const real origin[3], const real width[3],
+			  const int nx, const int ny, const int nz) const;
+
+    long get_data_size() const;
+    pixel_type *const get_pixel_data() const;
   };
 
   class Nikon_XTek : public cone_beam {
   public:
-    bool setup_experimental_geometry(const std::string file,
+    bool setup_experimental_geometry(const std::string path,
+				     const std::string file,
 				     const bool phantom);
-    bool read_scans(const bool phantom);
-    void forward_project(voxel_data &voxels, const real origin[3],
-			 const real width[3]);
-    void backward_project(voxel_data &voxels, const real origin[3],
-			  const real width[3]);
+    bool read_scans(const std::string path, const bool phantom);
+    bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
+			       const voxel_data &voxels) const;
+    void apply_beam_hardening();
+    void forward_project(pixel_type *pixels, voxel_type *const voxels,
+			 const real origin[3], const real width[3],
+			 const int nx, const int ny, const int nz) const;
+    void backward_project(pixel_type *pixels, voxel_type *const voxels,
+			  const real origin[3], const real width[3],
+			  const int nx, const int ny, const int nz) const;
+    void backward_project(voxel_type *const voxels,
+			  const real origin[3], const real width[3],
+			  const int nx, const int ny, const int nz) const;
+
+    long get_data_size() const;
+    pixel_type *const get_pixel_data() const;
 
     template <class pixel_t, class voxel_t>
     static void forward_project(const real source_x, const real source_y,
@@ -77,12 +117,17 @@ namespace CCPi {
     int n_angles;
     int n_horizontal_pixels;
     int n_vertical_pixels;
-    pixel_type *pixels;
+    pixel_type *pixel_data;
+    real offset[3];
+    real mask_radius;
+    real white_level;
+    std::string basename;
 
     bool create_phantom();
     bool build_phantom();
-    bool read_config_file(const std::string file);
-    bool read_images();
+    bool read_config_file(const std::string path, const std::string file);
+    bool read_angles(const std::string datafile, const real init_angle);
+    bool read_images(const std::string path);
   };
 
 }

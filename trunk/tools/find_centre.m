@@ -74,9 +74,3 @@ end
 
 % transform centre to required value
 centre = midpoint * geom.source.x / geom.d_sd;
-
-
-
-
-
-
