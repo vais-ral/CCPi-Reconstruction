@@ -1,13 +1,13 @@
 
 CXX = g++
-CXXFLAGS = -g -ansi -pedantic -Wall -fopenmp
+CXXFLAGS = -g -O2 -ansi -pedantic -Wall -fopenmp
 TIFFINC =
 TIFFLIB = -ltiff
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
 LIBS = $(TIFFLIB)
 
-OBJECTS = recon.o results.o diamond.o xtek.o cgls.o utils.o
+OBJECTS = recon.o results.o diamond.o xtek.o cgls.o tiff.o utils.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -25,8 +25,10 @@ cgls.o: cgls.cpp algorithms.hpp instruments.hpp
 diamond.o: diamond.cpp instruments.hpp
 
 xtek.o: xtek.cpp instruments.hpp xtek_b.hpp xtek_f.hpp project_line.hpp \
-	utils.hpp
+	tiff.hpp utils.hpp
 
-results.o: results.cpp results.hpp
+results.o: results.cpp results.hpp tiff.hpp
+
+tiff.o: tiff.cpp tiff.hpp
 
 utils.o: utils.cpp utils.hpp

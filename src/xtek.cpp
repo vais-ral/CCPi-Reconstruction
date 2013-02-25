@@ -9,7 +9,7 @@
 #include "project_line.hpp"
 #include "xtek_b.hpp"
 #include "xtek_f.hpp"
-#include "tiffio.h"
+#include "tiff.hpp"
 
 // Nikon XTek instrument
 // 360 degree clockwise sample rotations about vertical axis, cone beam
@@ -279,96 +279,12 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
   std::string pathbase;
   combine_path_and_name(path, basename, pathbase);
   char index[8];
-  for (int i = 0; i < n_angles; i++) {
-    std::cout << "loop " << i << '\n';
+  for (int i = 0; (i < n_angles and ok); i++) {
     snprintf(index, 8, "%04d", i + 1);
     std::string name = pathbase + index + ".tif";
-    TIFF *tif = TIFFOpen(name.c_str(), "r");
-    if (tif == 0) {
-      ok = false;
-      std::cerr << "Error opening " << name << '\n';
-    } else {
-      if (TIFFIsTiled(tif)) {
-	ok = false;
-        std::cerr << "tiled image not supported in XTek reader\n";
-      } else {
-	uint16 bps;
-	if (TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps) == 0) {
-	  std::cerr << "TIFF error reading bits per sample\n";
-	  ok = false;
-	} else if (bps != 16) {
-	  std::cerr << "TIFF is not 16bit data\n";
-	  ok = false;
-	} else {
-	  uint16 photo;
-	  if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photo) == 0) {
-	    std::cerr << "Error getting TIFF photometric info\n";
-	    ok = false;
-	  } else if (photo != PHOTOMETRIC_MINISBLACK) {
-	    std::cerr << "TIFF photometric type not supported by XTek reader\n";
-	    ok = false;
-	  } else {
-	    if (TIFFIsMSB2LSB(tif) == 0) {
-	      std::cerr << "TIFF is not MSB to LSB\n";
-	      ok = false;
-	    } else {
-	      // I'm assuming orientation would be 1, (0,0) in top left corner
-	      // but XTek tiffs don't usually work with TIFFTAG_ORIENTATION
-	      uint32 w;
-	      if (TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w) == 0) {
-		std::cerr << "Error getting TIFF width\n";
-		ok = false;
-	      } else if ((int)w != n_horizontal_pixels) {
-		std::cerr << "Image width mismatch\n";
-		ok = false;
-	      } else {
-		tsize_t strip_size = TIFFStripSize(tif);
-		int nstrips = TIFFNumberOfStrips(tif);
-		char *buf = (char *)_TIFFmalloc(strip_size * nstrips);
-		int offset = 0;
-		int result;
-		for (int count = 0; (count < nstrips and ok); count++){
-		  if ((result = TIFFReadEncodedStrip(tif, count, buf + offset,
-						     strip_size)) == -1) {
-		    std::cerr << "Read error in " << name << '\n';
-		    ok = false;
-		  } else
-		    offset += result;
-		}
-		int extra = offset % 2;
-		offset /= 2;
-		if (extra == 1) {
-		  std::cerr << "Odd number of bytes for 16 bit image\n";
-		  ok = false;
-		} else if (offset != n_horizontal_pixels * n_vertical_pixels) {
-		  std::cerr << "Image size mismatch\n";
-		  ok = false;
-		} else {
-		  // (0,0) at top left means vertical order needs to be reversed
-		  // for voxel box where the origin is at the bottom
-		  // It looks like strips are [h][v] col-major
-		  // storage order is [horiz][vert][angles] fortran order
-		  // for compatibility with Matlab.
-		  uint16 *b = (uint16 *)buf;
-		  long angle_offset = i * n_horizontal_pixels
-		    * n_vertical_pixels;
-		  for (int v = 0; v < n_vertical_pixels; v++) {
-		    for (int h = 0; h < n_horizontal_pixels; h++) {
-		      pixel_data[angle_offset] =
-			real(b[(n_vertical_pixels - v - 1)
-			       * n_horizontal_pixels + h]);
-		      angle_offset++;
-		    }
-		  }
-		}
-		_TIFFfree(buf);
-	      }
-	    }
-	  }
-	}
-      }
-      TIFFClose(tif);
-    }
+    long angle_offset = i * n_horizontal_pixels * n_vertical_pixels;
+    ok = read_tiff(name, &pixel_data[angle_offset], n_horizontal_pixels,
+		   n_vertical_pixels);
   }
   if (ok) {
     /*
