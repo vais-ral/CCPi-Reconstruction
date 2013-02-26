@@ -7,7 +7,7 @@ LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
 LIBS = $(TIFFLIB)
 
-OBJECTS = recon.o results.o diamond.o xtek.o cgls.o tiff.o utils.o
+OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o tiff.o utils.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -21,6 +21,8 @@ $(OBJECTS): base_types.hpp
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp
 
 cgls.o: cgls.cpp algorithms.hpp instruments.hpp
+
+instruments.o: instruments.cpp instruments.hpp
 
 diamond.o: diamond.cpp instruments.hpp
 
