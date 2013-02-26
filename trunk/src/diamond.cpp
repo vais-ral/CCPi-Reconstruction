@@ -30,40 +30,28 @@ void CCPi::Diamond::apply_beam_hardening()
   std::cerr << "Todo\n";
 }
 
-long CCPi::Diamond::get_data_size() const
-{
-  std::cerr << "Todo\n";
-  return 0;
-}
-
-pixel_type *const CCPi::Diamond::get_pixel_data() const
-{
-  std::cerr << "Todo\n";
-  return 0;
-}
-
-void CCPi::Diamond::forward_project(pixel_type *pixels,
-				    voxel_type *const voxels,
-				    const real origin[3],
-				    const real width[3], const int nx,
-				    const int ny, const int nz) const
+void CCPi::parallel_beam::forward_project(pixel_type *pixels,
+					  voxel_type *const voxels,
+					  const real origin[3],
+					  const real width[3], const int nx,
+					  const int ny, const int nz) const
 {
   std::cerr << "Todo\n";
 }
 
-void CCPi::Diamond::backward_project(pixel_type *pixels,
-				     voxel_type *const voxels,
-				     const real origin[3],
-				     const real width[3], const int nx,
-				     const int ny, const int nz) const
+void CCPi::parallel_beam::backward_project(pixel_type *pixels,
+					   voxel_type *const voxels,
+					   const real origin[3],
+					   const real width[3], const int nx,
+					   const int ny, const int nz) const
 {
   std::cerr << "Todo\n";
 }
 
-void CCPi::Diamond::backward_project(voxel_type *const voxels,
-				     const real origin[3],
-				     const real width[3], const int nx,
-				     const int ny, const int nz) const
+void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
+					   const real origin[3],
+					   const real width[3], const int nx,
+					   const int ny, const int nz) const
 {
   std::cerr << "Todo\n";
 }

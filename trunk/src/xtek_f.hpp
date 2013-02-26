@@ -3,7 +3,7 @@
 #define CCPI_XTEK_FORWARD
 
 template <class pixel_t, class voxel_t>
-void CCPi::Nikon_XTek::forward_project(const real source_x, const real source_y,
+void CCPi::instrument::forward_project(const real source_x, const real source_y,
 				       const real source_z, const real det_x,
 				       const real det_y[], const real det_z[],
 				       const real angles[],

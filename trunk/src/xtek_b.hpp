@@ -9,7 +9,7 @@ static inline real r_i(const long i, const real r_0, const real step)
 }
 
 template <class pixel_t, class voxel_t>
-void CCPi::Nikon_XTek::backward_project(const real source_x,
+void CCPi::instrument::backward_project(const real source_x,
 					const real source_y,
 					const real source_z, const real det_x,
 					const real det_y[], const real det_z[],
