@@ -33,20 +33,20 @@ namespace CCPi {
     static void forward_project(const real source_x, const real source_y,
 				const real source_z, const real det_x,
 				const real det_y[], const real det_z[],
-				const real angles[], pixel_t ray_data[],
-				voxel_t *const vol_data, const int n_angles,
-				const int n_rays_y, const int n_rays_z,
-				const real grid_offset[3],
+				const real phi[], const real theta[],
+				pixel_t ray_data[], voxel_t *const vol_data,
+				const int n_angles, const int n_rays_y,
+				const int n_rays_z, const real grid_offset[3],
 				const real voxel_size[3], const int nx_voxels,
 				const int ny_voxels, const int nz_voxels);
     template <class pixel_t, class voxel_t>
     static void backward_project(const real source_x, const real source_y,
 				 const real source_z, const real det_x,
 				 const real det_y[], const real det_z[],
-				 const real angles[], pixel_t ray_data[],
-				 voxel_t *const vol_data, const int n_angles,
-				 const int n_rays_y, const int n_rays_z,
-				 const real grid_offset[3],
+				 const real phi[], const real theta[],
+				 pixel_t ray_data[], voxel_t *const vol_data,
+				 const int n_angles, const int n_rays_y,
+				 const int n_rays_z, const real grid_offset[3],
 				 const real voxel_size[3], const int nx_voxels,
 				 const int ny_voxels, const int nz_voxels);
 
