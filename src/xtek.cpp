@@ -7,8 +7,8 @@
 #include "utils.hpp"
 #include "instruments.hpp"
 #include "project_line.hpp"
-#include "xtek_b.hpp"
-#include "xtek_f.hpp"
+#include "cone_b.hpp"
+#include "cone_f.hpp"
 #include "tiff.hpp"
 
 // Nikon XTek instrument

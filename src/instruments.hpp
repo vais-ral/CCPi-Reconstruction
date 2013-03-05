@@ -29,6 +29,24 @@ namespace CCPi {
 				  const int nx, const int ny,
 				  const int nz) const = 0;
 
+    // parallel beam
+    template <class pixel_t, class voxel_t>
+    static void forward_project(const real det_y[], const real det_z[],
+				const real phi[], const real theta[],
+				pixel_t ray_data[], voxel_t *const vol_data,
+				const int n_angles, const int n_rays_y,
+				const int n_rays_z, const real grid_offset[3],
+				const real voxel_size[3], const int nx_voxels,
+				const int ny_voxels, const int nz_voxels);
+    template <class pixel_t, class voxel_t>
+    static void backward_project(const real det_y[], const real det_z[],
+				 const real phi[], const real theta[],
+				 pixel_t ray_data[], voxel_t *const vol_data,
+				 const int n_angles, const int n_rays_y,
+				 const int n_rays_z, const real grid_offset[3],
+				 const real voxel_size[3], const int nx_voxels,
+				 const int ny_voxels, const int nz_voxels);
+    // cone beam
     template <class pixel_t, class voxel_t>
     static void forward_project(const real source_x, const real source_y,
 				const real source_z, const real det_x,
@@ -132,6 +150,10 @@ namespace CCPi {
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 			       const voxel_data &voxels) const;
     void apply_beam_hardening();
+
+  private:
+    bool create_phantom();
+    bool build_phantom();
   };
 
   class Nikon_XTek : public cone_beam {

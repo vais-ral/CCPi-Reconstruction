@@ -1,6 +1,6 @@
 
-#ifndef CCPI_XTEK_BACKWARD
-#define CCPI_XTEK_BACKWARD
+#ifndef CCPI_PARALLEL_BACKWARD
+#define CCPI_PARALLEL_BACKWARD
 
 static inline real r_i(const long i, const real r_0, const real step)
 {
@@ -9,10 +9,7 @@ static inline real r_i(const long i, const real r_0, const real step)
 }
 
 template <class pixel_t, class voxel_t>
-void CCPi::instrument::backward_project(const real source_x,
-					const real source_y,
-					const real source_z, const real det_x,
-					const real det_y[], const real det_z[],
+void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 					const real phi[], const real theta[],
 					pixel_t ray_data[],
 					voxel_t *const vol_data,
@@ -27,7 +24,12 @@ void CCPi::instrument::backward_project(const real source_x,
   int i, curr_angle, curr_ray_y, curr_ray_z;
   long ray_offset;
   real start[3], end[3];
-#pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset), firstprivate(source_x, source_y, source_z, det_x, n_rays_y, n_rays_z, n_angles, ray_data, vol_data, nx_voxels, ny_voxels, nz_voxels)
+
+  real det_x = 2.0 * std::max(std::abs(grid_offset[0]),
+			      std::max(std::abs(grid_offset[1]),
+				       std::abs(grid_offset[2])));
+
+#pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset), firstprivate(det_x, n_rays_y, n_rays_z, n_angles, ray_data, vol_data, nx_voxels, ny_voxels, nz_voxels)
   {
     int nz_offset = 0;
     int nz_step = 0;
@@ -78,13 +80,20 @@ void CCPi::instrument::backward_project(const real source_x,
 	  real cos_theta_angle = std::cos(theta[curr_angle]);
 	  real sin_theta_angle = std::sin(theta[curr_angle]);
 	  
-	  real xp = cos_theta_angle * source_x - sin_theta_angle * source_z;
-	  start[0] = cos_phi_angle * xp - sin_phi_angle * source_y;
-	  start[1] = sin_phi_angle * xp + cos_phi_angle * source_y;
-	  start[2] = sin_theta_angle * source_x + cos_theta_angle * source_z;
 	  end[2] = sin_theta_angle * det_x
 	    + cos_theta_angle * det_z[curr_ray_z];
-	  xp = (cos_theta_angle * det_x - sin_theta_angle * det_z[curr_ray_z]);
+	  real xp = (cos_theta_angle * det_x
+		     - sin_theta_angle * det_z[curr_ray_z]);
+	  // dir is mapping of -1,0,0 direction from angles
+	  real dirz = - sin_theta_angle;
+	  real dirp = - cos_theta_angle;
+	  real dirx = cos_phi_angle * dirp;
+	  real diry = sin_phi_angle * dirp;
+
+	  // so the source is located in the direction of dir
+	  // at 2 * detx distance from the detector pixel
+	  // make it 3 * for safety
+	  start[2] = end[2] + 3.0 * det_x * dirz;
 
 	  real delta_z, alpha_z_0, alpha_z_N;
 	  real alpha_z_min, alpha_z_max, alpha_min, alpha_max;
@@ -105,6 +114,8 @@ void CCPi::instrument::backward_project(const real source_x,
 	    for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
 	      end[0] = cos_phi_angle * xp - sin_phi_angle * det_y[curr_ray_y];
 	      end[1] = sin_phi_angle * xp + cos_phi_angle * det_y[curr_ray_y];
+	      start[0] = end[0] + 3.0 * det_x * dirx;
+	      start[1] = end[1] + 3.0 * det_x * diry;
 
 	      /* loop over z values on detector */
 	      project_singledata<pixel_t, voxel_t, true>(start, end,
@@ -121,4 +132,4 @@ void CCPi::instrument::backward_project(const real source_x,
   }
 }
 
-#endif // CCPI_XTEK_BACKWARD
+#endif // CCPI_PARALLEL_BACKWARD

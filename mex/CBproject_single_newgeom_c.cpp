@@ -17,7 +17,7 @@
 #include "mex_types.hpp"
 #include "instruments.hpp"
 #include "project_line.hpp"
-#include "xtek_f.hpp"
+#include "cone_f.hpp"
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {

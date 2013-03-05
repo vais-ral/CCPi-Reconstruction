@@ -24,9 +24,10 @@ cgls.o: cgls.cpp algorithms.hpp instruments.hpp
 
 instruments.o: instruments.cpp instruments.hpp
 
-diamond.o: diamond.cpp instruments.hpp
+diamond.o: diamond.cpp instruments.hpp parallel_b.hpp parallel_f.hpp \
+	project_line.hpp
 
-xtek.o: xtek.cpp instruments.hpp xtek_b.hpp xtek_f.hpp project_line.hpp \
+xtek.o: xtek.cpp instruments.hpp cone_b.hpp cone_f.hpp project_line.hpp \
 	tiff.hpp utils.hpp
 
 results.o: results.cpp results.hpp tiff.hpp
