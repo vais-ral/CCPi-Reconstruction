@@ -1,6 +1,6 @@
 
-#ifndef CCPI_XTEK_FORWARD
-#define CCPI_XTEK_FORWARD
+#ifndef CCPI_CONE_FORWARD
+#define CCPI_CONE_FORWARD
 
 template <class pixel_t, class voxel_t>
 void CCPi::instrument::forward_project(const real source_x, const real source_y,
@@ -60,4 +60,4 @@ void CCPi::instrument::forward_project(const real source_x, const real source_y,
   }
 }
 
-#endif // CCPI_XTEK_FORWARD
+#endif // CCPI_CONE_FORWARD
