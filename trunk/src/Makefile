@@ -1,13 +1,14 @@
 
 CXX = g++
-CXXFLAGS = -g -O2 -ansi -pedantic -Wall -fopenmp
+CXXFLAGS = -g -O2 -ansi -pedantic -Wall -DUSE_TIMER=true -fopenmp
 TIFFINC =
 TIFFLIB = -ltiff
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
 LIBS = $(TIFFLIB)
 
-OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o tiff.o utils.o
+OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o tiff.o \
+	timer.o utils.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -20,7 +21,7 @@ $(OBJECTS): base_types.hpp
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp
 
-cgls.o: cgls.cpp algorithms.hpp instruments.hpp
+cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp
 
 instruments.o: instruments.cpp instruments.hpp
 
@@ -33,5 +34,7 @@ xtek.o: xtek.cpp instruments.hpp cone_b.hpp cone_f.hpp project_line.hpp \
 results.o: results.cpp results.hpp tiff.hpp
 
 tiff.o: tiff.cpp tiff.hpp
+
+timer.o: timer.cpp timer.hpp
 
 utils.o: utils.cpp utils.hpp

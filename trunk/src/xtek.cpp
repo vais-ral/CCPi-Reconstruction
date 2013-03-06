@@ -10,6 +10,11 @@
 #include "cone_b.hpp"
 #include "cone_f.hpp"
 #include "tiff.hpp"
+#include "timer.hpp"
+
+#ifndef USE_TIMER
+#  define USE_TIMER false
+#endif // USE_TIMER
 
 // Nikon XTek instrument
 // 360 degree clockwise sample rotations about vertical axis, cone beam
@@ -324,11 +329,14 @@ void CCPi::cone_beam::forward_project(pixel_type *pixels,
 				      const real width[3], const int nx,
 				      const int ny, const int nz) const
 {
+  timer fptime(USE_TIMER);
   instrument::forward_project(source_x, source_y, source_z, detector_x,
 			      get_h_pixels(), get_v_pixels(), get_phi(),
 			      get_theta(), pixels, voxels, get_num_angles(),
 			      get_num_h_pixels(), get_num_v_pixels(), origin,
 			      width, nx, ny, nz);
+  fptime.accumulate();
+  fptime.output(" forward projection");
 }
 
 void CCPi::cone_beam::backward_project(pixel_type *pixels,
@@ -337,11 +345,14 @@ void CCPi::cone_beam::backward_project(pixel_type *pixels,
 				       const real width[3], const int nx,
 				       const int ny, const int nz) const
 {
+  timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,
 			       get_h_pixels(), get_v_pixels(), get_phi(),
 			       get_theta(), pixels, voxels, get_num_angles(),
 			       get_num_h_pixels(), get_num_v_pixels(), origin,
 			       width, nx, ny, nz);
+  bptime.accumulate();
+  bptime.output("backward projection");
 }
 
 void CCPi::cone_beam::backward_project(voxel_type *const voxels,
@@ -349,9 +360,12 @@ void CCPi::cone_beam::backward_project(voxel_type *const voxels,
 				       const real width[3], const int nx,
 				       const int ny, const int nz) const
 {
+  timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,
 			       get_h_pixels(), get_v_pixels(), get_phi(),
 			       get_theta(), get_pixel_data(), voxels,
 			       get_num_angles(), get_num_h_pixels(),
 			       get_num_v_pixels(), origin, width, nx, ny, nz);
+  bptime.accumulate();
+  bptime.output("backward projection");
 }
