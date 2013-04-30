@@ -101,11 +101,11 @@ void CCPi::project_singledata(const real start[], const real end[],
     real p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
     
     int x_defined, y_defined, z_defined;
-    long i,j,k;
+    long i=0,j=0,k=0;
     
     recon_type alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max, 
 	alpha_z_max, alpha_min, alpha_max, alpha_x, alpha_y, alpha_z, alpha_c;
-    recon_type alpha_x_u, alpha_y_u, alpha_z_u;
+    recon_type alpha_x_u = 0.0, alpha_y_u = 0.0, alpha_z_u = 0.0;
     recon_type l_ij;
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
     long i_step, j_step, k_step;
