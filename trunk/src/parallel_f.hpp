@@ -25,7 +25,7 @@ void CCPi::instrument::forward_project(const real det_y[], const real det_z[],
 			      std::max(std::abs(grid_offset[1]),
 				       std::abs(grid_offset[2])));
 
-#pragma omp parallel for shared(det_y, det_z, ray_data, phi) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset), firstprivate(det_x, vol_data, n_angles, n_rays_y, n_rays_z, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
+#pragma omp parallel for shared(det_y, det_z, ray_data, phi) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset), firstprivate(det_x) schedule(dynamic)
 
   for(curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
 
