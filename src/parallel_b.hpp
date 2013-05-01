@@ -29,7 +29,7 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 			      std::max(std::abs(grid_offset[1]),
 				       std::abs(grid_offset[2])));
 
-#pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset), firstprivate(det_x, n_rays_y, n_rays_z, n_angles, ray_data, vol_data, nx_voxels, ny_voxels, nz_voxels)
+#pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset), firstprivate(det_x)
   {
     int nz_offset = 0;
     int nz_step = 0;
