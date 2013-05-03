@@ -19,6 +19,27 @@
 // Nikon XTek instrument
 // 360 degree clockwise sample rotations about vertical axis, cone beam
 
+static pixel_type linear(const real x1, const real x2, const pixel_type f1,
+			 const pixel_type f2, const real x);
+static pixel_type bilinear(const real x1, const real x2, const real y1,
+			   const real y2, const pixel_type f11,
+			   const pixel_type f12, const pixel_type f21,
+			   const pixel_type f22, const real x, const real y);
+static pixel_type angles_linear(const int ph1, const real h[],
+				const int v_slice, const real angles[],
+				const pixel_type *data, const real new_h,
+				const real new_angle, const int nh,
+				const int na, const int nv);
+static pixel_type angles_bilinear(const int ph1, const real h[],
+				  const int v_slice, const real angles[],
+				  const pixel_type *data, const real new_h,
+				  const real new_angle, const int nh,
+				  const int na, const int nv);
+static pixel_type interpolate2D(const real h[], const int v_slice,
+				const real angles[], const pixel_type *data,
+				const real new_h, const real new_angle,
+				const int nh, const int na, const int nv);
+
 bool CCPi::Nikon_XTek::setup_experimental_geometry(const std::string path,
 						   const std::string file,
 						   const bool phantom)
@@ -72,6 +93,7 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
   bool ok = false;
   // read Xtek .xtekct file
   std::string data_file;
+  char sep = '\0';
   combine_path_and_name(path, file, data_file);
   std::ifstream input(data_file.c_str());
   if (input.good()) {
@@ -120,6 +142,8 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	} else if (strncmp(line, "WhiteLevel", 10) == 0) {
 	  white_level = std::atof(&line[11]);
 	  ndata++;
+	} else if (strncmp(line, "InputSeparator", 14) == 0) {
+	  sep = line[15];
 	} else if (strncmp(line, "Name", 4) == 0) {
 	  while (isspace(line[strlen(line) - 1]))
 	    line[strlen(line) - 1] = '\0';
@@ -161,6 +185,10 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
     input.close();
   } else
     std::cerr << "Open " << file << " failed\n";
+  if (ok) {
+    if (sep != '\0')
+      basename += sep;
+  }
   return ok;
 }
 
@@ -172,11 +200,26 @@ bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
   std::ifstream data(datafile.c_str());
   if (data.good()) {
     real *p = new real[n];
-    // sets of 3 items terminated by ^M, second is the angle.
+    // get first 3 string labels
+    std::string t;
+    data >> t;
+    data >> t;
+    data >> t;
+    // 3 numbers
     real tmp;
+    data >> tmp;
+    data >> tmp;
+    data >> tmp;
+    // now 3 labels for the info we need
+    data >> t;
+    data >> t;
+    data >> t;
+    // sets of 3 items terminated by ^M, second is the angle.
     for (int i = 0; i < n; i++) {
       data >> tmp;
-      data >> p[i];
+      data >> tmp;
+      // everything else is radians
+      p[i] = M_PI * tmp / 180.0;
       data >> tmp;
     }
     data.close();
@@ -310,8 +353,193 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     // scale and take -ve log, due to exponential extinction in sample.
     for (long j = 0; j < n_rays; j++)
       pixels[j] = - std::log(pixels[j] / max_v);
+    find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;
+}
+
+pixel_type linear(const real x1, const real x2, const pixel_type f1,
+		  const pixel_type f2, const real x)
+{
+  return (f1 * (x2 - x) + f2  * (x - x1)) / (x2 - x1);
+}
+
+pixel_type bilinear(const real x1, const real x2, const real y1, const real y2,
+		    const pixel_type f11, const pixel_type f12,
+		    const pixel_type f21, const pixel_type f22,
+		    const real x, const real y)
+{
+  return (f11 * (x2 - x) * (y2 - y) + f21 * (x - x1) * (y2 - y)
+	  + f12 * (x2 - x) * (y - y1) + f22 * (x - x1) * (y - y1)) /
+    ((x2 - x1) * (y2 - y1));
+}
+
+pixel_type angles_linear(const int ph1, const real h[], const int v_slice,
+			 const real angles[], const pixel_type *data,
+			 const real new_h, const real new_angle,
+			 const int nh, const int na, const int nv)
+{
+  int pa1 = 0;
+  for (; pa1 < na - 1; pa1++) {
+    if (angles[pa1 + 1] > new_angle)
+      break;
+  }
+  if (angles[pa1] == new_angle) {
+    return data[ph1 + v_slice * nh + pa1 * nh * nv];
+  } else {
+    // interp pa1 to pa1 + 1
+    if (pa1 == na - 1)
+      return linear(angles[pa1], angles[0] + 2 * M_PI,
+		    data[ph1 + v_slice * nh + pa1 * nh * nv],
+		    data[ph1 + v_slice * nh + 0 * nh * nv],
+		    new_angle);
+    else
+      return linear(angles[pa1], angles[pa1 + 1],
+		    data[ph1 + v_slice * nh + pa1 * nh * nv],
+		    data[ph1 + v_slice * nh + (pa1 + 1) * nh * nv],
+		    new_angle);
+  }
+}
+
+pixel_type angles_bilinear(const int ph1, const real h[], const int v_slice,
+			   const real angles[], const pixel_type *data,
+			   const real new_h, const real new_angle,
+			   const int nh, const int na, const int nv)
+{
+  int pa1 = 0;
+  for (; pa1 < na - 1; pa1++) {
+    if (angles[pa1 + 1] > new_angle)
+      break;
+  }
+  if (angles[pa1] == new_angle) {
+    return linear(h[ph1], h[ph1 + 1],
+		  data[ph1 + v_slice * nh + pa1 * nh * nv],
+		  data[ph1 + 1 + v_slice * nh + pa1 * nh * nv], new_h);
+  } else {
+    // interp pa1 to pa1 + 1
+    if (pa1 == na - 1)
+      return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[0] + 2 * M_PI,
+		      data[ph1 + v_slice * nh + pa1 * nh * nv],
+		      data[ph1 + v_slice * nh + 0 * nh * nv],
+		      data[ph1 + 1 + v_slice * nh + pa1 * nh * nv],
+		      data[ph1 + 1 + v_slice * nh + 0 * nh * nv],
+		      new_h, new_angle);
+    else
+      return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[pa1 + 1],
+		      data[ph1 + v_slice * nh + pa1 * nh * nv],
+		      data[ph1 + v_slice * nh + (pa1 + 1) * nh * nv],
+		      data[ph1 + 1 + v_slice * nh + pa1 * nh * nv],
+		      data[ph1 + 1 + v_slice * nh + (pa1 + 1) * nh * nv],
+		      new_h, new_angle);
+  }
+}
+
+pixel_type interpolate2D(const real h[], const int v_slice, const real angles[],
+			 const pixel_type *data, const real new_h,
+			 const real new_angle, const int nh, const int na,
+			 const int nv)
+{
+  int ph1 = 0;
+  for (; ph1 < nh - 1; ph1++) {
+    if (h[ph1 + 1] > new_h)
+      break;
+  }
+  if (h[ph1] == new_h) {
+    // no need to interpolate h - linear interp angles
+    return angles_linear(ph1, h, v_slice, angles, data, new_h, new_angle,
+			 nh, na, nv);
+  } else {
+    // interp ph1 to ph1 + 1
+    return angles_bilinear(ph1, h, v_slice, angles, data, new_h, new_angle,
+			   nh, na, nv);
+  }
+}
+
+void CCPi::Nikon_XTek::find_centre(const int v_slice)
+{
+  // converted from matlab find_centre which is based on the method described
+  // in T. Liu - "Direct central ray determination in computed microtomography"
+  // Optical Engineering, April 2009, 046501
+  int n_precs = 5;
+  real precision[5] = { 1, 0.1, 0.01, 0.001, 0.0001 };
+  real midpoint = 0.0;
+  int nv = get_num_v_pixels();
+  int nh = get_num_h_pixels();
+  real *h_pixels = get_h_pixels();
+  int na = get_num_angles();
+  real *ph = get_phi();
+  pixel_type *px = get_pixel_data();
+  real distance = get_detector_x() - get_source_x();
+  real *gamma_i = new real[nh];
+  real *beta = new real[nh];
+  real *s2 = new real[nh];
+  for (int i = 0; i < n_precs; i++) {
+    real scor = midpoint - 10.0 * precision[i];
+    real M[21];
+    for (int j = 0; j < 21; j++) {
+      // angle of each ray relative to theoretical central ray
+      // common term arctan(s1/h0) in equations (1) and (2)
+      for (int k = 0; k < nh; k++)
+	gamma_i[k] = std::atan(h_pixels[k] / distance);
+      // angle of assumed centre of rotation to central ray
+      // common term arctan(c0/h0) in equations (1) and (2)
+      real gamma_c = std::atan((midpoint + (j - 10) * precision[i]) / distance);
+      // eqn (1) - Matlab differs from paper in + not -, why?
+      for (int k = 0; k < nh; k++)
+	beta[k] = M_PI + 2.0 * (gamma_i[k] - gamma_c);
+      // eqn (2)
+      for (int k = 0; k < nh; k++)
+        s2[k] = distance * std::tan(2.0 * gamma_c - gamma_i[k]);
+      // do summation on M in eqn (4), only include horizontal values within
+      // the data set so normalise each by the count
+      int count = 0;
+      pixel_type sum = 0;
+      for (int a = 0; a < na; a++) {
+	for (int k = 0; k < nh; k++) {
+	  if (s2[k] >= h_pixels[0] and s2[k] <= h_pixels[nh - 1]) {
+	    real alpha_beta = ph[a] + beta[k];
+	    // can it be < -2pi or > 4pi?
+	    if (alpha_beta < 0.0)
+	      alpha_beta += 2.0 * M_PI;
+	    else if (alpha_beta > 2.0 * M_PI)
+	      alpha_beta -= 2.0 * M_PI;
+	    pixel_type p = interpolate2D(h_pixels, v_slice, ph, px,
+					 s2[k], alpha_beta, nh, na, nv);
+	    // if (p > 0.0) { ?
+	    pixel_type t = px[k + v_slice * nh + a * nh * nv] - p;
+	    sum += t * t;
+	    count++;
+	    //} ?
+	  }
+	}
+      }
+      M[j] = sum / (pixel_type)count;
+    }
+    // minimum value and index
+    int ind_m = -1;
+    real min_m = 1e20;
+    for (int j = 0; j < 21; j++) {
+      if (min_m > M[j]) {
+	ind_m = j;
+	min_m = M[j];
+      }
+    }
+    if (ind_m < 0)
+      std::cerr << "Failure in XTek find centre\n";
+    real scor_m = scor + ind_m * precision[i];
+    std::cout << "Precision " << precision[i] << ": COR = "
+	      << scor_m * get_source_x() / distance << ", M = "
+	      << min_m << '\n';
+    midpoint = scor_m;
+  }
+  delete [] s2;
+  delete [] beta;
+  delete [] gamma_i;
+  // transform centre to required value
+  real y_centre = midpoint * get_source_x() / distance;
+  set_source(get_source_x(), get_source_y() + y_centre, get_source_z());
+  for (int i = 0; i < nh; i++)
+    h_pixels[i] += y_centre;
 }
 
 void CCPi::Nikon_XTek::apply_beam_hardening()

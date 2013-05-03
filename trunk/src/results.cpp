@@ -149,11 +149,10 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
     shift[1] = voxel_origin[1] + voxel_size[1] / 2.0;
     shift[2] = voxel_origin[2] + voxel_size[2] / 2.0;
     // for k.p need to scale by bohr to angstrom
-    fprintf(file, "%12.6f %12.6f %12.6f\n", shift[0] / 0.52917721092,
-	    shift[1] / 0.52917721092, shift[2] / 0.52917721092);
-    fprintf(file, "%12.6f 0.0 0.0\n", voxel_size[0] / 0.52917721092);
-    fprintf(file, "0.0 %12.6f 0.0\n", voxel_size[1] / 0.52917721092);
-    fprintf(file, "0.0 0.0 %12.6f\n", voxel_size[2] / 0.52917721092);
+    fprintf(file, "%12.6f %12.6f %12.6f\n", shift[0], shift[1], shift[2]);
+    fprintf(file, "%12.6f 0.0 0.0\n", voxel_size[0]);
+    fprintf(file, "0.0 %12.6f 0.0\n", voxel_size[1]);
+    fprintf(file, "0.0 0.0 %12.6f\n", voxel_size[2]);
     fprintf(file, "Image\n");
     fwrite(x, sizeof(float), n, file);
     delete [] x;

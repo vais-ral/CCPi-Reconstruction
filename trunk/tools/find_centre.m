@@ -57,7 +57,9 @@ for i = 1:length(precision)
         test = interp2(alpha, s, test_data, angles, s2, 'linear', 0);
         
         nonzero = find(test > 0);
-        M(j) = sum((test(nonzero) - data(nonzero)).^2)*(1/sum(nonzero));
+% BGS surely we want the number of non-zero values for the average,
+% not the sum of their positions
+        M(j) = sum((test(nonzero) - data(nonzero)).^2)*(1/length(nonzero));
         %M(j) = sum((test(:) - data(:)).^2);
     end
     
