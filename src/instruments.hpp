@@ -111,6 +111,11 @@ namespace CCPi {
 			  const real origin[3], const real width[3],
 			  const int nx, const int ny, const int nz) const;
 
+    // Kludge for Matlab interface.
+    void set_params(const real sx, const real sy, const real sz, const real dx,
+		    real dy[], real dz[], real ang[], const int ny,
+		    const int nz, const int nang);
+
   protected:
     real get_source_x() const;
     real get_source_y() const;
@@ -124,7 +129,7 @@ namespace CCPi {
     real source_x;
     real source_y;
     real source_z;
-    // Todo - does this further generalisation?
+    // Todo - does this need further generalisation?
     real detector_x;
   };
 

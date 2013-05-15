@@ -23,5 +23,4 @@
 
 mex mex/CBbackproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
 mex mex/CBproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-%mex mex/tvreg_upc.c c/tv_core.c c/tools.c c/project_singledata.c c/backproject_singledata.c -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -DREAL=double -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-
+mex mex/tvreg_upn_c.cpp src/tv_core.cpp src/instruments.cpp src/timer.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
