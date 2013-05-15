@@ -1,16 +1,7 @@
 
 #include <iostream>
-#include <omp.h>
 #include "base_types.hpp"
 #include "instruments.hpp"
-#include "project_line.hpp"
-#include "parallel_b.hpp"
-#include "parallel_f.hpp"
-#include "timer.hpp"
-
-#ifndef USE_TIMER
-#  define USE_TIMER false
-#endif // USE_TIMER
 
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
@@ -129,10 +120,7 @@ bool CCPi::Diamond::build_phantom()
 
   pixel_type *pixels = create_pixel_data();
   // perform projection step
-  instrument::forward_project(get_h_pixels(), get_v_pixels(),
-			      get_phi(), get_theta(), pixels, x,
-			      get_num_angles(), nh, nv,
-			      image_offset, voxel_size, nx, ny, nz);
+  forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   delete [] x;
   return true;
 }
@@ -170,48 +158,4 @@ void CCPi::Diamond::apply_beam_hardening()
   pixel_type *pixels = get_pixel_data();
   for (long i = 0; i < n_rays; i++)
     pixels[i] = pixels[i] * pixels[i];
-}
-
-void CCPi::parallel_beam::forward_project(pixel_type *pixels,
-					  voxel_type *const voxels,
-					  const real origin[3],
-					  const real width[3], const int nx,
-					  const int ny, const int nz) const
-{
-  timer fptime(USE_TIMER);
-  instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
-			      get_theta(), pixels, voxels, get_num_angles(),
-			      get_num_h_pixels(), get_num_v_pixels(), origin,
-			      width, nx, ny, nz);
-  fptime.accumulate();
-  fptime.output(" forward projection");
-}
-
-void CCPi::parallel_beam::backward_project(pixel_type *pixels,
-					   voxel_type *const voxels,
-					   const real origin[3],
-					   const real width[3], const int nx,
-					   const int ny, const int nz) const
-{
-  timer bptime(USE_TIMER);
-  instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), pixels, voxels, get_num_angles(),
-			       get_num_h_pixels(), get_num_v_pixels(), origin,
-			       width, nx, ny, nz);
-  bptime.accumulate();
-  bptime.output("backward projection");
-}
-
-void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
-					   const real origin[3],
-					   const real width[3], const int nx,
-					   const int ny, const int nz) const
-{
-  timer bptime(USE_TIMER);
-  instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), get_pixel_data(), voxels,
-			       get_num_angles(), get_num_h_pixels(),
-			       get_num_v_pixels(), origin, width, nx, ny, nz);
-  bptime.accumulate();
-  bptime.output("backward projection");
 }

@@ -1,20 +1,12 @@
 
+#include <iostream>
 #include <fstream>
 #include <cstring>
 #include <cctype>
-#include <omp.h>
 #include "base_types.hpp"
 #include "utils.hpp"
 #include "instruments.hpp"
-#include "project_line.hpp"
-#include "cone_b.hpp"
-#include "cone_f.hpp"
 #include "tiff.hpp"
-#include "timer.hpp"
-
-#ifndef USE_TIMER
-#  define USE_TIMER false
-#endif // USE_TIMER
 
 // Nikon XTek instrument
 // 360 degree clockwise sample rotations about vertical axis, cone beam
@@ -310,11 +302,7 @@ bool CCPi::Nikon_XTek::build_phantom()
 
   pixel_type *pixels = create_pixel_data();
   // perform projection step
-  instrument::forward_project(get_source_x(), get_source_y(), get_source_z(),
-			      get_detector_x(), get_h_pixels(), get_v_pixels(),
-			      get_phi(), get_theta(), pixels, x,
-			      get_num_angles(), n_h_pixels, get_num_v_pixels(),
-			      image_offset, voxel_size, nx, ny, nz);
+  forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   delete [] x;
   // Todo - could do with adding noise.
   offset[0] = 0.0;
@@ -549,51 +537,4 @@ void CCPi::Nikon_XTek::apply_beam_hardening()
   pixel_type *pixels = get_pixel_data();
   for (long i = 0; i < n_rays; i++)
     pixels[i] = pixels[i] * pixels[i];
-}
-
-void CCPi::cone_beam::forward_project(pixel_type *pixels,
-				      voxel_type *const voxels,
-				      const real origin[3],
-				      const real width[3], const int nx,
-				      const int ny, const int nz) const
-{
-  timer fptime(USE_TIMER);
-  instrument::forward_project(source_x, source_y, source_z, detector_x,
-			      get_h_pixels(), get_v_pixels(), get_phi(),
-			      get_theta(), pixels, voxels, get_num_angles(),
-			      get_num_h_pixels(), get_num_v_pixels(), origin,
-			      width, nx, ny, nz);
-  fptime.accumulate();
-  fptime.output(" forward projection");
-}
-
-void CCPi::cone_beam::backward_project(pixel_type *pixels,
-				       voxel_type *const voxels,
-				       const real origin[3],
-				       const real width[3], const int nx,
-				       const int ny, const int nz) const
-{
-  timer bptime(USE_TIMER);
-  instrument::backward_project(source_x, source_y, source_z, detector_x,
-			       get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), pixels, voxels, get_num_angles(),
-			       get_num_h_pixels(), get_num_v_pixels(), origin,
-			       width, nx, ny, nz);
-  bptime.accumulate();
-  bptime.output("backward projection");
-}
-
-void CCPi::cone_beam::backward_project(voxel_type *const voxels,
-				       const real origin[3],
-				       const real width[3], const int nx,
-				       const int ny, const int nz) const
-{
-  timer bptime(USE_TIMER);
-  instrument::backward_project(source_x, source_y, source_z, detector_x,
-			       get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), get_pixel_data(), voxels,
-			       get_num_angles(), get_num_h_pixels(),
-			       get_num_v_pixels(), origin, width, nx, ny, nz);
-  bptime.accumulate();
-  bptime.output("backward projection");
 }

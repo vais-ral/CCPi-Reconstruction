@@ -2,7 +2,7 @@
 #ifndef CCPI_PARALLEL_BACKWARD
 #define CCPI_PARALLEL_BACKWARD
 
-static inline real r_i(const long i, const real r_0, const real step)
+static inline real pb_r_i(const long i, const real r_0, const real step)
 {
   // coord at grid index i
   return r_0 + i * step;
@@ -99,8 +99,9 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 	  real alpha_z_min, alpha_z_max, alpha_min, alpha_max;
 
 	  delta_z = end[2] - start[2];
-	  alpha_z_0 = (r_i(0, b_z, voxel_size[2]) - start[2]) / delta_z;
-	  alpha_z_N = (r_i(nz_step, b_z, voxel_size[2]) - start[2]) / delta_z;
+	  alpha_z_0 = (pb_r_i(0, b_z, voxel_size[2]) - start[2]) / delta_z;
+	  alpha_z_N = (pb_r_i(nz_step, b_z, voxel_size[2])
+		       - start[2]) / delta_z;
 	  alpha_z_min = std::min(alpha_z_0, alpha_z_N);
 	  alpha_z_max = std::max(alpha_z_0, alpha_z_N);
 	  alpha_min = std::max(0.0, alpha_z_min);
