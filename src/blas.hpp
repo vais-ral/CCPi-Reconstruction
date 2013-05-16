@@ -2,8 +2,6 @@
 #ifndef BLAS_WRAPPERS
 #define BLAS_WRAPPERS
 
-#ifndef MKL
-
 /* Only implements the simplest version of ddot which is used in this code 
    here, with incrx and incry = 1 hardcoded */
 template <class real_type>
@@ -43,6 +41,64 @@ void dcopy(const long n, const real_type x[], const int incx, real_type y[],
 {
   for (long i = 0; i < n; i++)
     y[i] = x[i];
+}
+
+#if defined(MKL_ILP64)
+
+#include "mkl_cblas.h"
+
+template <> inline
+float ddot(const long n, const float x[], const int incx,
+	   const float y[], const int incy)
+{
+  return cblas_sdot(n, x, incx, y, incy);
+}
+
+template <> inline
+double ddot(const long n, const double x[], const int incx,
+	    const double y[], const int incy)
+{
+  return cblas_ddot(n, x, incx, y, incy);
+}
+
+template <> inline
+float dnrm2(const long n, const float x[], const int incx)
+{
+  return cblas_snrm2(n, x, incx);
+}
+
+template <> inline
+double dnrm2(const long n, const double x[], const int incx)
+{
+  return cblas_dnrm2(n, x, incx);
+}
+
+template <> inline
+void daxpy(const long n, const real alpha, const float x[],
+	   const int incx, float y[], const int incy)
+{
+  cblas_saxpy(n, float(alpha), x, incx, y, incy);
+}
+
+template <> inline
+void daxpy(const long n, const real alpha, const double x[],
+	   const int incx, double y[], const int incy)
+{
+  cblas_daxpy(n, double(alpha), x, incx, y, incy);
+}
+
+template <> inline
+void dcopy(const long n, const float x[], const int incx, float y[],
+	   const int incy)
+{
+  cblas_scopy(n, x, incx, y, incy);
+}
+
+template <> inline
+void dcopy(const long n, const double x[], const int incx, double y[],
+	   const int incy)
+{
+  cblas_dcopy(n, x, incx, y, incy);
 }
 
 #endif // MKL
