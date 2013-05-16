@@ -59,7 +59,7 @@ bool CCPi::tv_regularization(const instrument *device, voxel_data &voxels,
   if (xl and k_max * n_vox < 1e7)
     xlist = new real[n_vox * (k_max + 1)];
 
-  // setp up constraints
+  // setp up constraints - these are correct if constraint == 3
   real cbase = 0.0;
   real dbase = 1.0;
   real *c = &cbase;
