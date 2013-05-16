@@ -428,7 +428,8 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
 /* Functions used for the inverse problems using Nesterov or BB method 
   Project onto the feasible (convex) set. 
    c==1: Unconstrained. 
-   c==2: Lower and upper bounds (elementwise) on x. Inplace. */
+   c==2: Lower and upper bounds (elementwise) on x. Inplace.
+   c==3: as 2 but single value bounds applied whole space. Inplace. */
 void P(voxel_type *y,int ctype,real *d,real *c,int mnl)
 {
   if(ctype==2){ /* c <= x <= d (elementwise) */
@@ -438,6 +439,14 @@ void P(voxel_type *y,int ctype,real *d,real *c,int mnl)
 	y[i]=c[i];
       else if(y[i]>d[i])
 	y[i]=d[i];
+    }
+  } else if(ctype==3){ /* c <= x <= d (elementwise) */
+    register int i=0;
+    for(i=0;i<mnl;i++){
+      if(y[i]<*c)
+	y[i]=*c;
+      else if(y[i]>*d)
+	y[i]=*d;
     }
   }
 }
