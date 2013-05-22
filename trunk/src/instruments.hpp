@@ -74,6 +74,7 @@ namespace CCPi {
 
   protected:
     pixel_type *create_pixel_data();
+    void set_pixel_data(pixel_type *p, const long n);
 
     real *get_phi() const;
     real *get_theta() const;
@@ -157,8 +158,11 @@ namespace CCPi {
     void apply_beam_hardening();
 
   private:
+    std::string name;
+
     bool create_phantom();
     bool build_phantom();
+    bool read_data(const std::string path);
   };
 
   class Nikon_XTek : public cone_beam {

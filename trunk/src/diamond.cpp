@@ -2,6 +2,8 @@
 #include <iostream>
 #include "base_types.hpp"
 #include "instruments.hpp"
+#include "nexus.hpp"
+#include "utils.hpp"
 
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
@@ -9,8 +11,10 @@ bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 {
   if (phantom)
     return create_phantom();
-  else
-    return false; //read_config_file(path, file);
+  else {
+    name = file;
+    return true;
+  }
 }
 
 bool CCPi::Diamond::create_phantom()
@@ -55,7 +59,7 @@ bool CCPi::Diamond::read_scans(const std::string path, const bool phantom)
   if (phantom)
     return build_phantom();
   else
-    return false; //read_images(path);
+    return read_data(path);
 }
 
 bool CCPi::Diamond::build_phantom()
@@ -123,6 +127,50 @@ bool CCPi::Diamond::build_phantom()
   forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   delete [] x;
   return true;
+}
+
+bool CCPi::Diamond::read_data(const std::string path)
+{
+  bool ok = true;
+  std::string fullname;
+  combine_path_and_name(path, name,fullname);
+  pixel_type *pixels = 0;
+  int nh_pixels = 0;
+  int nv_pixels = 0;
+  real *angles = 0;
+  int nangles = 0;
+  real hsize = 0.0;
+  real vsize = 0.0;
+  ok = read_NeXus(pixels, nh_pixels, nv_pixels, angles, nangles, hsize, vsize,
+		  fullname, false);
+  // store data in class
+  real *h_pixels = new real[nh_pixels];
+  int halfp = nh_pixels / 2;
+  h_pixels[0] = halfp * hsize;
+  if (nh_pixels % 2 == 1)
+    h_pixels[0] += hsize / 2.0;
+  for (int i = 1; i < nh_pixels; i++)
+    h_pixels[i] = h_pixels[0] + real(i) * hsize;
+  set_h_pixels(h_pixels, nh_pixels);
+  real *v_pixels = new real[nv_pixels];
+  halfp = nv_pixels / 2;
+  v_pixels[0] = halfp * vsize;
+  if (nv_pixels % 2 == 1)
+    v_pixels[0] += vsize / 2.0;
+  for (int i = 1; i < nv_pixels; i++)
+    v_pixels[i] = v_pixels[0] + real(i) * vsize;
+  set_v_pixels(v_pixels, nv_pixels);
+  set_phi(angles, nangles);
+  long n_rays = nangles * nh_pixels * nv_pixels;
+  set_pixel_data(pixels, n_rays);
+  if (ok) {
+    real max_v = 65535.0;
+    // scale and take -ve log, due to exponential extinction in sample.
+    for (long j = 0; j < n_rays; j++)
+      pixels[j] = - std::log(pixels[j] / max_v);
+    //find_centre(get_num_v_pixels() / 2 + 1);
+  }
+  return ok;
 }
 
 bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
