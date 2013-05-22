@@ -42,6 +42,14 @@ pixel_type *CCPi::instrument::create_pixel_data()
   return pixel_data;
 }
 
+void CCPi::instrument::set_pixel_data(pixel_type *p, const long n)
+{
+  long n_rays = n_angles * n_vertical_pixels * n_horizontal_pixels;
+  if (n != n_rays)
+    std::cerr << "Size mismatch setting pixel data\n";
+  pixel_data = p;
+}
+
 void CCPi::instrument::set_phi(real *p, const int n)
 {
   phi = p;
