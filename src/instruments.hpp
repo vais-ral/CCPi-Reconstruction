@@ -32,7 +32,7 @@ namespace CCPi {
     // parallel beam
     template <class pixel_t, class voxel_t>
     static void forward_project(const real det_y[], const real det_z[],
-				const real phi[], const real theta[],
+				const real phi[],
 				pixel_t ray_data[], voxel_t *const vol_data,
 				const int n_angles, const int n_rays_y,
 				const int n_rays_z, const real grid_offset[3],
@@ -40,7 +40,7 @@ namespace CCPi {
 				const int ny_voxels, const int nz_voxels);
     template <class pixel_t, class voxel_t>
     static void backward_project(const real det_y[], const real det_z[],
-				 const real phi[], const real theta[],
+				 const real phi[],
 				 pixel_t ray_data[], voxel_t *const vol_data,
 				 const int n_angles, const int n_rays_y,
 				 const int n_rays_z, const real grid_offset[3],
@@ -51,7 +51,7 @@ namespace CCPi {
     static void forward_project(const real source_x, const real source_y,
 				const real source_z, const real det_x,
 				const real det_y[], const real det_z[],
-				const real phi[], const real theta[],
+				const real phi[],
 				pixel_t ray_data[], voxel_t *const vol_data,
 				const int n_angles, const int n_rays_y,
 				const int n_rays_z, const real grid_offset[3],
@@ -61,7 +61,7 @@ namespace CCPi {
     static void backward_project(const real source_x, const real source_y,
 				 const real source_z, const real det_x,
 				 const real det_y[], const real det_z[],
-				 const real phi[], const real theta[],
+				 const real phi[],
 				 pixel_t ray_data[], voxel_t *const vol_data,
 				 const int n_angles, const int n_rays_y,
 				 const int n_rays_z, const real grid_offset[3],
@@ -77,7 +77,6 @@ namespace CCPi {
     void set_pixel_data(pixel_type *p, const long n);
 
     real *get_phi() const;
-    real *get_theta() const;
     real *get_h_pixels() const;
     real *get_v_pixels() const;
     int get_num_angles() const;
@@ -86,12 +85,10 @@ namespace CCPi {
 
     void set_h_pixels(real *h_pixels, const int n);
     void set_v_pixels(real *v_pixels, const int n);
-    void set_angles(real *p, real *t, const int n);
     void set_phi(real *p, const int n);
 
   private:
     real *phi;
-    real *theta;
     real *horizontal_pixels;
     real *vertical_pixels;
     int n_angles;
@@ -197,11 +194,6 @@ inline real *CCPi::instrument::get_phi() const
   return phi;
 }
 
-inline real *CCPi::instrument::get_theta() const
-{
-  return theta;
-}
-
 inline real *CCPi::instrument::get_h_pixels() const
 {
   return horizontal_pixels;
@@ -237,13 +229,6 @@ inline void CCPi::instrument::set_v_pixels(real *v_pixels, const int n)
 {
   vertical_pixels = v_pixels;
   n_vertical_pixels = n;
-}
-
-inline void CCPi::instrument::set_angles(real *p, real *t, const int n)
-{
-  phi = p;
-  theta = t;
-  n_angles = n;
 }
 
 inline real CCPi::cone_beam::get_source_x() const

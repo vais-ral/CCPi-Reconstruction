@@ -53,9 +53,6 @@ void CCPi::instrument::set_pixel_data(pixel_type *p, const long n)
 void CCPi::instrument::set_phi(real *p, const int n)
 {
   phi = p;
-  theta = new real[n];
-  for (int i = 0; i < n; i++)
-    theta[i] = 0.0;
   n_angles = n;
 }
 
@@ -80,7 +77,7 @@ void CCPi::cone_beam::forward_project(pixel_type *pixels,
   timer fptime(USE_TIMER);
   instrument::forward_project(source_x, source_y, source_z, detector_x,
 			      get_h_pixels(), get_v_pixels(), get_phi(),
-			      get_theta(), pixels, voxels, get_num_angles(),
+			      pixels, voxels, get_num_angles(),
 			      get_num_h_pixels(), get_num_v_pixels(), origin,
 			      width, nx, ny, nz);
   fptime.accumulate();
@@ -96,7 +93,7 @@ void CCPi::cone_beam::backward_project(pixel_type *pixels,
   timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,
 			       get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), pixels, voxels, get_num_angles(),
+			       pixels, voxels, get_num_angles(),
 			       get_num_h_pixels(), get_num_v_pixels(), origin,
 			       width, nx, ny, nz);
   bptime.accumulate();
@@ -111,7 +108,7 @@ void CCPi::cone_beam::backward_project(voxel_type *const voxels,
   timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,
 			       get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), get_pixel_data(), voxels,
+			       get_pixel_data(), voxels,
 			       get_num_angles(), get_num_h_pixels(),
 			       get_num_v_pixels(), origin, width, nx, ny, nz);
   bptime.accumulate();
@@ -126,7 +123,7 @@ void CCPi::parallel_beam::forward_project(pixel_type *pixels,
 {
   timer fptime(USE_TIMER);
   instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
-			      get_theta(), pixels, voxels, get_num_angles(),
+			      pixels, voxels, get_num_angles(),
 			      get_num_h_pixels(), get_num_v_pixels(), origin,
 			      width, nx, ny, nz);
   fptime.accumulate();
@@ -141,7 +138,7 @@ void CCPi::parallel_beam::backward_project(pixel_type *pixels,
 {
   timer bptime(USE_TIMER);
   instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), pixels, voxels, get_num_angles(),
+			       pixels, voxels, get_num_angles(),
 			       get_num_h_pixels(), get_num_v_pixels(), origin,
 			       width, nx, ny, nz);
   bptime.accumulate();
@@ -155,7 +152,7 @@ void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
 {
   timer bptime(USE_TIMER);
   instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
-			       get_theta(), get_pixel_data(), voxels,
+			       get_pixel_data(), voxels,
 			       get_num_angles(), get_num_h_pixels(),
 			       get_num_v_pixels(), origin, width, nx, ny, nz);
   bptime.accumulate();
