@@ -69,20 +69,15 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
       real b_z = grid_offset[2] + voxel_size[2] * nz_offset;
 
       for (curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
-	real delta_z, alpha_z_0, alpha_z_N;
-	real alpha_z_min, alpha_z_max, alpha_min, alpha_max;
 	end[2] = det_z[curr_ray_z];
 	start[2] = end[2];
 
-	delta_z = end[2] - start[2];
-	alpha_z_0 = (pb_r_i(0, b_z, voxel_size[2]) - start[2]) / delta_z;
-	alpha_z_N = (pb_r_i(nz_step, b_z, voxel_size[2]) - start[2]) / delta_z;
-	alpha_z_min = std::min(alpha_z_0, alpha_z_N);
-	alpha_z_max = std::max(alpha_z_0, alpha_z_N);
-	alpha_min = std::max(0.0, alpha_z_min);
-	alpha_max = std::min(1.0, alpha_z_max);
+	// start == end so delta_z = 0.0
+	real min_z = pb_r_i(0, b_z, voxel_size[2]);
+	real max_z = pb_r_i(nz_step, b_z, voxel_size[2]);
 
-	if (alpha_min < alpha_max) {
+	// make sure the line is with the voxel box range
+	if (min_z <= end[2] and end[2] < max_z) {
 	  for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
 	    /* rotate source and detector positions by current angle */
 	    cos_curr_angle = std::cos(phi[curr_angle]);
