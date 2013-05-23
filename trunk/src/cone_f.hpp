@@ -6,8 +6,7 @@ template <class pixel_t, class voxel_t>
 void CCPi::instrument::forward_project(const real source_x, const real source_y,
 				       const real source_z, const real det_x,
 				       const real det_y[], const real det_z[],
-				       const real phi[], const real theta[],
-				       pixel_t ray_data[],
+				       const real phi[], pixel_t ray_data[],
 				       voxel_t *const vol_data,
 				       const int n_angles, const int n_rays_y,
 				       const int n_rays_z,
@@ -19,34 +18,28 @@ void CCPi::instrument::forward_project(const real source_x, const real source_y,
 {
   int curr_angle, curr_ray_y, curr_ray_z;
   long ray_offset;
+  real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
-#pragma omp parallel for shared(det_y, det_z, ray_data, phi) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset) schedule(dynamic)
+#pragma omp parallel for shared(det_y, det_z, ray_data, phi) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset, cos_curr_angle, sin_curr_angle) schedule(dynamic)
 
   for(curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
+    start[2] = source_z;
+    end[2] = det_z[curr_ray_z];
 
     for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
-      // rotate source and detector positions by current angle
-      // these are -ve of angles since they apply to the object and we
-      // are inverting the transformation onto the source/detector
-      // theta 0 is xy plane, +ve tilts object up wrt source -ve down
-      real cos_phi_angle = std::cos(phi[curr_angle]);
-      real sin_phi_angle = std::sin(phi[curr_angle]);
-      real cos_theta_angle = std::cos(theta[curr_angle]);
-      real sin_theta_angle = std::sin(theta[curr_angle]);
+      /* rotate source and detector positions by current angle */
+      cos_curr_angle = std::cos(phi[curr_angle]);
+      sin_curr_angle = std::sin(phi[curr_angle]);
 
-      real xp = cos_theta_angle * source_x - sin_theta_angle * source_z;
-      start[0] = cos_phi_angle * xp - sin_phi_angle * source_y;
-      start[1] = sin_phi_angle * xp + cos_phi_angle * source_y;
-      start[2] = sin_theta_angle * source_x + cos_theta_angle * source_z;
-      end[2] = sin_theta_angle * det_x + cos_theta_angle * det_z[curr_ray_z];
-      xp = (cos_theta_angle * det_x - sin_theta_angle * det_z[curr_ray_z]);
+      start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
+      start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
 
       ray_offset = curr_angle * n_rays_y * n_rays_z + curr_ray_z*n_rays_y;
 
       /* loop over y values on detector */
       for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
-	end[0] = cos_phi_angle * xp - sin_phi_angle * det_y[curr_ray_y];
-	end[1] = sin_phi_angle * xp + cos_phi_angle * det_y[curr_ray_y];
+	end[0] = cos_curr_angle * det_x - sin_curr_angle * det_y[curr_ray_y];
+	end[1] = sin_curr_angle * det_x + cos_curr_angle * det_y[curr_ray_y];
 
 	/* loop over z values on detector */
 
