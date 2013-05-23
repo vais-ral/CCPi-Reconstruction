@@ -9,7 +9,7 @@ namespace CCPi {
 
   void write_results(const std::string basename, const voxel_data &voxels,
 		     const real voxel_origin[3], const real voxel_size[3],
-		     const output_format format);
+		     const output_format format, const bool clamp);
 
 }
 

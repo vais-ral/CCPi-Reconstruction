@@ -27,6 +27,7 @@ int main()
   CCPi::algorithms algorithm = CCPi::alg_CGLS;
   CCPi::instrument *instrument = 0;
   CCPi::output_format write_format = CCPi::bgs_float_dump;
+  bool clamp_output = true;
   std::string output_name = "phantom";
   std::string data_file =
     "/home/bgs/scratch/ccpi/Bird_skull/Bird_skull_2001.xtekct";
@@ -83,7 +84,7 @@ int main()
 	}
 	if (ok)
 	  CCPi::write_results(output_name, voxels, voxel_origin,
-			      voxel_size, write_format);
+			      voxel_size, write_format, clamp_output);
       }
     }
   }
