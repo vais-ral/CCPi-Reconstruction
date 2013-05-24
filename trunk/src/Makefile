@@ -40,9 +40,9 @@ tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp
 
 tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp
 
-tiff.o: tiff.cpp tiff.hpp
+tiff.o: tiff.cpp tiff.hpp timer.hpp
 
-nexus.o: nexus.cpp nexus.hpp
+nexus.o: nexus.cpp nexus.hpp timer.hpp
 
 timer.o: timer.cpp timer.hpp
 

@@ -4,6 +4,11 @@
 
 #include "base_types.hpp"
 #include "tiff.hpp"
+#include "timer.hpp"
+
+#ifndef USE_TIMER
+#  define USE_TIMER false
+#endif // USE_TIMER
 
 bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
 		     const int n_h_pixels, const int n_v_pixels)
@@ -14,6 +19,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
     ok = false;
     std::cerr << "Error opening " << filename << '\n';
   } else {
+    timer ldtime(USE_TIMER);
     if (TIFFIsTiled(tif)) {
       ok = false;
       std::cerr << "tiled image not supported in XTek reader\n";
@@ -92,6 +98,8 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
       }
     }
     TIFFClose(tif);
+    ldtime.accumulate();
+    ldtime.output("Tiff load");
   }
   return ok;
 }

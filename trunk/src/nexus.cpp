@@ -6,12 +6,18 @@
 #include "NeXusException.hpp"
 #include "base_types.hpp"
 #include "nexus.hpp"
+#include "timer.hpp"
+
+#ifndef USE_TIMER
+#  define USE_TIMER false
+#endif // USE_TIMER
 
 bool CCPi::read_NeXus(pixel_type * &pixels, int &nh_pixels, int &nv_pixels,
 		      real * &angles, int &nangles, real &hsize, real &vsize,
 		      const std::string filename, const bool all_angles)
 {
   bool ok = true;
+  timer ldtime(USE_TIMER);
   NeXus::File input(filename);
   // catch exception if open/construct failed?
   /*
@@ -221,6 +227,7 @@ bool CCPi::read_NeXus(pixel_type * &pixels, int &nh_pixels, int &nv_pixels,
 	      pixels = new pixel_type[long(nangles) * long(sizes[1])
 				      * long(sizes[2])];
 	      uint16_t *ptr = new uint16_t[sizes[1] * sizes[2]];
+	      long offset = sizes[1] * sizes[2];
 	      for (long i = min_angle; i < max_angle; i++) {
 		index[0] = i;
 		input.getSlab(ptr, index, sizes);
@@ -229,10 +236,10 @@ bool CCPi::read_NeXus(pixel_type * &pixels, int &nh_pixels, int &nv_pixels,
 		// way the data is taken it doesn't make much sense for
 		// angles to vary fastest, so C storage order I guess
 		// should we check for an offset attribute?
-		for (int j = 0; j < sizes[1]; j++) {
-		  for (int k = 0; k < sizes[2]; k++) {
-		  pixels[j + k * sizes[1] + i * sizes[1] * sizes[2]] =
-		    pixel_type(ptr[j * sizes[2] + k]);
+		for (long j = 0; j < sizes[1]; j++) {
+		  for (long k = 0; k < sizes[2]; k++) {
+		    pixels[j + k * sizes[1] + (i - min_angle) * offset] =
+		      pixel_type(ptr[j * sizes[2] + k]);
 		  }
 		}
 	      }
@@ -247,6 +254,8 @@ bool CCPi::read_NeXus(pixel_type * &pixels, int &nh_pixels, int &nv_pixels,
     }
     input.closeGroup();
   }
+  ldtime.accumulate();
+  ldtime.output("NeXus load");
   // destructor closes file
   return ok;
 }
