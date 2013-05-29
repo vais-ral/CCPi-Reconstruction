@@ -20,7 +20,7 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 					const int ny_voxels,
 					const int nz_voxels)
 {
-  int i, curr_angle, curr_ray_y, curr_ray_z;
+  int curr_angle, curr_ray_y, curr_ray_z;
   long ray_offset;
   real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
@@ -38,43 +38,24 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
     int nzblocks = nthreads;
     int nz_size = nz_voxels / nzblocks;
     int extra = nz_voxels - nz_size * nzblocks;
-    int half = (nthreads - 1) / 2;
-    if (threadid <= half) {
-      extra = (extra + 1) / 2;
-      for (i = 0; i <= half; i++) {
-	if (i > half - extra)
-	  nz_step = nz_size + 1;
-	else
-	  nz_step = nz_size;
-	if (i == threadid)
-	  break;
-	nz_offset += nz_step;
-      }
+    if (threadid < extra) {
+      nz_step = nz_size + 1;
+      nz_offset = threadid * nz_step;
     } else {
-      nz_offset = nz_voxels;
-      extra = extra / 2;
-      for (i = nthreads - 1; i > half; i--) {
-	if (i <= half + extra)
-	  nz_step = nz_size + 1;
-	else
-	  nz_step = nz_size;
-	nz_offset -= nz_step;
-	if (i == threadid)
-	  break;
-      }
+      nz_step = nz_size;
+      nz_offset = threadid * nz_size + extra;
     }
 
     if (nz_step > 0) {
       //local_opts.im_size_z = nz_step;
       real b_z = grid_offset[2] + voxel_size[2] * nz_offset;
+      // start == end so delta_z = 0.0
+      real min_z = pb_r_i(0, b_z, voxel_size[2]);
+      real max_z = pb_r_i(nz_step, b_z, voxel_size[2]);
 
       for (curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
 	end[2] = det_z[curr_ray_z];
 	start[2] = end[2];
-
-	// start == end so delta_z = 0.0
-	real min_z = pb_r_i(0, b_z, voxel_size[2]);
-	real max_z = pb_r_i(nz_step, b_z, voxel_size[2]);
 
 	// make sure the line is with the voxel box range
 	if (min_z <= end[2] and end[2] < max_z) {

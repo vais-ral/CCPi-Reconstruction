@@ -146,17 +146,17 @@ bool CCPi::Diamond::read_data(const std::string path)
   // store data in class
   real *h_pixels = new real[nh_pixels];
   int halfp = nh_pixels / 2;
-  h_pixels[0] = halfp * hsize;
+  h_pixels[0] = - halfp * hsize;
   if (nh_pixels % 2 == 1)
-    h_pixels[0] += hsize / 2.0;
+    h_pixels[0] -= hsize / 2.0;
   for (int i = 1; i < nh_pixels; i++)
     h_pixels[i] = h_pixels[0] + real(i) * hsize;
   set_h_pixels(h_pixels, nh_pixels);
   real *v_pixels = new real[nv_pixels];
   halfp = nv_pixels / 2;
-  v_pixels[0] = halfp * vsize;
+  v_pixels[0] = - halfp * vsize;
   if (nv_pixels % 2 == 1)
-    v_pixels[0] += vsize / 2.0;
+    v_pixels[0] -= vsize / 2.0;
   for (int i = 1; i < nv_pixels; i++)
     v_pixels[i] = v_pixels[0] + real(i) * vsize;
   set_v_pixels(v_pixels, nv_pixels);
@@ -186,13 +186,14 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
   real hmax = h_pixels[nh - 1] + (h_pixels[1] - h_pixels[0]);
   real vmin = std::abs(v_pixels[0]);
   real vmax = v_pixels[nv - 1] + (v_pixels[1] - v_pixels[0]);
-  real hlim = std::max(hmax, hmin);
+   real hlim = std::max(hmax, hmin);
   real vlim = std::max(vmax, vmin);
-  real lim = std::max(hlim, vlim);
-  real size = 2.0 * lim / real(s[0]);
-  voxel_size[0] = size;
-  voxel_size[1] = size;
-  voxel_size[2] = size;
+  int hs = std::max(int(s[0]), int(s[1]));
+  real hsize = 2.0 * hlim / real(hs);
+  real vsize = 2.0 * vlim / real(s[2]);
+  voxel_size[0] = hsize;
+  voxel_size[1] = hsize;
+  voxel_size[2] = vsize;
   voxel_origin[0] = -voxel_size[0] * real(s[0]) / 2.0; // + offset[0];
   voxel_origin[1] = -voxel_size[1] * real(s[1]) / 2.0; // + offset[1];
   voxel_origin[2] = -voxel_size[2] * real(s[2]) / 2.0; // + offset[2];
