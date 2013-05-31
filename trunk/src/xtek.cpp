@@ -339,8 +339,12 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     */
     real max_v = 65535.0;
     // scale and take -ve log, due to exponential extinction in sample.
-    for (long j = 0; j < n_rays; j++)
-      pixels[j] = - std::log(pixels[j] / max_v);
+    for (long j = 0; j < n_rays; j++) {
+      if (pixels[j] < 1.0)
+	pixels[j] = - std::log(0.00001 / max_v);
+      else
+	pixels[j] = - std::log(pixels[j] / max_v);
+    }
     find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;

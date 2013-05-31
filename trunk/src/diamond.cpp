@@ -161,13 +161,17 @@ bool CCPi::Diamond::read_data(const std::string path)
     v_pixels[i] = v_pixels[0] + real(i) * vsize;
   set_v_pixels(v_pixels, nv_pixels);
   set_phi(angles, nangles);
-  long n_rays = nangles * nh_pixels * nv_pixels;
+  long n_rays = long(nangles) * long(nh_pixels) * long(nv_pixels);
   set_pixel_data(pixels, n_rays);
   if (ok) {
     real max_v = 65535.0;
     // scale and take -ve log, due to exponential extinction in sample.
-    for (long j = 0; j < n_rays; j++)
-      pixels[j] = - std::log(pixels[j] / max_v);
+    for (long j = 0; j < n_rays; j++) {
+      if (pixels[j] < 1.0)
+	pixels[j] = - std::log(0.00001 / max_v);
+      else
+	pixels[j] = - std::log(pixels[j] / max_v);
+    }
     //find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;

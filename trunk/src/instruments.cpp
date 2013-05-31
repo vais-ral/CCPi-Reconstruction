@@ -27,7 +27,7 @@
 
 long CCPi::instrument::get_data_size() const
 {
-  return n_angles * n_vertical_pixels * n_horizontal_pixels;
+  return long(n_angles) * long(n_vertical_pixels) * long(n_horizontal_pixels);
 }
 
 pixel_type *const CCPi::instrument::get_pixel_data() const
@@ -37,14 +37,16 @@ pixel_type *const CCPi::instrument::get_pixel_data() const
 
 pixel_type *CCPi::instrument::create_pixel_data()
 {
-  long n_rays = n_angles * n_vertical_pixels * n_horizontal_pixels;
+  long n_rays = long(n_angles) * long(n_vertical_pixels)
+    * long(n_horizontal_pixels);
   pixel_data = new pixel_type[n_rays];
   return pixel_data;
 }
 
 void CCPi::instrument::set_pixel_data(pixel_type *p, const long n)
 {
-  long n_rays = n_angles * n_vertical_pixels * n_horizontal_pixels;
+  long n_rays = long(n_angles) * long(n_vertical_pixels)
+    * long(n_horizontal_pixels);
   if (n != n_rays)
     std::cerr << "Size mismatch setting pixel data\n";
   pixel_data = p;
