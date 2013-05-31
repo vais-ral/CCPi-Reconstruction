@@ -214,14 +214,14 @@ bool CCPi::read_NeXus(pixel_type * &pixels, int &nh_pixels, int &nv_pixels,
 	      ok = false;
 	      std::cerr << "Unexpected data range\n";
 	    } else {
-	      std::vector<int> index(3);
-	      std::vector<int> sizes(3);
+	      std::vector<long> index(3);
+	      std::vector<long> sizes(3);
 	      index[0] = 0;
 	      index[1] = 0;
 	      index[2] = 0;
 	      sizes[0] = 1;
-	      sizes[1] = (int)info.dims[1];
-	      sizes[2] = (int)info.dims[2];
+	      sizes[1] = (long)info.dims[1];
+	      sizes[2] = (long)info.dims[2];
 	      nh_pixels = sizes[1];
 	      nv_pixels = sizes[2];
 	      pixels = new pixel_type[long(nangles) * long(sizes[1])
