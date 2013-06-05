@@ -24,6 +24,8 @@ namespace CCPi {
 					     const bool phantom = false) = 0;
     virtual bool read_scans(const std::string path,
 			    const bool phantom = false) = 0;
+    int get_num_h_pixels() const;
+    int get_num_v_pixels() const;
     virtual bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 				       const voxel_data &voxels) const = 0;
     virtual void apply_beam_hardening() = 0;
@@ -96,8 +98,6 @@ namespace CCPi {
     real *get_h_pixels() const;
     real *get_v_pixels() const;
     int get_num_angles() const;
-    int get_num_h_pixels() const;
-    int get_num_v_pixels() const;
 
     void set_h_pixels(real *h_pixels, const int n);
     void set_v_pixels(real *v_pixels, const int n);
