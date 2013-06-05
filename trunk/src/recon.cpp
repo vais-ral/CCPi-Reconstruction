@@ -22,6 +22,7 @@ int main()
   // Todo - usage messages if started up wrong?
   bool phantom = false;
   bool beam_harden = false;
+  bool fast_projection = false;
   int niterations = 5;
   CCPi::devices device = CCPi::dev_Nikon_XTek;
   CCPi::algorithms algorithm = CCPi::alg_CGLS;
@@ -66,6 +67,9 @@ int main()
 					    voxels)) {      
 	if (beam_harden)
 	  instrument->apply_beam_hardening();
+	if (fast_projection)
+	  instrument->setup_projection_matrix(voxel_origin, voxel_size,
+					      nx_voxels, ny_voxels, nz_voxels);
 	bool ok = false;
 	switch (algorithm) {
 	case CCPi::alg_FDK:
