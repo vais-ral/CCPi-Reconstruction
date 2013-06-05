@@ -32,9 +32,7 @@ int main()
   std::string output_name = "phantom";
   std::string data_file =
     "/home/bgs/scratch/ccpi/Bird_skull/Bird_skull_2001.xtekct";
-  int nx_voxels = 500;
-  int ny_voxels = 500;
-  int nz_voxels = 500;
+  const int pixels_per_voxel = 4;
   // Todo - get stuff rather than the above test defaults here
   switch (device) {
   case CCPi::dev_Diamond_I13:
@@ -50,19 +48,26 @@ int main()
   std::string path;
   std::string filename;
   CCPi::split_path_and_name(data_file, path, filename);
-  voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
-		    boost::fortran_storage_order());
-  for (int i = 0; i < nz_voxels; i++) {
-    for (int j = 0; j < ny_voxels; j++) {
-      for (int k = 0; k < nx_voxels; k++) {
-	voxels[k][j][i] = 0.0;
-      }
-    }
-  }
-  real voxel_origin[3];
-  real voxel_size[3];
   if (instrument->setup_experimental_geometry(path, filename, phantom)) {
     if (instrument->read_scans(path, phantom)) {
+      if (instrument->get_num_h_pixels() % pixels_per_voxel != 0)
+	std::cerr << "Number of horizontal pixels doesn't match voxels\n";
+      int nx_voxels = instrument->get_num_h_pixels() / pixels_per_voxel;
+      int ny_voxels = nx_voxels;
+      if (instrument->get_num_v_pixels() % pixels_per_voxel != 0)
+	std::cerr << "Number of vertical pixels doesn't match voxels\n";
+      int nz_voxels = instrument->get_num_v_pixels() / pixels_per_voxel;
+      voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
+			boost::fortran_storage_order());
+      for (int i = 0; i < nz_voxels; i++) {
+	for (int j = 0; j < ny_voxels; j++) {
+	  for (int k = 0; k < nx_voxels; k++) {
+	    voxels[k][j][i] = 0.0;
+	  }
+	}
+      }
+      real voxel_origin[3];
+      real voxel_size[3];
       if (instrument->finish_voxel_geometry(voxel_origin, voxel_size,
 					    voxels)) {      
 	if (beam_harden)
