@@ -2,7 +2,18 @@
 #ifndef CCPI_RECON_INSTRUMENTS
 #define CCPI_RECON_INSTRUMENTS
 
+#include <map>
+
 namespace CCPi {
+
+  struct map_index {
+    int x;
+    int y;
+
+    bool operator < (const map_index &b) const;
+  };
+
+  typedef std::map<map_index, real> projection_map;
 
   enum devices { dev_Diamond_I13, dev_Nikon_XTek };
 
@@ -28,6 +39,11 @@ namespace CCPi {
 				  const real origin[3], const real width[3],
 				  const int nx, const int ny,
 				  const int nz) const = 0;
+
+    virtual void setup_projection_matrix(const real origin[3],
+					 const real width[3],
+					 const int nx, const int ny,
+					 const int nz) = 0;
 
     // parallel beam
     template <class pixel_t, class voxel_t>
@@ -109,6 +125,10 @@ namespace CCPi {
 			  const real origin[3], const real width[3],
 			  const int nx, const int ny, const int nz) const;
 
+    void setup_projection_matrix(const real origin[3], const real width[3],
+				 const int nx, const int ny,
+				 const int nz);
+
     // Kludge for Matlab interface.
     void set_params(const real sx, const real sy, const real sz, const real dx,
 		    real dy[], real dz[], real ang[], const int ny,
@@ -133,6 +153,8 @@ namespace CCPi {
 
   class parallel_beam : public instrument {
   public:
+    parallel_beam();
+
     void forward_project(pixel_type *pixels, voxel_type *const voxels,
 			 const real origin[3], const real width[3],
 			 const int nx, const int ny, const int nz) const;
@@ -142,6 +164,47 @@ namespace CCPi {
     void backward_project(voxel_type *const voxels,
 			  const real origin[3], const real width[3],
 			  const int nx, const int ny, const int nz) const;
+
+    void setup_projection_matrix(const real origin[3], const real width[3],
+				 const int nx, const int ny,
+				 const int nz);
+
+  private:
+    bool has_projection_matrix;
+    real **forward_data;
+    int **forward_x;
+    int **forward_y;
+    int *forward_sizes;
+    real **backward_data;
+    int **backward_angles;
+    int **backward_h;
+    int *backward_sizes;
+
+    static void map_2Dprojection(const real start[], const real end[],
+				 const real b_x, const real b_y,
+				 const real b_z, const real d_x,
+				 const real d_y, const real d_z,
+				 const int im_size_x, const int im_size_y,
+				 const int im_size_z, const long z_offset,
+				 projection_map &map);
+    void setup_2D_matrix(const real det_y[], const real phi[],
+			 const int n_angles, const int n_rays_y,
+			 const real grid_offset[3],
+			 const real voxel_size[3], const int nx_voxels,
+			 const int ny_voxels, const int nz_voxels);
+    void forward_project_matrix(const real det_z[], pixel_type ray_data[],
+				voxel_type *const vol_data, const int n_angles,
+				const int n_rays_y, const int n_rays_z,
+				const real grid_offset[3],
+				const real voxel_size[3], const int nx_voxels,
+				const int ny_voxels, const int nz_voxels) const;
+    void backward_project_matrix(const real det_z[], pixel_type ray_data[],
+				 voxel_type *const vol_data, const int n_angles,
+				 const int n_rays_y, const int n_rays_z,
+				 const real grid_offset[3],
+				 const real voxel_size[3], const int nx_voxels,
+				 const int ny_voxels,
+				 const int nz_voxels) const;
   };
 
   class Diamond : public parallel_beam {
@@ -187,6 +250,16 @@ namespace CCPi {
     void find_centre(const int v_slice);
   };
 
+}
+
+inline bool CCPi::map_index::operator < (const map_index &b) const
+{
+  if (x < b.x)
+    return true;
+  else if (x == b.x)
+    return (y < b.y);
+  else
+    return false;
 }
 
 inline real *CCPi::instrument::get_phi() const
@@ -262,6 +335,13 @@ inline void CCPi::cone_beam::set_source(const real x, const real y,
 inline void CCPi::cone_beam::set_detector(const real x)
 {
   detector_x = x;
+}
+
+inline CCPi::parallel_beam::parallel_beam()
+  : has_projection_matrix(false), forward_data(0), forward_x(0), forward_y(0),
+    forward_sizes(0), backward_data(0), backward_angles(0), backward_h(0),
+    backward_sizes(0)
+{
 }
 
 #endif // CCPI_RECON_INSTRUMENTS
