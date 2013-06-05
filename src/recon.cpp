@@ -33,6 +33,12 @@ int main()
   std::string data_file =
     "/home/bgs/scratch/ccpi/Bird_skull/Bird_skull_2001.xtekct";
   const int pixels_per_voxel = 4;
+  // Todo - improve for TVReg
+  const real alpha = 0.005;
+  const real tau = 1e-4;
+  const real l = 6930;
+  const real mu = 0.5;
+  const real tv_reg_constraint = 3;
   // Todo - get stuff rather than the above test defaults here
   switch (device) {
   case CCPi::dev_Diamond_I13:
@@ -85,7 +91,9 @@ int main()
 					 voxel_size, niterations);
 	  break;
 	case CCPi::alg_TVreg:
-	  std::cerr << "ERROR: TVreg not implmented - Todo\n";
+	  ok = CCPi::tv_regularization(instrument, voxels, voxel_origin,
+				       voxel_size, alpha, tau, l, mu,
+				       tv_reg_constraint);
 	  break;
 	default:
 	  std::cerr << "ERROR: Unknown algorithm\n";
