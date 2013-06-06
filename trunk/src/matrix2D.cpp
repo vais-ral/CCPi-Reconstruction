@@ -427,6 +427,7 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
 
 void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 					  const int n_angles,
+					  const int n_rays_z,
 					  const int n_rays_y,
 					  const real grid_offset[3],
 					  const real voxel_size[3],
@@ -448,10 +449,10 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   start[2] = end[2];
 
   // generate forward projections.
-  forward_data = new real *[n_rays_y * n_angles];
-  forward_x = new int *[n_rays_y * n_angles];
-  forward_y = new int *[n_rays_y * n_angles];
-  forward_sizes = new int[n_rays_y * n_angles];
+  real **forward_data = new real *[n_rays_y * n_angles];
+  int **forward_x = new int *[n_rays_y * n_angles];
+  int **forward_y = new int *[n_rays_y * n_angles];
+  int *forward_sizes = new int[n_rays_y * n_angles];
 
   long total = 0;
   // Todo parallelize?
@@ -500,58 +501,45 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
     }
   }
 
-  // produce backward projections from forward data
-  backward_data = new real *[nx_voxels * ny_voxels];
-  backward_angles = new int *[nx_voxels * ny_voxels];
-  backward_h = new int *[nx_voxels * ny_voxels];
-  backward_sizes = new int[nx_voxels * ny_voxels];
-
-  /* this form seems to costly in memory, although faster
-  std::vector<projection_map> mapping(nx_voxels * ny_voxels);
-  int p = 0;
-  map_index m;
+  // forward matrix - the pixels produced have to be offset by z
+  // MKL 0 indexed coordinate format, CSR is a bit tricky as needs all rows
+  // even though we only want a 2D subset (its because of z in angles,z,y)
+  matrix_size = total;
+  forward_matrix = new real[total];
+  forward_cols = new long[total];
+  forward_rows = new long[total];
+  long column = 0;
+  long row = 0;
+  long index = 0;
+  offset = 0;
   for (curr_angle = 0; curr_angle < n_angles; curr_angle++) {
     for (curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
-      for (int i = 0; i < forward_sizes[p]; i++) {
-	offset = forward_y[p][i] * nx_voxels + forward_x[p][i];
-	m.x = curr_angle;
-	m.y = curr_ray_y;
-	mapping[offset].insert(std::make_pair(m, forward_data[p][i]));
-      }
-      p++;
-    }
-  }
-
-  offset = 0;
-  for (long y = 0; y < ny_voxels; y++) {
-    std::cerr << "b " << y << '\n';
-    for (long x = 0; x < nx_voxels; x++) {
-      int sz = (int)mapping[offset].size();
-      backward_sizes[offset] = sz;
-      if (sz > 0) {
-	total += sz;
-	backward_data[offset] = new real[sz];
-	backward_angles[offset] = new int[sz];
-	backward_h[offset] = new int[sz];
-	int i = 0;
-	for (projection_map::const_iterator ptr = mapping[offset].begin();
-	     ptr != mapping[offset].end(); ++ptr) {
-	  backward_data[offset][i] = ptr->second;
-	  backward_angles[offset][i] = ptr->first.x;
-	  backward_h[offset][i] = ptr->first.y;
-	  i++;
+      row = curr_angle * n_rays_y * n_rays_z + curr_ray_y;
+      if (forward_sizes[offset] > 0) {
+	for (int i = 0; i < forward_sizes[offset]; i++) {
+	  column = forward_y[offset][i] * nx_voxels + forward_x[offset][i];
+	  forward_matrix[index] = forward_data[offset][i];
+	  forward_cols[index] = column;
+	  forward_rows[index] = row;
+	  index++;
 	}
-      } else {
-	backward_data[offset] = 0;
-	backward_angles[offset] = 0;
-	backward_h[offset] = 0;
+	
       }
       offset++;
     }
   }
-  */
+
+  // produce backward projections from forward data - since we have packed
+  // y,x memory order we can use CSR format
+  backward_matrix = new real[total];
+  backward_cols = new long[total];
+  backward_rowb = new long[nx_voxels * ny_voxels];
+  backward_rowe = new long[nx_voxels * ny_voxels];
 
   long count = 0;
+  column = 0;
+  row = 0;
+  index = 0;
   offset = 0;
   // store last position to reduce search loop
   std::vector<int> position(n_angles * n_rays_y);
@@ -580,29 +568,32 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 
     for (long x = 0; x < nx_voxels; x++) {
       int sz = (int)mapping[x].size();
-      backward_sizes[offset] = sz;
+      backward_rowb[offset] = index;
       if (sz > 0) {
 	count += sz;
-	backward_data[offset] = new real[sz];
-	backward_angles[offset] = new int[sz];
-	backward_h[offset] = new int[sz];
-	int i = 0;
 	for (projection_map::const_iterator ptr = mapping[x].begin();
 	     ptr != mapping[x].end(); ++ptr) {
-	  backward_data[offset][i] = ptr->second;
-	  backward_angles[offset][i] = ptr->first.x;
-	  backward_h[offset][i] = ptr->first.y;
-	  i++;
+	  column = ptr->first.x * n_rays_y * n_rays_z + ptr->first.y;
+	  backward_matrix[index] = ptr->second;
+	  backward_cols[index] = column;
+	  index++;
 	}
-      } else {
-	backward_data[offset] = 0;
-	backward_angles[offset] = 0;
-	backward_h[offset] = 0;
       }
+      backward_rowe[offset] = index;
       offset++;
     }
   }
-
+  for (int i = 0; i < n_angles * n_rays_y; i++) {
+    if (forward_sizes[i] > 0) {
+      delete [] forward_y[i];
+      delete [] forward_x[i];
+      delete [] forward_data[i];
+    }
+  }
+  delete [] forward_sizes;
+  delete [] forward_y;
+  delete [] forward_x;
+  delete [] forward_data;
 #ifdef USE_TIMER
   std::cout << "Total matrix data is " << total << ' ' << count << '\n';
 #endif // USE_TIMER

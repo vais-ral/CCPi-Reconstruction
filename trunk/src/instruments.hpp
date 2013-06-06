@@ -171,14 +171,14 @@ namespace CCPi {
 
   private:
     bool has_projection_matrix;
-    real **forward_data;
-    int **forward_x;
-    int **forward_y;
-    int *forward_sizes;
-    real **backward_data;
-    int **backward_angles;
-    int **backward_h;
-    int *backward_sizes;
+    long matrix_size;
+    real *forward_matrix;
+    long *forward_cols;
+    long *forward_rows;
+    real *backward_matrix;
+    long *backward_cols;
+    long *backward_rowb;
+    long *backward_rowe;
 
     static void map_2Dprojection(const real start[], const real end[],
 				 const real b_x, const real b_y,
@@ -188,8 +188,8 @@ namespace CCPi {
 				 const int im_size_z, const long z_offset,
 				 projection_map &map);
     void setup_2D_matrix(const real det_y[], const real phi[],
-			 const int n_angles, const int n_rays_y,
-			 const real grid_offset[3],
+			 const int n_angles, const int n_rays_z,
+			 const int n_rays_y, const real grid_offset[3],
 			 const real voxel_size[3], const int nx_voxels,
 			 const int ny_voxels, const int nz_voxels);
     void forward_project_matrix(const real det_z[], pixel_type ray_data[],
@@ -338,9 +338,9 @@ inline void CCPi::cone_beam::set_detector(const real x)
 }
 
 inline CCPi::parallel_beam::parallel_beam()
-  : has_projection_matrix(false), forward_data(0), forward_x(0), forward_y(0),
-    forward_sizes(0), backward_data(0), backward_angles(0), backward_h(0),
-    backward_sizes(0)
+  : has_projection_matrix(false), matrix_size(0), forward_matrix(0),
+    forward_cols(0), forward_rows(0), backward_matrix(0), backward_cols(0),
+    backward_rowb(0), backward_rowe(0)
 {
 }
 

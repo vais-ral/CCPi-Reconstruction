@@ -57,11 +57,13 @@ int main()
   if (instrument->setup_experimental_geometry(path, filename, phantom)) {
     if (instrument->read_scans(path, phantom)) {
       if (instrument->get_num_h_pixels() % pixels_per_voxel != 0)
-	std::cerr << "Number of horizontal pixels doesn't match voxels\n";
+	std::cerr << "Number of horizontal pixels doesn't match voxels "
+		  << instrument->get_num_h_pixels() << '\n';
       int nx_voxels = instrument->get_num_h_pixels() / pixels_per_voxel;
       int ny_voxels = nx_voxels;
       if (instrument->get_num_v_pixels() % pixels_per_voxel != 0)
-	std::cerr << "Number of vertical pixels doesn't match voxels\n";
+	std::cerr << "Number of vertical pixels doesn't match voxels "
+		  << instrument->get_num_v_pixels() << '\n';
       int nz_voxels = instrument->get_num_v_pixels() / pixels_per_voxel;
       voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
 			boost::fortran_storage_order());
