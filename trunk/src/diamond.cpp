@@ -25,7 +25,7 @@ bool CCPi::Diamond::create_phantom()
   int i;
   for (i = 0; i < 1000; i++) {
     //real p = -100.0 + i * 0.250;
-    real p = -100.0 + i * 0.400;
+    real p = -99.8 + i * 0.400;
     if (p <= 100.0 + 0.001)
       h_pixels[i] = p;
     else
@@ -35,7 +35,7 @@ bool CCPi::Diamond::create_phantom()
   real *v_pixels = new real[1000];
   for (i = 0; i < 1000; i++) {
     //real p = -100.0 + i * 0.250;
-    real p = -100.0 + i * 0.400;
+    real p = -99.8 + i * 0.400;
     if (p <= 100.0 + 0.001)
       v_pixels[i] = p;
     else
