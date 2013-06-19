@@ -141,8 +141,12 @@ bool CCPi::Diamond::read_data(const std::string path)
   int nangles = 0;
   real hsize = 0.0;
   real vsize = 0.0;
-  ok = read_NeXus(pixels, nh_pixels, nv_pixels, angles, nangles, hsize, vsize,
-		  fullname, false);
+  pixel_type *i_dark = 0;
+  pixel_type *f_dark = 0;
+  pixel_type *i_bright = 0;
+  pixel_type *f_bright = 0;
+  ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
+		  nv_pixels, angles, nangles, hsize, vsize, fullname, false);
   // store data in class
   real *h_pixels = new real[nh_pixels];
   int halfp = nh_pixels / 2;
@@ -164,16 +168,47 @@ bool CCPi::Diamond::read_data(const std::string path)
   long n_rays = long(nangles) * long(nh_pixels) * long(nv_pixels);
   set_pixel_data(pixels, n_rays);
   if (ok) {
-    real max_v = 65535.0;
-    // scale and take -ve log, due to exponential extinction in sample.
-    for (long j = 0; j < n_rays; j++) {
-      if (pixels[j] < 1.0)
-	pixels[j] = - std::log(0.00001 / max_v);
-      else
-	pixels[j] = - std::log(pixels[j] / max_v);
+    // linear interpolate bright/dark frames. Todo - something else?
+    // Todo, also use initial final bright/dark angles? rather than assuming
+    // initial/final sample angles?
+    long n = nh_pixels * nv_pixels;
+    pixel_type *dark = new pixel_type[n];
+    pixel_type *bright = new pixel_type[n];
+    for (int i = 0; i < nangles; i++) {
+      // Based on fbp code, interpolate bright/dark
+      // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
+      real w = angles[i] / angles[nangles - 1];
+      for (long j = 0; j < n; j++)
+	dark[j] = i_dark[j] * (1.0 - w) + f_dark[j] * w;
+      for (long j = 0; j < n; j++)
+	bright[j] = i_bright[j] * (1.0 - w) + f_bright[j] * w;
+      // subtract dark from data/bright
+      // and clamp min data/bright value to 0.1
+      for (long j = 0; j < n; j++) {
+	bright[j] -= dark[j];
+	if (bright[j] < 0.1)
+	  bright[j] = 0.1;
+      }
+      for (long j = 0; j < n; j++) {
+	pixels[j + i * n] -= dark[j];
+	if (pixels[j + i * n] < 0.1)
+	  pixels[j + i * n] = 0.1;
+      }
+      // scale each data pixel by bright pixel
+      for (long j = 0; j < n; j++)
+	pixels[j + i * n] /= bright[j];
     }
+    delete [] bright;
+    delete [] dark;
+    // take -ve log, due to exponential extinction in sample.
+    for (long j = 0; j < n_rays; j++)
+      pixels[j] = - std::log(pixels[j]);
     //find_centre(get_num_v_pixels() / 2 + 1);
   }
+  delete [] f_bright;
+  delete [] i_bright;
+  delete [] f_dark;
+  delete [] i_dark;
   return ok;
 }
 
