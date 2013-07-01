@@ -4,18 +4,48 @@
 #include "instruments.hpp"
 #include "algorithms.hpp"
 
-// should be passed an initial guess in voxels, either from CGLS or
-// some other method
+namespace CCPi {
+
+  bool tv_regularization(const instrument *device, pixel_type *b,
+			 voxel_data &voxels, const real origin[3],
+			 const real voxel_size[3], const real alpha,
+			 const real tau, const real init_L,
+			 const real init_mu, const int constraint);
+
+}
+
+// driver routine designed to initialise from CGLS
 bool CCPi::tv_regularization(const instrument *device, voxel_data &voxels,
 			     const real origin[3], const real voxel_size[3],
 			     const real alpha, const real tau,
 			     const real init_L, const real init_mu,
 			     const int constraint)
 {
+  // Need copy of pixels before initial CGLS guess overwrites them
+  long n_pixels = device->get_data_size();
+  pixel_type *const p = device->get_pixel_data();
+  pixel_type *b = new pixel_type[n_pixels];
+  for (long i = 0; i < n_pixels; i++)
+    b[i] = p[i];
+  bool ok = cgls_reconstruction(device, voxels, origin, voxel_size, 5);
+  if (ok)
+    ok = tv_regularization(device, b, voxels, origin, voxel_size,
+			   alpha, tau, init_L, init_mu, constraint);
+  delete [] p;
+  return ok;
+}
+
+// should be passed an initial guess in voxels, either from CGLS or
+// some other method
+bool CCPi::tv_regularization(const instrument *device, pixel_type *b,
+			     voxel_data &voxels, const real origin[3],
+			     const real voxel_size[3], const real alpha,
+			     const real tau, const real init_L,
+			     const real init_mu, const int constraint)
+{
   const voxel_data::size_type *sz = voxels.shape();
   long n_vox = long(sz[0]) * long(sz[1]) * long(sz[2]);
   voxel_type *const vox = voxels.data();
-  pixel_type *const b = device->get_pixel_data();
 
   // defaults - should be inputs
   real epsb_rel = 1e-4;
