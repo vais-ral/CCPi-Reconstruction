@@ -133,9 +133,7 @@ bool CCPi::tv_regularization(const instrument *device, pixel_type *b,
   // Todo - copy rp into rkList
 
   // If the iteration counter reaches the k_max, the algorithm did not converge
-  if (k == k_max) {
+  if (k == k_max)
     std::cerr << "Did not find a epsb_rel solution in k_max iterations.\n";
-    return false;
-  } else
-    return true;
+  return true;
 }
