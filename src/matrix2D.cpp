@@ -573,7 +573,8 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 	count += sz;
 	for (projection_map::const_iterator ptr = mapping[x].begin();
 	     ptr != mapping[x].end(); ++ptr) {
-	  column = ptr->first.x * n_rays_y * n_rays_z + ptr->first.y;
+	  column = long(ptr->first.x) * long(n_rays_y) * long(n_rays_z)
+	    + long(ptr->first.y);
 	  backward_matrix[index] = ptr->second;
 	  backward_cols[index] = column;
 	  index++;
