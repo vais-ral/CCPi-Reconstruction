@@ -207,8 +207,8 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 	      sizes[0] = 1;
 	      sizes[1] = (long)info.dims[1];
 	      sizes[2] = (long)info.dims[2];
-	      nh_pixels = sizes[1];
-	      nv_pixels = sizes[2];
+	      nh_pixels = sizes[2];
+	      nv_pixels = sizes[1];
 	      long offset = sizes[1] * sizes[2];
 	      // count angles for allocation
 	      nangles = 0;
@@ -239,13 +239,8 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 		// should we check for an offset attribute?
 		if (keys[i] == 0) {
 		  // sample
-		  for (long j = 0; j < sizes[1]; j++) {
-		    for (long k = 0; k < sizes[2]; k++) {
-		      pixels[j + k * sizes[1] + nangles * offset] =
-			pixel_type(ptr[j + k * sizes[1]]);
-		      // This one is based on the file C order but seems wrong
-		      //pixel_type(ptr[j * sizes[2] + k]);
-		    }
+		  for (long j = 0; j < offset; j++) {
+		    pixels[j + nangles * offset] = pixel_type(ptr[j]);
 		  }
 		  angles[nangles] = angle_data[i];
 		  nangles++;
@@ -258,12 +253,8 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 		    n_fbright++;
 		  } else
 		    n_ibright++;
-		  for (long j = 0; j < sizes[1]; j++) {
-		    for (long k = 0; k < sizes[2]; k++) {
-		      bptr[j + k * sizes[1]] +=
-			pixel_type(ptr[j + k * sizes[1]]);
-		      //pixel_type(ptr[j * sizes[2] + k]);
-		    }
+		  for (long j = 0; j < offset; j++) {
+		    bptr[j] += pixel_type(ptr[j]);
 		  }
 		} else if (keys[i] == 2) {
 		  // dark
@@ -273,12 +264,8 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 		    n_fdark++;
 		  } else
 		    n_idark++;
-		  for (long j = 0; j < sizes[1]; j++) {
-		    for (long k = 0; k < sizes[2]; k++) {
-		      dptr[j + k * sizes[1]] +=
-			pixel_type(ptr[j + k * sizes[1]]);
-		      //pixel_type(ptr[j * sizes[2] + k]);
-		    }
+		  for (long j = 0; j < offset; j++) {
+		    dptr[j] += pixel_type(ptr[j]);
 		  }
 		}
 	      }
