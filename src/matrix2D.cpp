@@ -2,7 +2,12 @@
 // Ugly copy of projection algorithm, could simplify to 2D
 // Todo - how to avoid a copy?
 #include <map>
-#include "base_types.hpp"
+#include <vector>
+#ifdef MATLAB_MEX_FILE
+#  include "mex_types.hpp"
+#else
+#  include "base_types.hpp"
+#endif // mex
 #include "instruments.hpp"
 
 /* jacobs_ray_3d

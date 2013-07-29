@@ -1,6 +1,8 @@
 
 #include <iostream>
-#include <unistd.h>
+#ifndef WINDOWS
+#  include <unistd.h>
+#endif // WINDOWS
 #include "timer.hpp"
 
 static std::clock_t get_current_cpu_time();
@@ -10,6 +12,22 @@ static void get_elapsed_cpu_time(time_data &elapsed, std::clock_t &start_time,
 static void get_current_wall_time(time_data &current);
 static void get_elapsed_wall_time(time_data &elapsed, time_data &start,
 				  const bool reset_start = false);
+
+#ifdef WINDOWS
+
+inline std::clock_t get_current_cpu_time()
+{
+  return clock();
+}
+
+inline void get_current_wall_time(time_data &current)
+{
+	// Todo
+	current.seconds = 0;
+	current.microsecs = 0;
+}
+
+#else
 
 inline std::clock_t get_current_cpu_time()
 {
@@ -26,13 +44,19 @@ inline void get_current_wall_time(time_data &current)
   current.microsecs = t.tv_usec;
 }
 
+#endif // WIN32
+
 void get_elapsed_cpu_time(time_data &elapsed,
 			  std::clock_t &start_time,
 			  const bool reset_start)
 {
+#ifdef WINDOWS
+  static long ticks = 1000;
+#else
   static long ticks = 0;
   if (ticks == 0)
     ticks = sysconf(_SC_CLK_TCK);
+#endif // WINDOWS
   std::clock_t current = get_current_cpu_time();
   std::clock_t diff = current - start_time;
   if (diff < 0) {
@@ -49,10 +73,10 @@ void get_elapsed_cpu_time(time_data &elapsed,
 void get_elapsed_wall_time(time_data &elapsed, time_data &start,
 			   const bool reset_start)
 {
-  timeval t;
-  gettimeofday(&t, 0);
-  elapsed.seconds = t.tv_sec - start.seconds;
-  elapsed.microsecs = t.tv_usec - start.microsecs;
+  time_data cur;
+  get_current_wall_time(cur);
+  elapsed.seconds = cur.seconds - start.seconds;
+  elapsed.microsecs = cur.microsecs - start.microsecs;
   if (elapsed.microsecs > 1000000) {
     elapsed.microsecs -= 1000000;
     elapsed.seconds++;
@@ -61,8 +85,8 @@ void get_elapsed_wall_time(time_data &elapsed, time_data &start,
     elapsed.seconds--;
   }
   if (reset_start) {
-    start.seconds = t.tv_sec;
-    start.microsecs = t.tv_usec;
+    start.seconds = cur.seconds;
+    start.microsecs = cur.microsecs;
   }
 }
 

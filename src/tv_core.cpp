@@ -12,11 +12,16 @@
 #include "algorithms.hpp"
 
 /* Settings which makes the user do a CTRL-C break out of the loop*/
-#if defined(LIBUT) && (defined(_WIN32) || defined(__WIN32__) )
+#if defined(_WIN32) || defined(__WIN32__)
 
-#define STOPMARK utIsInterruptPending()
-#define INITBREAK ;
+#  ifdef LIBUT
+#    define STOPMARK utIsInterruptPending()
+#    define INITBREAK ;
 bool utIsInterruptPending(void);
+#  else
+#    define STOPMARK false
+#    define INITBREAK ;
+#  endif // LIBUT
 
 #else
 
