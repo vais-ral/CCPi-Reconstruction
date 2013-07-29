@@ -2,8 +2,10 @@
 #ifndef TIMER
 #define TIMER
 
-#include <sys/time.h>
-#include <sys/times.h>
+#ifndef WINDOWS
+#  include <sys/time.h>
+#  include <sys/times.h>
+#endif // WINDOWS
 #include <ctime>
 
 struct time_data {

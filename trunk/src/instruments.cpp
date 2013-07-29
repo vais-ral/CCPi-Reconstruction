@@ -15,6 +15,11 @@
 #include "cone_f.hpp"
 #include "timer.hpp"
 
+#ifdef MKL_ILP64
+#  define MKL_INT long
+#  include "mkl_spblas.h"
+#endif // MKL_ILP64
+
 #ifndef USE_TIMER
 #  define USE_TIMER false
 #endif // USE_TIMER
@@ -201,9 +206,6 @@ void CCPi::parallel_beam::setup_projection_matrix(const real origin[3],
   ptime.accumulate();
   ptime.output("projection map");
 }
-
-#define MKL_INT long
-#include "mkl_spblas.h"
 
 void CCPi::parallel_beam::forward_project_matrix(const real det_z[],
 						 pixel_type ray_data[],
