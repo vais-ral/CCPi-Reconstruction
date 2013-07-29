@@ -3,6 +3,7 @@
 // Todo - how to avoid a copy?
 #include <map>
 #include <vector>
+#include <cmath>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
