@@ -53,6 +53,9 @@ function [xkp1 fxkp1 hxkp1 gxkp1 fxkp1l info hxkp1l gxkp1l xlist] = ...
 %     type == 2
 %          Q = {x | d_i =>x_i>= c_i, i=0..prod(dims)}
 %
+%     type == 3
+%          Q = {x | d =>x_i>= c, i=0..prod(dims)}
+%
 % opt:    (Optional) A struct with one or more of the following fields
 %          
 %         epsb_rel = stopping criteria (default 1e-4)
