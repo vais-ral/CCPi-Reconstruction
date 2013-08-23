@@ -2,8 +2,16 @@
 #ifndef CCPI_PROJECT_LINE
 #define CCPI_PROJECT_LINE
 
+#include <cfloat>
+
 namespace CCPi {
 
+  template <class pixel_t, class voxel_t, bool backward>
+  void generate_line(real L, real x, real y, real z, const real L_x_inc,
+		     const real L_y_inc, const real L_z_inc, const long i_step,
+		     const long j_step, const long k_step, long ray_index,
+		     pixel_t &pixel, voxel_t *const vol_data, const real tol1,
+		     const real tol2);
   template <class pixel_t, class voxel_t, bool backward>
   void project_singledata(const real start[], const real end[],
 			  pixel_t &ray_data, voxel_t *const vol_data,
@@ -14,77 +22,140 @@ namespace CCPi {
 
 }
 
-/* jacobs_ray_3d
-   % void jacobs_ray_3d(int im_size, real *start, real *end, int *ray_index, real *ray_data, int *n_entries)
-   %
-   % implementation of algorithm by Jacobs et.al (modification of Siddon's)
-   %
-   % int im_size: size of grid
-   % real start[3]: x,y,z coordinates for starting point of ray
-   % real end[3]
-   % int ray_index[n_entries]: stores voxel numbers hit by ray
-   % real ray_data[n_entries]: stores weights corresponding to relative length of ray in a given voxel
-   % int n_entries: counts number of voxels hit by ray
-   %
-   %
-   % takes coordinates of points relative origin in centre of grid, and
-   % translates to correspond to algorithm
-   %
-   %
-   % david szotten
-   % august 2005
+#define PRECISION 0.00000001
 
-$Revision: 1.1.1.11 $
-$Date: 2008/09/08 13:20:38 $
-*/
-
-/* 18/08/2011 WT - adapting this code to perform back projection (ie At*b) in single step */
-
-/* 09/09/2011 this version operates on single precision ray and volume data, but performs internal calculations in double precision */
-
-#define PRECISION 0.00000001 /* for calculating rays intersecting voxels*/
-
-static inline real alpha_fn(const int n, const real p1, const real p2,
-			    const real b, const real d)
+static inline real min_dbl(const real a, const real b)
 {
-    return ( (b+n*d) - p1)/(p2-p1);
+  return a < b ? a : b;
 }
 
-static inline real p(const real alpha, const real p1, const real p2)
+static inline real max_dbl(const real a, const real b)
 {
-    return p1+alpha*(p2-p1);
+  return a > b ? a : b;
 }
 
-static inline real phi(const real alpha, const real p1, const real p2,
-		       const real b, const real d)
+template <class pixel_t, class voxel_t, bool backward>
+void CCPi::generate_line(real L, real x, real y, real z, const real L_x_inc,
+			 const real L_y_inc, const real L_z_inc,
+			 const long i_step, const long j_step,
+			 const long k_step, long ray_index, pixel_t &pixel,
+			 voxel_t *const vol_data, const real tol1,
+			 const real tol2)
 {
-    return ( p(alpha, p1, p2)-b)/d;
-}
-
-static inline int equal_to_precision(const real x, const real y,
-				     const real prec)
-{
-    return std::abs(x-y) < prec;
-}
-
-static inline real min3_dbl(const real a, const real b, const real c)
-{
-  return a < b ? std::min(a,c) : std::min(b,c);
-}
-
-static inline real max3_dbl(const real a, const real b, const real c)
-{
-  return a > b ? std::max(a,c) : std::max(b,c);
-}
-
-static inline real ceil_j(const real arg)
-{
-  return arg == (int)arg ? arg+1 : std::ceil( arg );
-}
-
-static inline real floor_j(const real arg)
-{
-  return std::floor( arg );
+  real sum = 0.0;
+  while (L > tol2) {
+    if (x < y - tol1) {
+      if (x < z - tol1) {
+	L -= x;
+	if (backward)
+	  vol_data[ray_index] += voxel_t(x * pixel);
+	else
+	  sum += x * vol_data[ray_index];
+	//i += i_inc;
+	ray_index += i_step;
+	y -= x;
+	z -= x;
+	x = L_x_inc;
+      } else if (x > z - tol1 && x < z + tol1) {
+	L -= x;
+	if (backward)
+	  vol_data[ray_index] += voxel_t(x * pixel);
+	else
+	  sum += x * vol_data[ray_index];
+	//i += i_inc;
+	//k += k_inc;
+	ray_index += k_step + i_step;
+	y -= x;
+	z = L_z_inc;
+	x = L_x_inc;
+      } else {
+	L -= z;
+	if (backward)
+	  vol_data[ray_index] += voxel_t(z * pixel);
+	else
+	  sum += z * vol_data[ray_index];
+	//k += k_inc;
+	ray_index += k_step;
+	x -= z;
+	y -= z;
+	z = L_z_inc;
+      }
+    } else if (x > y - tol1 && x < y + tol1) {
+      if (x < z) {
+	L -= x;
+	if (backward)
+	  vol_data[ray_index] += voxel_t(x * pixel);
+	else
+	  sum += x * vol_data[ray_index];
+	//i += i_inc;
+	//j += j_inc;
+	ray_index += j_step + i_step;
+	y = L_y_inc;
+	z -= x;
+	x = L_x_inc;
+      } else if (x > z - tol1 && x < z + tol1) {
+	L -= x;
+	if (backward)
+	  vol_data[ray_index] += voxel_t(x * pixel);
+	else
+	  sum += x * vol_data[ray_index];
+	//i += i_inc;
+	//j += j_inc;
+	//k += k_inc;
+	ray_index += k_step + j_step + i_step;
+	y = L_y_inc;
+	z = L_z_inc;
+	x = L_x_inc;
+      } else {
+	L -= z;
+	if (backward)
+	  vol_data[ray_index] += voxel_t(z * pixel);
+	else
+	  sum += z * vol_data[ray_index];
+	//k += k_inc;
+	ray_index += k_step;
+	x -= z;
+	y -= z;
+	z = L_z_inc;
+      }
+    } else if (y < z - tol1) {
+      L -= y;
+      if (backward)
+	vol_data[ray_index] += voxel_t(y * pixel);
+      else
+	sum += y * vol_data[ray_index];
+      //j += j_inc;
+      ray_index += j_step;
+      x -= y;
+      z -= y;
+      y = L_y_inc;
+    } else if (y > z - tol1 && y < z + tol1) {
+      L -= y;
+      if (backward)
+	vol_data[ray_index] += voxel_t(y * pixel);
+      else
+	sum += y * vol_data[ray_index];
+      //j += j_inc;
+      //k += k_inc;
+      ray_index += k_step + j_step;
+      x -= y;
+      z = L_z_inc;
+      y = L_y_inc;
+    } else {
+      L -= z;
+      if (backward)
+	vol_data[ray_index] += voxel_t(z * pixel);
+      else
+	sum += z * vol_data[ray_index];
+      //k += k_inc;
+      ray_index += k_step;
+      x -= z;
+      y -= z;
+      z = L_z_inc;
+    }
+  }
+  if (!backward)
+    pixel += pixel_t(sum);
 }
 
 template <class pixel_t, class voxel_t, bool backward>
@@ -95,343 +166,234 @@ void CCPi::project_singledata(const real start[], const real end[],
 			      const int im_size_x, const int im_size_y,
 			      const int im_size_z, const long z_offset)
 {
-    
-  int N_x, N_y, N_z, N_p/*, im_size_x, im_size_y, im_size_z*/;
-  real /*b_x, b_y, b_z, d_x, d_y, d_z,*/ d_conv;
-    real p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
-    
-    int x_defined, y_defined, z_defined;
-    long i=0,j=0,k=0;
-    
-    recon_type alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max, 
-	alpha_z_max, alpha_min, alpha_max, alpha_x, alpha_y, alpha_z, alpha_c;
-    recon_type alpha_x_u = 0.0, alpha_y_u = 0.0, alpha_z_u = 0.0;
-    recon_type l_ij;
-    int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
-    long i_step, j_step, k_step;
-    
-    long ray_index;
-	
-    p1_x = start[0];
-    p1_y = start[1];
-    p1_z = start[2];
-    p2_x = end[0];
-    p2_y = end[1];
-    p2_z = end[2];
-
-    //im_size_x = options->im_size_x;
-    ///im_size_y = options->im_size_y;
-    //im_size_z = options->im_size_z;
-
-	N_x=im_size_x+1;
-	N_y=im_size_y+1;
-	N_z=im_size_z+1;
-
-	/* d: voxel size */
-	//d_x = options->d_x;
-	//d_y = options->d_y;
-	//d_z = options->d_z;
-
-	/* b: grid offset from origin */
-	//b_x = options->b_x;
-	//b_y = options->b_y;
-	//b_z = options->b_z;
-
-
-
-    /* use total lengh=alpha_max-alpha_min instead, to get everage, not sum. */
-    /* moving back to original d_conv*/
-    d_conv=sqrt( (p1_x-p2_x)*(p1_x-p2_x) + (p1_y-p2_y)*(p1_y-p2_y) + (p1_z-p2_z)*(p1_z-p2_z));
-
-
-    x_defined =  !(equal_to_precision(p1_x,p2_x,PRECISION));
-    y_defined =  !(equal_to_precision(p1_y,p2_y,PRECISION));
-    z_defined =  !(equal_to_precision(p1_z,p2_z,PRECISION));
-	
-    if( !x_defined && !y_defined && !z_defined)
-	return;
-
-    if (x_defined) {
-	alpha_x_min=std::min(alpha_fn(0, p1_x, p2_x, b_x, d_x), alpha_fn(N_x-1, p1_x, p2_x, b_x, d_x));
-	alpha_x_max=std::max(alpha_fn(0, p1_x, p2_x, b_x, d_x), alpha_fn(N_x-1, p1_x, p2_x, b_x, d_x));
-    }
-    else {
-	alpha_x_min=-2;
-	alpha_x_max=2;
-	i=(int) floor_j( phi(0.0, p1_x, p2_x, b_x, d_x));
-	if ( i < 0 || i >= im_size_x)
-	    return;
-	alpha_x=2;
-	i_min = 1;
-	i_max = 0;
-    }
-
-    if(y_defined) {
-	alpha_y_min=std::min(alpha_fn(0, p1_y, p2_y, b_y, d_y), alpha_fn(N_y-1, p1_y, p2_y, b_y, d_y));
-	alpha_y_max=std::max(alpha_fn(0, p1_y, p2_y, b_y, d_y), alpha_fn(N_y-1, p1_y, p2_y, b_y, d_y));
-    }
-    else {
-	alpha_y_min=-2;
-	alpha_y_max=2;
-	j=(int) floor_j( phi(0.0, p1_y, p2_y, b_y, d_y));
-	if ( j < 0 || j >= im_size_y)
-	    return;
-	alpha_y=2;
-	j_min = 1;
-	j_max = 0;
-    }
-
-    		
-    if(z_defined) {
-	alpha_z_min=std::min(alpha_fn(0, p1_z, p2_z, b_z, d_z), alpha_fn(N_z-1, p1_z, p2_z, b_z, d_z));
-	alpha_z_max=std::max(alpha_fn(0, p1_z, p2_z, b_z, d_z), alpha_fn(N_z-1, p1_z, p2_z, b_z, d_z));
-    }
-    else {
-	alpha_z_min=-2;
-	alpha_z_max=2;
-	k=(int) floor_j( phi(0.0, p1_z, p2_z, b_z, d_z));
-	if ( k < 0 || k >= im_size_z)
-	    return;
-	alpha_z=2;
-	k_min = 1;
-	k_max = 0;
-    }
-		
-    alpha_min=std::max(0.0, max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
-    alpha_max=std::min(1.0, min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
-
-    /* if ray intersects voxel grid */
-    if (alpha_min < alpha_max) {
-
-	if (x_defined && p1_x < p2_x) {
-	    if (equal_to_precision(alpha_min,alpha_x_min,PRECISION)==1)
-		i_min=1;
-	    else
-		i_min = (int) ceil_j(phi(alpha_min, p1_x, p2_x, b_x, d_x));
-
-	    if (equal_to_precision(alpha_max,alpha_x_max,PRECISION)==1)
-		i_max = N_x - 1;
-	    else
-		i_max = (int) floor_j( phi(alpha_max, p1_x, p2_x, b_x, d_x));
-
-	    alpha_x=alpha_fn(i_min, p1_x, p2_x, b_x, d_x);
-	}
-
-	else if (x_defined) {
-	    if (equal_to_precision(alpha_min,alpha_x_min,PRECISION)==1)
-		i_max=N_x-2;
-	    else
-		i_max = (int) floor_j(phi(alpha_min, p1_x, p2_x, b_x, d_x));
-
-	    if (equal_to_precision(alpha_max,alpha_x_max,PRECISION)==1)
-		i_min = 0;
-	    else
-		i_min = (int) ceil_j( phi(alpha_max, p1_x, p2_x, b_x, d_x));
-
-	    alpha_x=alpha_fn(i_max, p1_x, p2_x, b_x, d_x);
-	}
-
-
-	if (y_defined && p1_y < p2_y) {
-	    if (equal_to_precision(alpha_min,alpha_y_min,PRECISION)==1)
-		j_min=1;
-	    else
-		j_min = (int) ceil_j(phi(alpha_min, p1_y, p2_y, b_y, d_y));
-
-
-	    if (equal_to_precision(alpha_max, alpha_y_max,PRECISION)==1)
-		j_max = N_y - 1;
-	    else
-		j_max = (int) floor_j( phi(alpha_max, p1_y, p2_y, b_y, d_y));
-
-	    alpha_y=alpha_fn(j_min, p1_y, p2_y, b_y, d_y);
-	}
-
-	else if (y_defined) {
-
-	    if (equal_to_precision(alpha_min,alpha_y_min,PRECISION)==1)
-		j_max=N_y-2;
-	    else
-		j_max = (int) floor_j(phi(alpha_min, p1_y, p2_y, b_y, d_y));
-
-
-	    if (equal_to_precision(alpha_max, alpha_y_max, PRECISION)==1)
-		j_min = 0;
-	    else
-		j_min = (int) ceil_j( phi(alpha_max, p1_y, p2_y, b_y, d_y));
-
-	    alpha_y=alpha_fn(j_max, p1_y, p2_y, b_y, d_y);
-	}
-
-
-
-	if (z_defined && p1_z < p2_z) {
-	    if (equal_to_precision(alpha_min,alpha_z_min,PRECISION)==1)
-		k_min=1;
-	    else
-		k_min = (int) ceil_j(phi(alpha_min, p1_z, p2_z, b_z, d_z));
-
-
-	    if (equal_to_precision(alpha_max, alpha_z_max,PRECISION)==1)
-		k_max = N_z - 1;
-	    else
-		k_max = (int) floor_j( phi(alpha_max, p1_z, p2_z, b_z, d_z));
-
-	    alpha_z=alpha_fn(k_min, p1_z, p2_z, b_z, d_z);
-	}
-
-	else if (z_defined) {
-
-	    if (equal_to_precision(alpha_min,alpha_z_min,PRECISION)==1)
-		k_max=N_z-2;
-	    else
-		k_max = (int) floor_j(phi(alpha_min, p1_z, p2_z, b_z, d_z));
-
-
-	    if (equal_to_precision(alpha_max, alpha_z_max, PRECISION)==1)
-		k_min = 0;
-	    else
-		k_min = (int) ceil_j( phi(alpha_max, p1_z, p2_z, b_z, d_z));
-
-	    alpha_z=alpha_fn(k_max, p1_z, p2_z, b_z, d_z);
-	}
-
-
-	N_p=(i_max - i_min +1) + (j_max - j_min + 1) + (k_max - k_min + 1);
-
-	if (x_defined) {
-	    i=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_x, p2_x, b_x, d_x) );
-	alpha_x_u = d_x/std::abs(p2_x-p1_x);
-	}
-
-	if (y_defined) {
-	    j=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_y, p2_y, b_y, d_y) );
-	alpha_y_u = d_y/std::abs(p2_y-p1_y);
-	}
-	if (z_defined) {
-	    k=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_z, p2_z, b_z, d_z) );
-	alpha_z_u = d_z/std::abs(p2_z-p1_z);
-	}
-
-	if (p1_x < p2_x)
-	    i_u=1;
-	else
-	    i_u=-1;
-
-	if (p1_y < p2_y)
-	    j_u=1;
-	else
-	    j_u=-1;
-
-	if (p1_z < p2_z)
-	    k_u=1;
-	else
-	    k_u=-1;
-
-
-	alpha_c=alpha_min;
-	ray_index = (k+z_offset)*im_size_y*im_size_x + j*im_size_x + i;
-	i_step = i_u;
-	j_step = j_u * im_size_x;
-	k_step = k_u * im_size_y * im_size_x;
-	recon_type data = 0.0;
-	recon_type rdata = (recon_type)ray_data;
-
-	for (n_count=1; n_count<N_p+1;n_count++) {
-
-
-	    /* x smallest*/
-	    if (x_defined && alpha_x <= alpha_y && alpha_x <= alpha_z) {
-		/* ray intersects pixel(i,j) with length l_ij */
-
-	      if (backward)
-	      vol_data[ray_index] += (voxel_t)((alpha_x-alpha_c)*d_conv * rdata);
-	      else
-        data += (alpha_x-alpha_c)*d_conv * vol_data[ray_index];
-
-		if( y_defined && alpha_x == alpha_y) {
-		    j += j_u;
-		    ray_index += j_step;
-		    n_count++;
-		    alpha_y += alpha_y_u;
-		}
-
-		if( z_defined && alpha_x == alpha_z) {
-		    k += k_u;
-		    ray_index += k_step;
-		    n_count++;
-		    alpha_z += alpha_z_u;
-		}
-
-		i += i_u;
-		ray_index += i_step;
-		alpha_c=alpha_x;
-		alpha_x += alpha_x_u;
-	    }
-
-	    /* y smallest*/
-	    else if (y_defined && alpha_y <= alpha_z) {
-		/* ray intersects pixel(i,j) with length l_ij */
-
-	      if (backward)
-	      vol_data[ray_index] += (voxel_t)((alpha_y-alpha_c)*d_conv * rdata);
-	      else
-		data += (alpha_y-alpha_c)*d_conv * vol_data[ray_index];
-
-		if( z_defined && alpha_y == alpha_z) {
-		    k += k_u;
-		    ray_index += k_step;
-		    n_count++;
-		    alpha_z += alpha_z_u;
-		}
-
-		j=j+j_u;
-		ray_index += j_step;
-		alpha_c=alpha_y;
-		alpha_y += alpha_y_u;
-	    }
-
-	    /* z smallest*/
-	    else if (z_defined) {
-		/* ray intersects pixel(i,j) with length l_ij */
-
-	      if (backward)
-	      vol_data[ray_index] += (voxel_t)((alpha_z-alpha_c)*d_conv * rdata);
-	      else
-		data += (alpha_z-alpha_c)*d_conv * vol_data[ray_index];
-
-		k += k_u;
-		ray_index += k_step;
-		alpha_c=alpha_z;
-		alpha_z += alpha_z_u;
-	    }
-
-
-	    /* did we loop too far? */
-	    if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z)
-		/* artificially end loop  */
-		N_p = n_count - 1;
-	    
-
-
-	} /* end of for loop though N_p */
-                
-	/* in case we're ending inside grid, finish off last voxel */
-	if( (alpha_max - alpha_c) > PRECISION) {
-	    /* this is the last step so don't need to worry about incrementing i or j*/
-	    l_ij=(alpha_max-alpha_c)*d_conv;
-
-	    if (backward)
-	    vol_data[ray_index] += (voxel_t)(l_ij * rdata);
-	    else
-	    data += l_ij * vol_data[ray_index];
-	}
-	if (!backward)
-	  ray_data += (pixel_t)data;
-	
-    } /* of alpha_min < alpha_max */
-    
+  const real source_x = start[0];
+  const real source_y = start[1];
+  const real source_z = start[2];
+  const real detect_x = end[0];
+  const real detect_y = end[1];
+  const real detect_z = end[2];
+  const long nvoxels_x = im_size_x;
+  const long nvoxels_y = im_size_y;
+  const long nvoxels_z = im_size_z;
+  const real voxel_size_x = d_x;
+  const real voxel_size_y = d_y;
+  const real voxel_size_z = d_z;
+  const real voxel0_x = b_x;
+  const real voxel0_y = b_y;
+  const real voxel0_z = b_z;
+
+  /* spacing between source and detector */
+  const real delta_x = detect_x - source_x;
+  const real delta_y = detect_y - source_y;
+  const real delta_z = detect_z - source_z;
+
+  const real delta_x_abs = fabs(delta_x);
+  const real delta_y_abs = fabs(delta_y);
+  const real delta_z_abs = fabs(delta_z);
+
+  if (delta_x_abs < PRECISION && delta_y_abs < PRECISION &&
+      delta_z_abs < PRECISION)
     return;
+
+  /* distance between source and detector */
+  const real distance = sqrt(delta_x * delta_x + delta_y * delta_y
+			     + delta_z * delta_z);
+  /* coord at other edge of grid is */
+  const real voxeln_x = voxel0_x + nvoxels_x * voxel_size_x;
+  const real voxeln_y = voxel0_y + nvoxels_y * voxel_size_y;
+  const real voxeln_z = voxel0_z + nvoxels_z * voxel_size_z;
+  /* The line between the source and detector is r + alpha delta_r,
+     where alpha = 0.0 at the source and 1.0 at the detector, so it
+     intercepts the limits of the voxel grid at (r' - r) / delta_r */
+  real alpha0_x;
+  real alphan_x;
+  if (delta_x_abs > PRECISION) {
+    if (delta_x < 0.0) {
+      alphan_x = (voxel0_x - source_x) / delta_x;
+      alpha0_x = (voxeln_x - source_x) / delta_x;
+    } else {
+      alpha0_x = (voxel0_x - source_x) / delta_x;
+      alphan_x = (voxeln_x - source_x) / delta_x;
+    }
+  } else {
+    alpha0_x = -2.0;
+    alphan_x = 2.0;
+  }
+  real alpha0_y;
+  real alphan_y;
+  if (delta_y_abs > PRECISION) {
+    if (delta_y < 0.0) {
+      alphan_y = (voxel0_y - source_y) / delta_y;
+      alpha0_y = (voxeln_y - source_y) / delta_y;
+    } else {
+      alpha0_y = (voxel0_y - source_y) / delta_y;
+      alphan_y = (voxeln_y - source_y) / delta_y;
+    }
+  } else {
+    alpha0_y = -2.0;
+    alphan_y = 2.0;
+  }
+  real alpha0_z;
+  real alphan_z;
+  if (delta_z_abs > PRECISION) {
+    if (delta_z < 0.0) {
+      alphan_z = (voxel0_z - source_z) / delta_z;
+      alpha0_z = (voxeln_z - source_z) / delta_z;
+    } else {
+      alpha0_z = (voxel0_z - source_z) / delta_z;
+      alphan_z = (voxeln_z - source_z) / delta_z;
+    }
+  } else {
+    alpha0_z = -2.0;
+    alphan_z = 2.0;
+  }
+  /* The line doesn't intercept the grid until all 3 coords intercept,
+     so take max of alpha0, min of alphan */
+  const real alpha0 = max_dbl(0.0, max_dbl(alpha0_x,
+					   max_dbl(alpha0_y, alpha0_z)));
+  const real alphan = min_dbl(1.0, min_dbl(alphan_x,
+					   min_dbl(alphan_y, alphan_z)));
+  /* if first intercept if beyond the second then it missed the grid */
+  if (alpha0 < alphan) {
+    const real dalpha = alphan - alpha0;
+    /* x is the stride 1 index so order the loops so this is innermost,
+       the alternative would be to order on the lengths in the different
+       directions so the most steps in a direction is innermost which is
+       a bit like Zhao and Reader (2003) */
+    /* length of line within the grid */
+    const real length = distance * dalpha;
+
+    /* the delta alpha of a grid step is */
+    const real dalpha_x = voxel_size_x / delta_x_abs;
+    const real dalpha_y = voxel_size_y / delta_y_abs;
+    const real dalpha_z = voxel_size_z / delta_z_abs;
+    /* start and end coords in voxel grid */
+    const real x_start = source_x + alpha0 * delta_x;
+    const real y_start = source_y + alpha0 * delta_y;
+    const real z_start = source_z + alpha0 * delta_z;
+    /* converted into array indices */
+    real x_start_idx = (x_start - voxel0_x) / voxel_size_x;
+    real y_start_idx = (y_start - voxel0_y) / voxel_size_y;
+    real z_start_idx = (z_start - voxel0_z) / voxel_size_z;
+
+    // Length of line from one voxel to the next
+    const real L_x_inc = dalpha_x * distance;
+    const real L_y_inc = dalpha_y * distance;
+    const real L_z_inc = dalpha_z * distance;
+
+    const real tol1 = distance * 5.0 * DBL_EPSILON;
+
+    real x_min;
+    long i_inc;
+    real x;
+    if (delta_x_abs < tol1) {
+      x = distance;
+      i_inc = 1;
+      x_min = floor(x_start_idx + tol1);
+    } else if (delta_x < 0.0) {
+      x_min = floor(x_start_idx - tol1);
+      i_inc = -1;
+      if (x_start_idx > x_min - tol1 && x_start_idx < x_min + tol1)
+	x = L_x_inc;
+      else
+	x = (x_start_idx - x_min) * L_x_inc;
+    } else {
+      x_min = floor(x_start_idx + tol1);
+      i_inc = 1;
+      if (x_start_idx > x_min - tol1 && x_start_idx < x_min + tol1)
+	x = L_x_inc;
+      else
+	x = (1.0 - (x_start_idx - x_min)) * L_x_inc;
+    }
+    const long i_min = (long)x_min;
+    long i = i_min;
+    real y_min;
+    long j_inc;
+    real y;
+    if (delta_y_abs < tol1) {
+      y = distance;
+      j_inc = 1;
+      y_min = floor(y_start_idx + tol1);
+    } else if (delta_y < 0.0) {
+      y_min = floor(y_start_idx - tol1);
+      j_inc = -1;
+      if (y_start_idx > y_min - tol1 && y_start_idx < y_min + tol1)
+	y = L_y_inc;
+      else
+	y = (y_start_idx - y_min) * L_y_inc;
+    } else {
+      y_min = floor(y_start_idx + tol1);
+      j_inc = 1;
+      if (y_start_idx > y_min - tol1 && y_start_idx < y_min + tol1)
+	y = L_y_inc;
+      else
+	y = (1.0 - (y_start_idx - y_min)) * L_y_inc;
+    }
+    const long j_min = (long)y_min;
+    long j = j_min;
+    real z_min;
+    long k_inc;
+    real z;
+    if (delta_z_abs < tol1) {
+      z = distance;
+      k_inc = 1;
+      z_min = floor(z_start_idx + tol1);
+    } else if (delta_z < 0.0) {
+      z_min = floor(z_start_idx - tol1);
+      k_inc = -1;
+      if (z_start_idx > z_min - tol1 && z_start_idx < z_min + tol1)
+	z = L_z_inc;
+      else
+	z = (z_start_idx - z_min) * L_z_inc;
+    } else {
+      z_min = floor(z_start_idx + tol1);
+      k_inc = 1;
+      if (z_start_idx > z_min - tol1 && z_start_idx < z_min + tol1)
+	z = L_z_inc;
+      else
+	z = (1.0 - (z_start_idx - z_min)) * L_z_inc;
+    }
+    const long k_min = (long)z_min;
+    long k = k_min;
+
+    real L = length;
+    long ray_index = (k+z_offset)*nvoxels_y*nvoxels_x + j*nvoxels_x + i;
+    long i_step = i_inc;
+    long j_step = j_inc * nvoxels_x;
+    long k_step = k_inc * nvoxels_y * nvoxels_x;
+    // This needs to be big enough to allow for the accumulated rounding errors
+    // of subtracting lengths from L, whilst not overrunning the edge of the
+    // voxels. Otherwise we would also need to test i/j/k >=0 < nvoxels.
+    const real tol2 = distance * 100.0 * DBL_EPSILON;
+    // try to order so that most common test in loop is the first one.
+    if (L_x_inc < L_y_inc + tol1) {
+      if (L_x_inc < L_z_inc + tol1) {
+	// x < y, z
+	if (L_y_inc < L_z_inc + tol1)
+	  // x, y, z
+	  generate_line<pixel_t, voxel_t, backward>(L, x, y, z, L_x_inc, L_y_inc, L_z_inc, i_step, j_step,
+			k_step, ray_index, ray_data, vol_data, tol1, tol2);
+	else
+	  // x, z, y
+	  generate_line<pixel_t, voxel_t, backward>(L, x, z, y, L_x_inc, L_z_inc, L_y_inc, i_step, k_step,
+			j_step, ray_index, ray_data, vol_data, tol1, tol2);
+      } else
+	generate_line<pixel_t, voxel_t, backward>(L, z, x, y, L_z_inc, L_x_inc, L_y_inc, k_step, i_step,
+		      j_step, ray_index, ray_data, vol_data, tol1, tol2);
+    } else {
+      // x > y
+      if (L_y_inc < L_z_inc + tol1) {
+	if (L_x_inc < L_z_inc + tol1)
+	  generate_line<pixel_t, voxel_t, backward>(L, y, x, z, L_y_inc, L_x_inc, L_z_inc, j_step, i_step,
+			k_step, ray_index, ray_data, vol_data, tol1, tol2);
+	else
+	  generate_line<pixel_t, voxel_t, backward>(L, y, z, x, L_y_inc, L_z_inc, L_x_inc, j_step, k_step,
+			i_step, ray_index, ray_data, vol_data, tol1, tol2);
+      } else
+	generate_line<pixel_t, voxel_t, backward>(L, z, y, x, L_z_inc, L_y_inc, L_x_inc, k_step, j_step,
+		      i_step, ray_index, ray_data, vol_data, tol1, tol2);
+    }
+  }
 }
 
 #endif // CCPI_PROJECT_LINE
