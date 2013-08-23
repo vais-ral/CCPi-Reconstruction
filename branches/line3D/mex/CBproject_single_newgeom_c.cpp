@@ -9,17 +9,15 @@
 
 
 #include <mex.h>
-#include <math.h>
+#include <cmath>
 #include <matrix.h>
-#include <stdlib.h>
-#include <string.h>
-#include "jacobs_rays.h"
-
-extern void forwardProjection(double *source_x, double *source_y,
-			      double *source_z, double *det_x, double *det_y,
-			      double *det_z, float *ray_data, float *vol_data,
-			      double *angles, struct jacobs_options *options,
-			      int n_angles, long n_rays_y, long n_rays_z);
+#include <cstdlib>
+#include <cstring>
+#include <omp.h>
+#include "mex_types.hpp"
+#include "instruments.hpp"
+#include "project_line.hpp"
+#include "cone_f.hpp"
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -32,8 +30,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     float *ray_data, *vol_data;
     double *size_doubles;
 
-	struct jacobs_options options;
-	
 	/* check number of arguments */
 	if(nrhs != 11)
     {
@@ -82,32 +78,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   plhs[0] = mxCreateNumericMatrix(n_rays_y * n_rays_z * n_angles, 1, mxSINGLE_CLASS, mxREAL);
   ray_data = (float *) mxGetData(plhs[0]);
 
-  options.im_size_default = 0;
-  options.im_size_x = im_size_matlab[0];
-  options.im_size_y = im_size_matlab[1];
-  options.im_size_z = im_size_matlab[2];
-
-  options.b_default = 0;
-  options.b_x = grid_offset[0];
-  options.b_y = grid_offset[1];
-  options.b_z = grid_offset[2];
-
-  options.d_default = 0;
-  options.d_x = voxel_size[0];
-  options.d_y = voxel_size[1];
-  options.d_z = voxel_size[2];
-
-  forwardProjection(source_x, source_y, source_z, det_x, det_y, det_z,
-		    ray_data, vol_data, angles, &options, n_angles, n_rays_y,
-		    n_rays_z);
+  CCPi::instrument::forward_project(*source_x, *source_y, *source_z, *det_x,
+				    det_y, det_z, angles, ray_data,
+				    (float *const) vol_data,
+				    n_angles, n_rays_y, n_rays_z,
+				    grid_offset, voxel_size,
+				    im_size_matlab[0], im_size_matlab[1],
+				    im_size_matlab[2]);
 }
-
-
-
-
-
-
-
-
-
-

@@ -1,13 +1,29 @@
+
+#ifndef CCPI_PROJECT_LINE
+#define CCPI_PROJECT_LINE
+
+namespace CCPi {
+
+  template <class pixel_t, class voxel_t, bool backward>
+  void project_singledata(const real start[], const real end[],
+			  pixel_t &ray_data, voxel_t *const vol_data,
+			  const real b_x, const real b_y, const real b_z,
+			  const real d_x, const real d_y, const real d_z,
+			  const int im_size_x, const int im_size_y,
+			  const int im_size_z, const long z_offset);
+
+}
+
 /* jacobs_ray_3d
-   % void jacobs_ray_3d(int im_size, double *start, double *end, int *ray_index, double *ray_data, int *n_entries)
+   % void jacobs_ray_3d(int im_size, real *start, real *end, int *ray_index, real *ray_data, int *n_entries)
    %
    % implementation of algorithm by Jacobs et.al (modification of Siddon's)
    %
    % int im_size: size of grid
-   % double start[3]: x,y,z coordinates for starting point of ray
-   % double end[3]
+   % real start[3]: x,y,z coordinates for starting point of ray
+   % real end[3]
    % int ray_index[n_entries]: stores voxel numbers hit by ray
-   % double ray_data[n_entries]: stores weights corresponding to relative length of ray in a given voxel
+   % real ray_data[n_entries]: stores weights corresponding to relative length of ray in a given voxel
    % int n_entries: counts number of voxels hit by ray
    %
    %
@@ -22,86 +38,79 @@ $Revision: 1.1.1.11 $
 $Date: 2008/09/08 13:20:38 $
 */
 
-/* 18/08/2011 WT - adapting this code to perform projection (ie A*x) in single step */
+/* 18/08/2011 WT - adapting this code to perform back projection (ie At*b) in single step */
 
 /* 09/09/2011 this version operates on single precision ray and volume data, but performs internal calculations in double precision */
 
-#include "jacobs_rays.h"
+#define PRECISION 0.00000001 /* for calculating rays intersecting voxels*/
 
-static inline double alpha_fn(const int n, const double p1, const double p2,
-			      const double b, const double d)
+static inline real alpha_fn(const int n, const real p1, const real p2,
+			    const real b, const real d)
 {
     return ( (b+n*d) - p1)/(p2-p1);
 }
 
-static inline double p(const double alpha, const double p1, const double p2)
+static inline real p(const real alpha, const real p1, const real p2)
 {
     return p1+alpha*(p2-p1);
 }
 
-static inline double phi(const double alpha, const double p1, const double p2,
-			 const double b, const double d)
+static inline real phi(const real alpha, const real p1, const real p2,
+		       const real b, const real d)
 {
     return ( p(alpha, p1, p2)-b)/d;
 }
 
-static inline int equal_to_precision(const double x, const double y,
-				     const double prec)
+static inline int equal_to_precision(const real x, const real y,
+				     const real prec)
 {
-    return fabs(x-y) < prec;
+    return std::abs(x-y) < prec;
 }
 
-static inline double min_dbl(const double a, const double b)
+static inline real min3_dbl(const real a, const real b, const real c)
 {
-  return a < b ? a : b;
+  return a < b ? std::min(a,c) : std::min(b,c);
 }
 
-static inline double max_dbl(const double a, const double b)
+static inline real max3_dbl(const real a, const real b, const real c)
 {
-  return a > b ? a : b;
+  return a > b ? std::max(a,c) : std::max(b,c);
 }
 
-static inline double min3_dbl(const double a, const double b, const double c)
+static inline real ceil_j(const real arg)
 {
-  return a < b ? min_dbl(a,c) : min_dbl(b,c);
+  return arg == (int)arg ? arg+1 : std::ceil( arg );
 }
 
-static inline double max3_dbl(const double a, const double b, const double c)
+static inline real floor_j(const real arg)
 {
-  return a > b ? max_dbl(a,c) : max_dbl(b,c);
+  return std::floor( arg );
 }
 
-static inline double ceil_j(const double arg)
-{
-  return arg == (int)arg ? arg+1 : ceil( arg );
-}
-
-static inline double floor_j(const double arg)
-{
-  return floor( arg );
-}
-
-void project_singledata(const double start[], const double end[],
-			REAL *ray_data, const REAL const vol_data[],
-			const struct jacobs_options *options)
+template <class pixel_t, class voxel_t, bool backward>
+void CCPi::project_singledata(const real start[], const real end[],
+			      pixel_t &ray_data, voxel_t *const vol_data,
+			      const real b_x, const real b_y, const real b_z,
+			      const real d_x, const real d_y, const real d_z,
+			      const int im_size_x, const int im_size_y,
+			      const int im_size_z, const long z_offset)
 {
     
-    int N_x, N_y, N_z, N_p, im_size_x, im_size_y, im_size_z;
-    double b_x, b_y, b_z, d_x, d_y, d_z, d_conv;
-    double p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
+  int N_x, N_y, N_z, N_p/*, im_size_x, im_size_y, im_size_z*/;
+  real /*b_x, b_y, b_z, d_x, d_y, d_z,*/ d_conv;
+    real p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
     
     int x_defined, y_defined, z_defined;
-    long i,j,k;
+    long i=0,j=0,k=0;
     
-    double alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max, 
+    recon_type alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max, 
 	alpha_z_max, alpha_min, alpha_max, alpha_x, alpha_y, alpha_z, alpha_c;
-    double alpha_x_u, alpha_y_u, alpha_z_u;
-    double l_ij;
+    recon_type alpha_x_u = 0.0, alpha_y_u = 0.0, alpha_z_u = 0.0;
+    recon_type l_ij;
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
+    long i_step, j_step, k_step;
     
     long ray_index;
-    long i_step, j_step, k_step;
-    double data;
 	
     p1_x = start[0];
     p1_y = start[1];
@@ -110,23 +119,25 @@ void project_singledata(const double start[], const double end[],
     p2_y = end[1];
     p2_z = end[2];
 
-    im_size_x = options->im_size_x;
-    im_size_y = options->im_size_y;
-    im_size_z = options->im_size_z;
+    //im_size_x = options->im_size_x;
+    ///im_size_y = options->im_size_y;
+    //im_size_z = options->im_size_z;
 
 	N_x=im_size_x+1;
 	N_y=im_size_y+1;
 	N_z=im_size_z+1;
 
 	/* d: voxel size */
-    d_x = options->d_x;
-    d_y = options->d_y;
-    d_z = options->d_z;
+	//d_x = options->d_x;
+	//d_y = options->d_y;
+	//d_z = options->d_z;
 
 	/* b: grid offset from origin */
-    b_x = options->b_x;
-    b_y = options->b_y;
-    b_z = options->b_z;
+	//b_x = options->b_x;
+	//b_y = options->b_y;
+	//b_z = options->b_z;
+
+
 
     /* use total lengh=alpha_max-alpha_min instead, to get everage, not sum. */
     /* moving back to original d_conv*/
@@ -141,8 +152,8 @@ void project_singledata(const double start[], const double end[],
 	return;
 
     if (x_defined) {
-	alpha_x_min=min_dbl(alpha_fn(0, p1_x, p2_x, b_x, d_x), alpha_fn(N_x-1, p1_x, p2_x, b_x, d_x));
-	alpha_x_max=max_dbl(alpha_fn(0, p1_x, p2_x, b_x, d_x), alpha_fn(N_x-1, p1_x, p2_x, b_x, d_x));
+	alpha_x_min=std::min(alpha_fn(0, p1_x, p2_x, b_x, d_x), alpha_fn(N_x-1, p1_x, p2_x, b_x, d_x));
+	alpha_x_max=std::max(alpha_fn(0, p1_x, p2_x, b_x, d_x), alpha_fn(N_x-1, p1_x, p2_x, b_x, d_x));
     }
     else {
 	alpha_x_min=-2;
@@ -156,8 +167,8 @@ void project_singledata(const double start[], const double end[],
     }
 
     if(y_defined) {
-	alpha_y_min=min_dbl(alpha_fn(0, p1_y, p2_y, b_y, d_y), alpha_fn(N_y-1, p1_y, p2_y, b_y, d_y));
-	alpha_y_max=max_dbl(alpha_fn(0, p1_y, p2_y, b_y, d_y), alpha_fn(N_y-1, p1_y, p2_y, b_y, d_y));
+	alpha_y_min=std::min(alpha_fn(0, p1_y, p2_y, b_y, d_y), alpha_fn(N_y-1, p1_y, p2_y, b_y, d_y));
+	alpha_y_max=std::max(alpha_fn(0, p1_y, p2_y, b_y, d_y), alpha_fn(N_y-1, p1_y, p2_y, b_y, d_y));
     }
     else {
 	alpha_y_min=-2;
@@ -172,8 +183,8 @@ void project_singledata(const double start[], const double end[],
 
     		
     if(z_defined) {
-	alpha_z_min=min_dbl(alpha_fn(0, p1_z, p2_z, b_z, d_z), alpha_fn(N_z-1, p1_z, p2_z, b_z, d_z));
-	alpha_z_max=max_dbl(alpha_fn(0, p1_z, p2_z, b_z, d_z), alpha_fn(N_z-1, p1_z, p2_z, b_z, d_z));
+	alpha_z_min=std::min(alpha_fn(0, p1_z, p2_z, b_z, d_z), alpha_fn(N_z-1, p1_z, p2_z, b_z, d_z));
+	alpha_z_max=std::max(alpha_fn(0, p1_z, p2_z, b_z, d_z), alpha_fn(N_z-1, p1_z, p2_z, b_z, d_z));
     }
     else {
 	alpha_z_min=-2;
@@ -186,8 +197,8 @@ void project_singledata(const double start[], const double end[],
 	k_max = 0;
     }
 		
-    alpha_min=max_dbl(0.0, max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
-    alpha_max=min_dbl(1.0, min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
+    alpha_min=std::max(0.0, max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
+    alpha_max=std::min(1.0, min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
 
     /* if ray intersects voxel grid */
     if (alpha_min < alpha_max) {
@@ -290,16 +301,16 @@ void project_singledata(const double start[], const double end[],
 
 	if (x_defined) {
 	    i=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_x, p2_x, b_x, d_x) );
-	alpha_x_u = d_x/fabs(p2_x-p1_x);
+	alpha_x_u = d_x/std::abs(p2_x-p1_x);
 	}
 
 	if (y_defined) {
 	    j=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_y, p2_y, b_y, d_y) );
-	alpha_y_u = d_y/fabs(p2_y-p1_y);
+	alpha_y_u = d_y/std::abs(p2_y-p1_y);
 	}
 	if (z_defined) {
 	    k=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_z, p2_z, b_z, d_z) );
-	alpha_z_u = d_z/fabs(p2_z-p1_z);
+	alpha_z_u = d_z/std::abs(p2_z-p1_z);
 	}
 
 	if (p1_x < p2_x)
@@ -319,11 +330,12 @@ void project_singledata(const double start[], const double end[],
 
 
 	alpha_c=alpha_min;
-	ray_index = k*im_size_y*im_size_x + j*im_size_x + i;
+	ray_index = (k+z_offset)*im_size_y*im_size_x + j*im_size_x + i;
 	i_step = i_u;
 	j_step = j_u * im_size_x;
 	k_step = k_u * im_size_y * im_size_x;
-	data = 0.0;
+	recon_type data = 0.0;
+	recon_type rdata = (recon_type)ray_data;
 
 	for (n_count=1; n_count<N_p+1;n_count++) {
 
@@ -332,6 +344,9 @@ void project_singledata(const double start[], const double end[],
 	    if (x_defined && alpha_x <= alpha_y && alpha_x <= alpha_z) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
+	      if (backward)
+	      vol_data[ray_index] += (voxel_t)((alpha_x-alpha_c)*d_conv * rdata);
+	      else
         data += (alpha_x-alpha_c)*d_conv * vol_data[ray_index];
 
 		if( y_defined && alpha_x == alpha_y) {
@@ -358,6 +373,9 @@ void project_singledata(const double start[], const double end[],
 	    else if (y_defined && alpha_y <= alpha_z) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
+	      if (backward)
+	      vol_data[ray_index] += (voxel_t)((alpha_y-alpha_c)*d_conv * rdata);
+	      else
 		data += (alpha_y-alpha_c)*d_conv * vol_data[ray_index];
 
 		if( z_defined && alpha_y == alpha_z) {
@@ -377,6 +395,9 @@ void project_singledata(const double start[], const double end[],
 	    else if (z_defined) {
 		/* ray intersects pixel(i,j) with length l_ij */
 
+	      if (backward)
+	      vol_data[ray_index] += (voxel_t)((alpha_z-alpha_c)*d_conv * rdata);
+	      else
 		data += (alpha_z-alpha_c)*d_conv * vol_data[ray_index];
 
 		k += k_u;
@@ -399,52 +420,18 @@ void project_singledata(const double start[], const double end[],
 	if( (alpha_max - alpha_c) > PRECISION) {
 	    /* this is the last step so don't need to worry about incrementing i or j*/
 	    l_ij=(alpha_max-alpha_c)*d_conv;
-	    
+
+	    if (backward)
+	    vol_data[ray_index] += (voxel_t)(l_ij * rdata);
+	    else
 	    data += l_ij * vol_data[ray_index];
 	}
-	*ray_data += (REAL)data;
+	if (!backward)
+	  ray_data += (pixel_t)data;
 	
     } /* of alpha_min < alpha_max */
     
     return;
 }
 
-void forwardProjection(double *source_x, double *source_y, double *source_z,
-		       double *det_x, double *det_y, double *det_z,
-		       REAL *ray_data, REAL *vol_data, double *angles,
-		       struct jacobs_options *options, int n_angles,
-		       long n_rays_y, long n_rays_z)
-{
-  int i, curr_angle, curr_ray_y, curr_ray_z;
-  long ray_offset;
-  double cos_curr_angle, sin_curr_angle;
-  double start[3], end[3];
-#pragma omp parallel for shared(source_x, source_y, source_z, det_x, det_y, det_z, ray_data, angles, options) private(curr_angle, curr_ray_y, curr_ray_z, cos_curr_angle, sin_curr_angle, start, end, ray_offset), firstprivate(vol_data, n_angles, n_rays_y, n_rays_z) schedule(dynamic)
-
-  for(curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
-    start[2] = *source_z;
-    end[2] = det_z[curr_ray_z];
-
-    for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
-      /* rotate source and detector positions by current angle */
-      cos_curr_angle = cos(angles[curr_angle]);
-      sin_curr_angle = sin(angles[curr_angle]);
-	  
-      start[0] = cos_curr_angle * (*source_x) - sin_curr_angle * (*source_y);
-      start[1] = sin_curr_angle * (*source_x) + cos_curr_angle * (*source_y);
-	  
-      ray_offset = curr_angle * n_rays_y * n_rays_z + curr_ray_z*n_rays_y;
-	  
-      /* loop over y values on detector */
-      for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
-	end[0] = cos_curr_angle * (*det_x) - sin_curr_angle * det_y[curr_ray_y];
-	end[1] = sin_curr_angle * (*det_x) + cos_curr_angle * det_y[curr_ray_y];
-	  
-	/* loop over z values on detector */
-	    
-	project_singledata(start, end, &ray_data[ray_offset + curr_ray_y],
-			   vol_data, options);
-      }
-    }
-  }
-}
+#endif // CCPI_PROJECT_LINE
