@@ -1,0 +1,120 @@
+
+Parallel beam slice.
+
+Voxel corner at (xs, ys), voxel sizes wx, wy with mx by my voxels, so (xs, ys)
+to (xe, ye) = (xs + wx * mx, ys + wy * my). Normally wx = wy = w and
+mx = my = m, and xs = ys = s, so (s + w * m, s + w * m) which is usually
+symmetric about the origin so (-e, -e) to (e, e)
+
+Pixel array is sufficently far to be always outside voxels, so at phi = 0, say
+its central position (p, 0) is (3 * e, 0). For a clockwise rotation of the
+object from above its equivalent to an anticlockwise rotation of pixels so at
+phi the central position is (p * cos(phi), p * sin(phi))
+
+A line from the central pixel always passes through the origin so is
+represented by (x, y) = (0, 0) + r (p * cos(phi), p * sin(phi)). The lines
+from any other pixel, which started at (p, py), is parallel to this and is
+therefore represented by
+
+(x, y) =     (p * cos(phi) - py * sin(phi), p * sin(phi) + py * cos(phi))
+         + r (p * cos(phi), p * sin(phi))
+which can also be written as
+(x, y) = (- py * sin(phi), py * cos(phi)) + r (p * cos(phi), p * sin(phi))
+In fact we can ignore p to get
+(x, y) = (- py * sin(phi), py * cos(phi)) + r (cos(phi), sin(phi))
+
+We have n pixels in the strip
+
+The fastest varying memory index for the voxels is x, so in order to do an x
+strip at a time we must first find the intercept for the jth voxel strip
+which goes from ys + j * wy <= y < ys + (j + 1) * wy (0 <= j < my). As we step
+j the first value is the last value of the previous strip.
+(ys + j * wy = y1, ys + (j + 1) * wy = ys + wy = y2
+
+   py * cos(phi) + r sin(phi) = y1
+=> r sin(phi) = y1 - py * cos(phi)
+=> r = (y1 - py * cos(phi)) / sin(phi)
+
+which for the first value is r1 = (ys - py * cos(phi)) / sin(phi)
+and steps by rs = (wy - py * cos(phi)) / sin(phi) for each strip,
+r2 = r1 + rs.
+
+We can also define a step to the next pixel from py in this equation also.
+
+Then using this value of r we can calculate the x range of this line through
+the strip
+
+x1 = - py * sin(phi) + r1 * cos(phi) and
+x2 = - py * sin(phi) + r2 * cos(phi)
+   =   x1 + rs * cos(phi)
+
+(x1 > x2 for 90 < theta < 270, to be aware of)
+
+Now need to consider whether this intercepts the strip of x voxels and the
+lengths of intercept with each one if it does.
+
+The line initially intercepts the ith voxel at (x1, y1) and exists at the
+voxel x boundary (calc y), it intercepts each subsequent voxel at the initial
+and final boundaries (calc y for each), until the final voxel where it starts
+at the initial voxel boundary (calc y) and exits at (x2, y2). So we need to
+calculate the initial and final voxel indexes and generate y values as
+appropriate.
+
+Actually the length through all the intermediate voxels will be the same and
+is related to the angle, so its just the lengths at the two ends which are the
+real issue, and are sqrt((xb - xa)^2 - (yb - ya)^2). Can we relate these to
+the total length of the line - all the ones we crossed completely and avoid
+any square roots? It must be something like the r fraction of the line length
+for the r value at x1 and the r value at the voxel boundary...
+
+A line that intercepts a voxel at (xa, ya) and crosses it completely at angle
+phi has, wx = L cos(phi) => L = wx / cos(phi)
+
+The total line length crossing width wy is wy = LL sin(phi)
+=> LL = wy / sin(phi), so the left over bits are LL - n full voxels * L
+
+
+
+If 45 < phi < 135 will have better length through y rather than x so maybe
+invert and try to vectorise on a group of pixels. Might not help the
+parallelism? Initially don't do this.
+
+To restrict the range of h pixels we test for each voxel row we need to look
+at the limiting cases. The voxel row goes from (x0,y1) to (xN, y2), so y1 and
+y2 are the range of y values we have to consider a line from any pixel
+intercepting. We assume that the pixel array (at 0 degress) starts at a
+negative y value and proceeds to positive y with a fixed step. So
+
+Between 0 and 90 degrees a line projected from the source to the detector will
+start by just touching at y1 at xN (yN), going through the voxels, with the
+final line just touching y2 at x0 (y0). So for the range of pixel y values we
+define the pixel range by yN >= y1 and y0 < y2, (h = hN; h < h0; h++)
+
+Between 90 and 180  => yN < y2 and y0 >= y1, (h = h0; h > hN; h--)
+Between 180 and 270 => y0 < y2 and yN >= y1, (h = hN; h > h0; h--)
+Between 270 and 360 => yN < y2 and y0 >= y1, (h = h0; h < hN; h++)
+
+Now to define the values, the equation of the line gives us
+   x0 = -py sin(phi) + r0 cos(phi)
+=> r0 = (x0 + py sin(phi)) / cos(phi)
+  and
+   rN = (xN + py sin(phi)) / cos(phi)
+so
+  y0 = py cos(phi) + (x0 + py sin(phi)) sin(phi) / cos(phi)
+  yN = py cos(phi) + (xN + py sin(phi)) sin(phi) / cos(phi)
+
+or
+  yi = 
+
+Now since py = p + hj pstep, for yi (i = 0,N) (<, >) yk (k = 1,2)
+
+   yk <,> py cos(phi) + (xk + py sin(phi)) sin(phi) / cos(phi)
+=> yk <,> (p + hj step) cos (phi) + (xk + (p + hj step) sin(phi)) sin / cos
+=> yk cos(phi) <,> p cos^2(phi) + hj step cos^2(phi) + xk sin(phi)
+                   + p sin^2(phi) + hj step sin^2(phi)
+=> yk cos(phi) <,> p + hj step + xk sin(phi)
+=> (yk cos(phi) - p - xk sin(phi)) / step <,> hj
+
+which allows us to calculate the loop range
+
+Test against fast projection results?

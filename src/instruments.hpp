@@ -180,6 +180,13 @@ namespace CCPi {
     long *backward_rowb;
     long *backward_rowe;
 
+    static void my_back_project(const real h_pixels[], const real v_pixels[],
+				 const real angles[], pixel_type pixels[],
+				 voxel_type *const voxels,
+				 const int n_angles, const int nh_pixels,
+				 const int nv_pixels, const real grid_offset[3],
+				 const real voxel_size[3], const int nx_voxels,
+				 const int ny_voxels, const int nz_voxels);
     static void map_2Dprojection(const real start[], const real end[],
 				 const real b_x, const real b_y,
 				 const real b_z, const real d_x,
