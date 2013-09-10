@@ -242,7 +242,7 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 		  for (long j = 0; j < offset; j++) {
 		    pixels[j + nangles * offset] = pixel_type(ptr[j]);
 		  }
-		  angles[nangles] = angle_data[i];
+		  angles[nangles] = M_PI * angle_data[i] / 180.0;
 		  nangles++;
 		} else if (keys[i] == 1) {
 		  // bright
