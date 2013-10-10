@@ -142,6 +142,337 @@ void CCPi::parallel_beam::forward_project(pixel_type *pixels,
   fptime.output(" forward projection");
 }
 
+extern void test_voxel(const int i, const int j, const int k,
+		       const int a, const int v, const int h, const double d,
+		       const double l, const double voxel_origin[3],
+		       const double voxel_size[3], const double v_pos,
+		       const double h_pos, const double cphi,
+		       const double sphi, const int nx, const int ny,
+		       const int nz, const char message[]);
+
+// Todo - simdise across a group of j or h?
+void CCPi::parallel_beam::my_back_project(const real h_pixels[],
+					  const real v_pixels[],
+					  const real angles[],
+					  pixel_type pixels[],
+					  voxel_type *const voxels,
+					  const int n_angles,
+					  const int nh_pixels,
+					  const int nv_pixels,
+					  const real vox_origin[3],
+					  const real vox_size[3],
+					  const int nx,
+					  const int ny,
+					  const int nz)
+{
+  //const real tol = 1e-13;
+  std::vector<real> cangles(n_angles);
+  for (int i = 0; i < n_angles; i++)
+    cangles[i] = std::cos(angles[i]);
+  std::vector<real> sangles(n_angles);
+  for (int i = 0; i < n_angles; i++)
+    sangles[i] = std::sin(angles[i]);
+  // centred positions
+  std::vector<real> x_coords(nx);
+  for (int i = 0; i < nx; i++)
+    x_coords[i] = vox_origin[0] + vox_size[0] / 2.0 + real(i) * vox_size[0];
+  std::vector<real> x0_coords(nx + 1);
+  for (int i = 0; i <= nx; i++)
+    x0_coords[i] = vox_origin[0] + real(i) * vox_size[0];
+  std::vector<real> y_coords(ny);
+  for (int i = 0; i < ny; i++)
+    y_coords[i] = vox_origin[1] + vox_size[1] / 2.0 + real(i) * vox_size[1];
+  std::vector<real> y0_coords(ny + 1);
+  for (int i = 0; i <= ny; i++)
+    y0_coords[i] = vox_origin[1] + real(i) * vox_size[1];
+  std::vector<real> z_coords(nz + 1);
+  for (int i = 0; i <= nz; i++)
+    z_coords[i] = vox_origin[2] + real(i) * vox_size[2];
+  real inv_pixel_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+  std::vector<real> hh_pixels(nh_pixels);
+  for (int i = 0; i < nh_pixels; i++)
+    hh_pixels[i] = (h_pixels[i] - h_pixels[0]) * inv_pixel_step;
+  // Todo - pre-rotated array of voxels? need for each angle, x, y though
+  // x' = x cos() + y sin()
+  // y' = -x sin() + y cos() - not used in current form
+  std::vector<real> vox_lengths(n_angles);
+  for (int i = 0; i < n_angles; i++) {
+    if (std::abs(cangles[i]) > std::abs(sangles[i]))
+      vox_lengths[i] = vox_size[0] / std::abs(cangles[i]);
+    else
+      vox_lengths[i] = vox_size[0] / std::abs(sangles[i]);
+  }
+  // region of voxel about centre that has full vox_length passing through it
+  std::vector<real> yLr(n_angles);
+  for (int i = 0; i < n_angles; i++) {
+    if (std::abs(cangles[i]) > std::abs(sangles[i]))
+      yLr[i] = ((vox_size[0] - vox_lengths[i] * sangles[i]) / cangles[i]) / 2.0;
+    else
+      yLr[i] = ((vox_size[0] - vox_lengths[i] * cangles[i]) / sangles[i]) / 2.0;
+  }
+  // Assumes square voxels in x,y
+  std::vector<real> Pextra(n_angles);
+  for (int i = 0; i < n_angles; i++) {
+    if (std::abs(cangles[i]) > std::abs(sangles[i]))
+      Pextra[i] = vox_size[0] * sangles[i];
+    else
+      Pextra[i] = vox_size[0] * cangles[i];
+  }
+  /*
+  for (int i = 0; i < n_angles; i++)
+    std::cerr << "Ang " << i << ' ' << angles[i] << '\n';
+  for (int i = 0; i < nx; i++)
+    std::cerr << "Pos " << i << ' ' << x_coords[i] << ' ' << y_coords[i] << '\n';
+  */
+  // Todo can precalc 2D i0/inh1, yc0, xh_coords here
+  // its probably p that is the tricky one though
+  // put end value to stop while loop without over-run
+  std::vector<real> v_coords(nv_pixels + 1);
+  for (int i = 0; i < nv_pixels; i++)
+    v_coords[i] = v_pixels[i];
+  v_coords[nv_pixels] = z_coords[nz] + 1.0;
+  //std::vector<real> xh_coords(nx);
+  /*std::vector<real> lengths(nh_pixels);*/
+  std::vector<real> xx_coords(nx + 1);
+  std::vector<real> yy_coords(ny + 1);
+  int v = 0;
+  while (v_pixels[v] < z_coords[0])
+    v++;
+  for (int k = 0; k < nz; k++) {
+    long vox_z = k * long(ny) * long(nx);
+    // make this an inner loop? Todo
+    while (v_coords[v] < z_coords[k + 1]) {
+      long pix_v = v * long(nh_pixels);
+      // Todo - what is best order of a/j loops and which to parallelise?
+      for (int a = 0; a < n_angles; a++) {
+	long pix_av = a * long(nv_pixels) * long(nh_pixels) + pix_v;
+	real cphi = cangles[a];
+	real sphi = sangles[a];
+	real L = vox_lengths[a];
+	//for (int i = 0; i < nx; i++)
+	//xh_coords[i] = - x_coords[i] * sphi * inv_pixel_step;
+	for (int i = 0; i <= nx; i++)
+	  xx_coords[i] = - x0_coords[i] * sphi;
+	for (int i = 0; i <= ny; i++)
+	  yy_coords[i] = y0_coords[i] * cphi;
+	real y_0[2][2];
+	y_0[0][0] = xx_coords[0] + yy_coords[0];
+	y_0[0][1] = xx_coords[0] + yy_coords[1];
+	y_0[1][0] = xx_coords[1] + yy_coords[0];
+	y_0[1][1] = xx_coords[1] + yy_coords[1];
+	real y_top = 0.0;
+	real y_l1;
+	real y_l2;
+	real y_bot = 0.0;
+	if (sphi >= 0.0) {
+	  // <= 180, scanning from 0 to nx decreases p
+	  // orientation of voxels is the same for all so can get rotated shape
+	  // from any single one - use 0.0
+	  //int im;
+	  int jm;
+	  if (cphi >= 0.0) { // 0-90
+	    //im = 0;
+	    jm = 1;
+	    if (cphi >= sphi) { // 0-45
+	      y_l1 = y_0[0][1] - y_0[1][1];
+	      y_l2 = y_0[0][1] - y_0[0][0];
+	      y_bot = y_0[0][1] - y_0[1][0];
+	    } else {
+	      y_l1 = y_0[0][1] - y_0[0][0];
+	      y_l2 = y_0[0][1] - y_0[1][1];
+	      y_bot = y_0[0][1] - y_0[1][0];
+	    }
+	  } else {
+	    //im = 0;
+	    jm = 0;
+	    if (std::abs(cphi) > sphi) { // 135-180
+	      y_l1 = y_0[0][0] - y_0[1][0];
+	      y_l2 = y_0[0][0] - y_0[0][1];
+	      y_bot = y_0[0][0] - y_0[1][1];
+	    } else {
+	      y_l1 = y_0[0][0] - y_0[0][1];
+	      y_l2 = y_0[0][0] - y_0[1][0];
+	      y_bot = y_0[0][0] - y_0[1][1];
+	    }
+	  }
+	  //const int npixels = int(y_bot * inv_pixel_step) + 2;
+	  // Its always scaled by L
+	  real inv_y_l1 = L / y_l1;
+	  for (int j = 0; j < ny; j++) {
+	    real yj = yy_coords[j + jm];
+	    long vox_zy = vox_z + j * long(nx);
+	    int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
+	    if (p >= nh_pixels)
+	      p = nh_pixels - 1;
+	    else if (p < 0)
+	      continue;
+	    for (int i = 0; i < nx; i++) {
+	      // Todo ? ytop decreases by y_l1 for each i step
+	      y_top = xx_coords[i] + yj;
+	      while (h_pixels[p] > y_top) {
+		p--;
+		if (p < 0)
+		  break;
+	      }
+	      if (p < 0)
+		break;
+	      real yb = y_top - y_bot;
+	      real y1 = y_top - y_l1;
+	      real y2 = y_top - y_l2;
+	      /*int cnt = 0;*/
+	      //int max_pix = p - npixels;
+	      //if (max_pix < -1)
+	      //max_pix = -1;
+	      //const int mp = max_pix;
+	      //for (int q = p; q > mp; q--) {
+	      for (int q = p; q > -1; q--) {
+		if (h_pixels[q] < yb)
+		  break;
+		else if (h_pixels[q] < y2) {
+		  //real ratio = (h_pixels[q]-(y_top - y_bot)) / (y_bot - y_l2);
+		  real ratio = (h_pixels[q] - yb) * inv_y_l1;
+		  //y_bot - y_l2 == y_l1
+		  /*lengths[cnt] = ratio;*/
+		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
+		} else if (h_pixels[q] < y1) {
+		  /*lengths[cnt] = L;*/
+		  voxels[vox_zy + i] += pixels[pix_av + q] * L;
+		} else {
+		  real ratio = (y_top - h_pixels[q]) * inv_y_l1;
+		  /*lengths[cnt] = ratio;*/
+		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
+		}
+		/*cnt++;*/
+	      }
+	      /*
+	      if (k == 0) {
+		if (p < nh_pixels - 1)
+		  test_voxel(i, j, k, a, v, p+1, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[p+1],
+			     cphi, sphi, nx, ny, nz, "p+");
+		for (int q = 0; q < cnt; q++) {
+		  test_voxel(i, j, k, a, v, p-q, 1.0, lengths[q],
+			     vox_origin, vox_size, v_coords[v], h_pixels[p-q],
+			     cphi, sphi, nx, ny, nz, "pq");
+		}
+		if (p-cnt >= 0) {
+		  test_voxel(i, j, k, a, v, p-cnt, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[p-cnt],
+			     cphi, sphi, nx, ny, nz, "p-");
+		}
+	      }
+	      */
+	    }
+	  }
+	} else {
+	  // 0-nx increases p
+	  //int im;
+	  int jm;
+	  if (cphi < 0.0) { // 180-270
+	    //im = 0;
+	    jm = 1;
+	    if (cphi < sphi) { // 180-225
+	      y_l1 = y_0[1][1] - y_0[0][1];
+	      y_l2 = y_0[0][0] - y_0[0][1];
+	      y_top = y_0[1][0] - y_0[0][1];
+	    } else {
+	      y_l1 = y_0[0][0] - y_0[0][1];
+	      y_l2 = y_0[1][1] - y_0[0][1];
+	      y_top = y_0[1][0] - y_0[0][1];
+	    }
+	  } else { //270-360
+	    //im = 0;
+	    jm = 0;
+	    if (cphi > std::abs(sphi)) { // 315-360
+	      y_l1 = y_0[1][0] - y_0[0][0];
+	      y_l2 = y_0[0][1] - y_0[0][0];
+	      y_top = y_0[1][1] - y_0[0][0];
+	    } else {
+	      y_l1 = y_0[0][1] - y_0[0][0];
+	      y_l2 = y_0[1][0] - y_0[0][0];
+	      y_top = y_0[1][1] - y_0[0][0];
+	    }
+	  }
+	  //const int npixels = int(y_top * inv_pixel_step) + 2;
+	  real inv_y_l1 = L / y_l1;
+	  for (int j = 0; j < ny; j++) {
+	    real yj = yy_coords[j + jm];
+	    long vox_zy = vox_z + j * long(nx);
+	    int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
+	    if (p < 0)
+	      p = 0;
+	    else if (p >= nh_pixels)
+	      continue;
+	    for (int i = 0; i < nx; i++) {
+	      // Todo ? ybot increases by y_l1 for each i step
+	      y_bot = xx_coords[i] + yj;
+	      while (h_pixels[p] < y_bot) {
+		p++;
+		if (p >= nh_pixels)
+		  break;
+	      }
+	      if (p >= nh_pixels)
+		break;
+	      real yt = y_bot + y_top;
+	      real y1 = y_bot + y_l1;
+	      real y2 = y_bot + y_l2;
+	      //int max_pix = p + npixels;
+	      //if (max_pix > nh_pixels)
+	      //max_pix = nh_pixels;
+	      //const int mp = max_pix;
+	      /*int cnt = 0;*/
+	      //for (int q = p; q < mp; q++) {
+	      for (int q = p; q < nh_pixels; q++) {
+		if (h_pixels[q] >= yt)
+		  break;
+		else if (h_pixels[q] < y1) {
+		  real ratio = (h_pixels[q] - y_bot) * inv_y_l1;
+		  /*lengths[cnt] = ratio;*/
+		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
+		} else if (h_pixels[q] < y2) {
+		  /*lengths[cnt] = L;*/
+		  voxels[vox_zy + i] += pixels[pix_av + q] * L;
+		} else {
+		  real ratio = (yt - h_pixels[q]) * inv_y_l1;
+		  //real ratio = ((y_bot+y_top) - h_pixels[q]) / (y_top - y_l2);
+		  // y_top - y_l2 == y_l1
+		  /*lengths[cnt] = ratio;*/
+		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
+		}
+		/*cnt++;*/
+	      }
+	      /*
+	      if (k == 0) {
+		if (i == 0 and j == 0 and a == 46 and v == 0) {
+		  std::cerr << p << ' ' << cnt << ' ' << y_top << ' '
+			    << y_l1 << ' ' << y_l2 << ' ' << y_bot << ' '
+			    << h_pixels[p] << '\n';
+		}
+		if (p > 0)
+		  test_voxel(i, j, k, a, v, p-1, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[p-1],
+			     cphi, sphi, nx, ny, nz, "p-");
+		for (int q = 0; q < cnt; q++) {
+		  test_voxel(i, j, k, a, v, p+q, 1.0, lengths[q],
+			     vox_origin, vox_size, v_coords[v], h_pixels[p+q],
+			     cphi, sphi, nx, ny, nz, "pq");
+		}
+		if (p+cnt < nh_pixels) {
+		  test_voxel(i, j, k, a, v, p+cnt, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[p+cnt],
+			     cphi, sphi, nx, ny, nz, "p+");
+		}
+	      }
+	      */
+	    }
+	  }
+	}
+      }
+      v++;
+    }
+  }
+}
+
 void CCPi::parallel_beam::backward_project(pixel_type *pixels,
 					   voxel_type *const voxels,
 					   const real origin[3],
@@ -154,7 +485,13 @@ void CCPi::parallel_beam::backward_project(pixel_type *pixels,
 			    get_num_h_pixels(), get_num_v_pixels(), origin,
 			    width, nx, ny, nz);
   else
+    /*
     instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
+				 pixels, voxels, get_num_angles(),
+				 get_num_h_pixels(), get_num_v_pixels(), origin,
+				 width, nx, ny, nz);
+    */
+    my_back_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				 pixels, voxels, get_num_angles(),
 				 get_num_h_pixels(), get_num_v_pixels(), origin,
 				 width, nx, ny, nz);
@@ -173,10 +510,17 @@ void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
 			    get_num_angles(), get_num_h_pixels(),
 			    get_num_v_pixels(), origin, width, nx, ny, nz);
   else
+    /**/
     instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				 get_pixel_data(), voxels,
 				 get_num_angles(), get_num_h_pixels(),
 				 get_num_v_pixels(), origin, width, nx, ny, nz);
+  /**/ /*
+    my_back_project(get_h_pixels(), get_v_pixels(), get_phi(),
+				 get_pixel_data(), voxels,
+				 get_num_angles(), get_num_h_pixels(),
+				 get_num_v_pixels(), origin, width, nx, ny, nz);
+       */
   bptime.accumulate();
   bptime.output("backward projection");
 }

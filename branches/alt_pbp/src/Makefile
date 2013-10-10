@@ -12,7 +12,7 @@ MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_intel_ilp64.a /opt/intel/c
 LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB) 
 
 OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o \
-	tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o timer.o utils.o
+	tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o timer.o utils.o point.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -49,3 +49,5 @@ nexus.o: nexus.cpp nexus.hpp timer.hpp
 timer.o: timer.cpp timer.hpp
 
 utils.o: utils.cpp utils.hpp
+
+point.o: point.cpp
