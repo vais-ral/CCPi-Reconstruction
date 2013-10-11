@@ -173,15 +173,9 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
   for (int i = 0; i < n_angles; i++)
     sangles[i] = std::sin(angles[i]);
   // centred positions
-  std::vector<real> x_coords(nx);
-  for (int i = 0; i < nx; i++)
-    x_coords[i] = vox_origin[0] + vox_size[0] / 2.0 + real(i) * vox_size[0];
   std::vector<real> x0_coords(nx + 1);
   for (int i = 0; i <= nx; i++)
     x0_coords[i] = vox_origin[0] + real(i) * vox_size[0];
-  std::vector<real> y_coords(ny);
-  for (int i = 0; i < ny; i++)
-    y_coords[i] = vox_origin[1] + vox_size[1] / 2.0 + real(i) * vox_size[1];
   std::vector<real> y0_coords(ny + 1);
   for (int i = 0; i <= ny; i++)
     y0_coords[i] = vox_origin[1] + real(i) * vox_size[1];
@@ -189,9 +183,6 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
   for (int i = 0; i <= nz; i++)
     z_coords[i] = vox_origin[2] + real(i) * vox_size[2];
   real inv_pixel_step = 1.0 / (h_pixels[1] - h_pixels[0]);
-  std::vector<real> hh_pixels(nh_pixels);
-  for (int i = 0; i < nh_pixels; i++)
-    hh_pixels[i] = (h_pixels[i] - h_pixels[0]) * inv_pixel_step;
   // Todo - pre-rotated array of voxels? need for each angle, x, y though
   // x' = x cos() + y sin()
   // y' = -x sin() + y cos() - not used in current form
@@ -202,28 +193,6 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
     else
       vox_lengths[i] = vox_size[0] / std::abs(sangles[i]);
   }
-  // region of voxel about centre that has full vox_length passing through it
-  std::vector<real> yLr(n_angles);
-  for (int i = 0; i < n_angles; i++) {
-    if (std::abs(cangles[i]) > std::abs(sangles[i]))
-      yLr[i] = ((vox_size[0] - vox_lengths[i] * sangles[i]) / cangles[i]) / 2.0;
-    else
-      yLr[i] = ((vox_size[0] - vox_lengths[i] * cangles[i]) / sangles[i]) / 2.0;
-  }
-  // Assumes square voxels in x,y
-  std::vector<real> Pextra(n_angles);
-  for (int i = 0; i < n_angles; i++) {
-    if (std::abs(cangles[i]) > std::abs(sangles[i]))
-      Pextra[i] = vox_size[0] * sangles[i];
-    else
-      Pextra[i] = vox_size[0] * cangles[i];
-  }
-  /*
-  for (int i = 0; i < n_angles; i++)
-    std::cerr << "Ang " << i << ' ' << angles[i] << '\n';
-  for (int i = 0; i < nx; i++)
-    std::cerr << "Pos " << i << ' ' << x_coords[i] << ' ' << y_coords[i] << '\n';
-  */
   // Todo can precalc 2D i0/inh1, yc0, xh_coords here
   // its probably p that is the tricky one though
   // put end value to stop while loop without over-run
@@ -231,7 +200,6 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
   for (int i = 0; i < nv_pixels; i++)
     v_coords[i] = v_pixels[i];
   v_coords[nv_pixels] = z_coords[nz] + 1.0;
-  //std::vector<real> xh_coords(nx);
   /*std::vector<real> lengths(nh_pixels);*/
   std::vector<real> xx_coords(nx + 1);
   std::vector<real> yy_coords(ny + 1);
@@ -255,11 +223,10 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	  xx_coords[i] = - x0_coords[i] * sphi;
 	for (int i = 0; i <= ny; i++)
 	  yy_coords[i] = y0_coords[i] * cphi;
-	real y_0[2][2];
-	y_0[0][0] = xx_coords[0] + yy_coords[0];
-	y_0[0][1] = xx_coords[0] + yy_coords[1];
-	y_0[1][0] = xx_coords[1] + yy_coords[0];
-	y_0[1][1] = xx_coords[1] + yy_coords[1];
+	real y_00 = xx_coords[0] + yy_coords[0];
+	real y_01 = xx_coords[0] + yy_coords[1];
+	real y_10 = xx_coords[1] + yy_coords[0];
+	real y_11 = xx_coords[1] + yy_coords[1];
 	real y_top = 0.0;
 	real y_l1;
 	real y_l2;
@@ -268,31 +235,28 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	  // <= 180, scanning from 0 to nx decreases p
 	  // orientation of voxels is the same for all so can get rotated shape
 	  // from any single one - use 0.0
-	  //int im;
 	  int jm;
 	  if (cphi >= 0.0) { // 0-90
-	    //im = 0;
 	    jm = 1;
 	    if (cphi >= sphi) { // 0-45
-	      y_l1 = y_0[0][1] - y_0[1][1];
-	      y_l2 = y_0[0][1] - y_0[0][0];
-	      y_bot = y_0[0][1] - y_0[1][0];
+	      y_l1 = y_01 - y_11;
+	      y_l2 = y_01 - y_00;
+	      y_bot = y_01 - y_10;
 	    } else {
-	      y_l1 = y_0[0][1] - y_0[0][0];
-	      y_l2 = y_0[0][1] - y_0[1][1];
-	      y_bot = y_0[0][1] - y_0[1][0];
+	      y_l1 = y_01 - y_00;
+	      y_l2 = y_01 - y_11;
+	      y_bot = y_01 - y_10;
 	    }
 	  } else {
-	    //im = 0;
 	    jm = 0;
 	    if (std::abs(cphi) > sphi) { // 135-180
-	      y_l1 = y_0[0][0] - y_0[1][0];
-	      y_l2 = y_0[0][0] - y_0[0][1];
-	      y_bot = y_0[0][0] - y_0[1][1];
+	      y_l1 = y_00 - y_10;
+	      y_l2 = y_00 - y_01;
+	      y_bot = y_00 - y_11;
 	    } else {
-	      y_l1 = y_0[0][0] - y_0[0][1];
-	      y_l2 = y_0[0][0] - y_0[1][0];
-	      y_bot = y_0[0][0] - y_0[1][1];
+	      y_l1 = y_00 - y_01;
+	      y_l2 = y_00 - y_10;
+	      y_bot = y_00 - y_11;
 	    }
 	  }
 	  //const int npixels = int(y_bot * inv_pixel_step) + 2;
@@ -320,18 +284,11 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	      real y1 = y_top - y_l1;
 	      real y2 = y_top - y_l2;
 	      /*int cnt = 0;*/
-	      //int max_pix = p - npixels;
-	      //if (max_pix < -1)
-	      //max_pix = -1;
-	      //const int mp = max_pix;
-	      //for (int q = p; q > mp; q--) {
 	      for (int q = p; q > -1; q--) {
 		if (h_pixels[q] < yb)
 		  break;
 		else if (h_pixels[q] < y2) {
-		  //real ratio = (h_pixels[q]-(y_top - y_bot)) / (y_bot - y_l2);
 		  real ratio = (h_pixels[q] - yb) * inv_y_l1;
-		  //y_bot - y_l2 == y_l1
 		  /*lengths[cnt] = ratio;*/
 		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
 		} else if (h_pixels[q] < y1) {
@@ -366,34 +323,30 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	  }
 	} else {
 	  // 0-nx increases p
-	  //int im;
 	  int jm;
 	  if (cphi < 0.0) { // 180-270
-	    //im = 0;
 	    jm = 1;
 	    if (cphi < sphi) { // 180-225
-	      y_l1 = y_0[1][1] - y_0[0][1];
-	      y_l2 = y_0[0][0] - y_0[0][1];
-	      y_top = y_0[1][0] - y_0[0][1];
+	      y_l1 = y_11 - y_01;
+	      y_l2 = y_00 - y_01;
+	      y_top = y_10 - y_01;
 	    } else {
-	      y_l1 = y_0[0][0] - y_0[0][1];
-	      y_l2 = y_0[1][1] - y_0[0][1];
-	      y_top = y_0[1][0] - y_0[0][1];
+	      y_l1 = y_00 - y_01;
+	      y_l2 = y_11 - y_01;
+	      y_top = y_10 - y_01;
 	    }
 	  } else { //270-360
-	    //im = 0;
 	    jm = 0;
 	    if (cphi > std::abs(sphi)) { // 315-360
-	      y_l1 = y_0[1][0] - y_0[0][0];
-	      y_l2 = y_0[0][1] - y_0[0][0];
-	      y_top = y_0[1][1] - y_0[0][0];
+	      y_l1 = y_10 - y_00;
+	      y_l2 = y_01 - y_00;
+	      y_top = y_11 - y_00;
 	    } else {
-	      y_l1 = y_0[0][1] - y_0[0][0];
-	      y_l2 = y_0[1][0] - y_0[0][0];
-	      y_top = y_0[1][1] - y_0[0][0];
+	      y_l1 = y_01 - y_00;
+	      y_l2 = y_10 - y_00;
+	      y_top = y_11 - y_00;
 	    }
 	  }
-	  //const int npixels = int(y_top * inv_pixel_step) + 2;
 	  real inv_y_l1 = L / y_l1;
 	  for (int j = 0; j < ny; j++) {
 	    real yj = yy_coords[j + jm];
@@ -416,12 +369,7 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	      real yt = y_bot + y_top;
 	      real y1 = y_bot + y_l1;
 	      real y2 = y_bot + y_l2;
-	      //int max_pix = p + npixels;
-	      //if (max_pix > nh_pixels)
-	      //max_pix = nh_pixels;
-	      //const int mp = max_pix;
 	      /*int cnt = 0;*/
-	      //for (int q = p; q < mp; q++) {
 	      for (int q = p; q < nh_pixels; q++) {
 		if (h_pixels[q] >= yt)
 		  break;
@@ -434,8 +382,6 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 		  voxels[vox_zy + i] += pixels[pix_av + q] * L;
 		} else {
 		  real ratio = (yt - h_pixels[q]) * inv_y_l1;
-		  //real ratio = ((y_bot+y_top) - h_pixels[q]) / (y_top - y_l2);
-		  // y_top - y_l2 == y_l1
 		  /*lengths[cnt] = ratio;*/
 		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
 		}
