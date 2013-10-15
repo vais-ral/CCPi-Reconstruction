@@ -200,7 +200,9 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
   for (int i = 0; i < nv_pixels; i++)
     v_coords[i] = v_pixels[i];
   v_coords[nv_pixels] = z_coords[nz] + 1.0;
-  /*std::vector<real> lengths(nh_pixels);*/
+#ifdef TESTBP
+  std::vector<real> lengths(nh_pixels);
+#endif // TESTBP
   std::vector<real> xx_coords(nx + 1);
   std::vector<real> yy_coords(ny + 1);
   int v = 0;
@@ -265,61 +267,133 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	  for (int j = 0; j < ny; j++) {
 	    real yj = yy_coords[j + jm];
 	    long vox_zy = vox_z + j * long(nx);
-	    int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
-	    if (p >= nh_pixels)
-	      p = nh_pixels - 1;
-	    else if (p < 0)
-	      continue;
-	    for (int i = 0; i < nx; i++) {
-	      // Todo ? ytop decreases by y_l1 for each i step
-	      y_top = xx_coords[i] + yj;
-	      while (h_pixels[p] > y_top) {
-		p--;
-		if (p < 0)
-		  break;
-	      }
-	      if (p < 0)
-		break;
-	      real yb = y_top - y_bot;
-	      real y1 = y_top - y_l1;
-	      real y2 = y_top - y_l2;
-	      /*int cnt = 0;*/
-	      for (int q = p; q > -1; q--) {
-		if (h_pixels[q] < yb)
-		  break;
-		else if (h_pixels[q] < y2) {
-		  real ratio = (h_pixels[q] - yb) * inv_y_l1;
-		  /*lengths[cnt] = ratio;*/
-		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
-		} else if (h_pixels[q] < y1) {
-		  /*lengths[cnt] = L;*/
-		  voxels[vox_zy + i] += pixels[pix_av + q] * L;
-		} else {
-		  real ratio = (y_top - h_pixels[q]) * inv_y_l1;
-		  /*lengths[cnt] = ratio;*/
-		  voxels[vox_zy + i] += pixels[pix_av + q] * ratio;
-		}
-		/*cnt++;*/
-	      }
-	      /*
-	      if (k == 0) {
-		if (p < nh_pixels - 1)
-		  test_voxel(i, j, k, a, v, p+1, 0.0, 0.0,
-			     vox_origin, vox_size, v_coords[v], h_pixels[p+1],
+	    int p0 = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
+	    if (p0 >= nh_pixels)
+	      p0 = nh_pixels - 1;
+	    real xn = (xx_coords[nx - 1] + yj - y_bot
+		       - h_pixels[0]) * inv_pixel_step;
+	    int pn;
+	    if (xn < 0.0)
+	      pn = -1;
+	    else
+	      pn = int(xn);
+	    /*
+	    if (k == 0) {
+	      std::cerr << "range " << a << ' ' << j << ' ' << p0 << " - "
+			<< pn << ", " << y_bot << ' ' << y_l1 << ' '
+			<< y_l2 << '\n';
+	    }
+	    */
+#ifdef TESTBP
+	    if (k == 0) {
+	      if (p0 < nh_pixels - 1) {
+		for (int i = 0; i < nx; i++) {
+		  test_voxel(i, j, k, a, v, p0+1, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[p0+1],
 			     cphi, sphi, nx, ny, nz, "p+");
-		for (int q = 0; q < cnt; q++) {
-		  test_voxel(i, j, k, a, v, p-q, 1.0, lengths[q],
-			     vox_origin, vox_size, v_coords[v], h_pixels[p-q],
-			     cphi, sphi, nx, ny, nz, "pq");
 		}
-		if (p-cnt >= 0) {
-		  test_voxel(i, j, k, a, v, p-cnt, 0.0, 0.0,
-			     vox_origin, vox_size, v_coords[v], h_pixels[p-cnt],
+	      }
+	    }
+#endif // TESTBP
+	    real ym;
+	    if (jm == 0)
+	      ym = yy_coords[j + 1];
+	    else
+	      ym = yy_coords[j];
+	    for (int p = p0; p > pn; p--) {
+	      //int i1 = int((h_pixels[p] - (yj - y_bot)
+	      //	    - xx_coords[0]) / (vox_size[0] * sphi));
+	      // bot is related to x_coords[1]
+	      int i1 = int((-h_pixels[p] + ym
+			    + xx_coords[1]) / (vox_size[0] * sphi));
+	      if (i1 < 0)
+		i1 = 0;
+	      int i2 = int((h_pixels[p] - yj
+			    - xx_coords[0]) / (vox_size[0] * sphi));
+	      if (i2 >= nx)
+		i2 = nx - 1;
+	      if (std::abs(sphi) < 1e-8) {
+		i1 = 0;
+		i2 = nx - 1;
+		// Todo - just run L from 0 to nx-1 and avoid tests
+	      }
+#ifdef TESTBP
+	      int cnt = 0;
+#endif // TESTBP
+	      if (i1 <= i2) { // Todo - why isn't this true?
+		/*
+		if (k == 0) {
+		  std::cerr << "  p = " << p << ' ' << i1 << " - " << i2 << '\n';
+		  if (p == 6 and a == 1 and j == 0 and v == 0) {
+		    std::cerr << "    info " << h_pixels[p] << ' ' << yj << ' '
+			      << xx_coords[0] << ' ' << vox_size[0] << '\n';
+		  }
+		}
+		*/
+		real y_top = xx_coords[i1] + yj;
+		int ia = i1;
+		// initial bit
+		if (y_top - y_l2 > h_pixels[p]) {
+		  real ratio = (h_pixels[p] - (y_top - y_bot)) * inv_y_l1;
+#ifdef TESTBP
+		  lengths[cnt] = ratio;
+		  cnt++;
+#endif // TESTBP
+		  voxels[vox_zy + i1] += pixels[pix_av + p] * ratio;
+		  ia++;
+		}
+		y_top = xx_coords[i2] + yj;
+		int ib = i2;
+		// final bit
+		if (y_top - y_l1 < h_pixels[p]) {
+		  real ratio = (y_top - h_pixels[p]) * inv_y_l1;
+#ifdef TESTBP
+		  lengths[cnt] = ratio;
+		  cnt++;
+#endif // TESTBP
+		  voxels[vox_zy + i2] += pixels[pix_av + p] * ratio;
+		  ib--;
+		}
+		// all the bits in between
+		for (int i = ia; i <= ib; i++) {
+		  voxels[vox_zy + i] += pixels[pix_av + p] * L;
+#ifdef TESTBP
+		  lengths[cnt] = L;
+		  cnt++;
+#endif // TESTBP
+		}
+	      }
+#ifdef TESTBP
+	      if (k == 0) {
+		if (i1 > 0 and i1 <= nx) {
+		  test_voxel(i1-1, j, k, a, v, p, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[p],
+			     cphi, sphi, nx, ny, nz, "pm");
+		}
+		for (int ix = 0; ix < cnt; ix++) {
+		  test_voxel(i1+ix, j, k, a, v, p, 1.0, lengths[ix],
+			     vox_origin, vox_size, v_coords[v], h_pixels[p],
+			     cphi, sphi, nx, ny, nz, "p");
+		}
+		if (i2 < nx-1 and i2 >= 0) {
+		  test_voxel(i2+1, j, k, a, v, p, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[p],
+			     cphi, sphi, nx, ny, nz, "px");
+		}
+	      }
+#endif // TESTBP
+	    }
+#ifdef TESTBP
+	    if (k == 0) {
+	      if (pn >= 0) {
+		for (int i = 0; i < nx; i++) {
+		  test_voxel(i, j, k, a, v, pn, 0.0, 0.0,
+			     vox_origin, vox_size, v_coords[v], h_pixels[pn],
 			     cphi, sphi, nx, ny, nz, "p-");
 		}
 	      }
-	      */
 	    }
+#endif // TESTBP
 	  }
 	} else {
 	  // 0-nx increases p
