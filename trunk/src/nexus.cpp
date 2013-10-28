@@ -12,11 +12,13 @@
 #  define USE_TIMER false
 #endif // USE_TIMER
 
-bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
-		      pixel_type * &f_dark, pixel_type * &i_bright,
-		      pixel_type * &f_bright, int &nh_pixels, int &nv_pixels,
+bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
+		      pixel_type *f_dark, pixel_type *i_bright,
+		      pixel_type *f_bright, int &nh_pixels, int &nv_pixels,
 		      real * &angles, int &nangles, real &hsize, real &vsize,
-		      const std::string filename, const bool all_angles)
+		      const std::string filename, const bool all_angles,
+		      const bool read_data, const int start_idx,
+		      const int block_size)
 {
   bool ok = true;
   timer ldtime(USE_TIMER);
@@ -202,10 +204,10 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 	      std::vector<long> index(3);
 	      std::vector<long> sizes(3);
 	      index[0] = 0;
-	      index[1] = 0;
+	      index[1] = start_idx;
 	      index[2] = 0;
 	      sizes[0] = 1;
-	      sizes[1] = (long)info.dims[1];
+	      sizes[1] = block_size;
 	      sizes[2] = (long)info.dims[2];
 	      nh_pixels = sizes[2];
 	      nv_pixels = sizes[1];
@@ -216,22 +218,14 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 		if (keys[i] == 0)
 		  nangles++;
 	      }
-	      pixels = new pixel_type[long(nangles) * offset];
-	      i_dark = new pixel_type[offset];
-	      f_dark = new pixel_type[offset];
-	      i_bright = new pixel_type[offset];
-	      f_bright = new pixel_type[offset];
-	      for (long i = 0; i < offset; i++) {
-		i_dark[i] = 0.0;
-		f_dark[i] = 0.0;
-		i_bright[i] = 0.0;
-		f_bright[i] = 0.0;
-	      }
-	      uint16_t *ptr = new uint16_t[sizes[1] * sizes[2]];
+	      uint16_t *ptr = 0;
+	      if (read_data)
+		ptr = new uint16_t[sizes[1] * sizes[2]];
 	      nangles = 0;
 	      for (long i = 0; i < n_ang; i++) {
 		index[0] = i;
-		input.getSlab(ptr, index, sizes);
+		if (read_data)
+		  input.getSlab(ptr, index, sizes);
 		// Todo - don't want to depend on pixel order here
 		// angles,x,y suggests y(v) varies fastest, since given the
 		// way the data is taken it doesn't make much sense for
@@ -239,37 +233,44 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
 		// should we check for an offset attribute?
 		if (keys[i] == 0) {
 		  // sample
-		  for (long j = 0; j < offset; j++) {
-		    pixels[j + nangles * offset] = pixel_type(ptr[j]);
+		  if (read_data) {
+		    for (long j = 0; j < offset; j++) {
+		      pixels[j + nangles * offset] = pixel_type(ptr[j]);
+		    }
 		  }
 		  angles[nangles] = M_PI * angle_data[i] / 180.0;
 		  nangles++;
 		} else if (keys[i] == 1) {
-		  // bright
-		  // Todo - check angles, no average? ...
-		  pixel_type *bptr = i_bright;
-		  if (i > n_ang / 2) {
-		    bptr = f_bright;
-		    n_fbright++;
-		  } else
-		    n_ibright++;
-		  for (long j = 0; j < offset; j++) {
-		    bptr[j] += pixel_type(ptr[j]);
+		  if (read_data) {
+		    // bright
+		    // Todo - check angles, no average? ...
+		    pixel_type *bptr = i_bright;
+		    if (i > n_ang / 2) {
+		      bptr = f_bright;
+		      n_fbright++;
+		    } else
+		      n_ibright++;
+		    for (long j = 0; j < offset; j++) {
+		      bptr[j] += pixel_type(ptr[j]);
+		    }
 		  }
 		} else if (keys[i] == 2) {
-		  // dark
-		  pixel_type *dptr = i_dark;
-		  if (i > n_ang / 2) {
-		    dptr = f_dark;
-		    n_fdark++;
-		  } else
-		    n_idark++;
-		  for (long j = 0; j < offset; j++) {
-		    dptr[j] += pixel_type(ptr[j]);
+		  if (read_data) {
+		    // dark
+		    pixel_type *dptr = i_dark;
+		    if (i > n_ang / 2) {
+		      dptr = f_dark;
+		      n_fdark++;
+		    } else
+		      n_idark++;
+		    for (long j = 0; j < offset; j++) {
+		      dptr[j] += pixel_type(ptr[j]);
+		    }
 		  }
 		}
 	      }
-	      delete [] ptr;
+	      if (read_data)
+		delete [] ptr;
 	    }
 	    input.closeData();
 	    input.closeGroup();
@@ -280,18 +281,20 @@ bool CCPi::read_NeXus(pixel_type * &pixels, pixel_type * &i_dark,
     }
     input.closeGroup();
   }
-  ldtime.accumulate();
-  ldtime.output("NeXus load");
-  // Average bright/dark frames - Todo, something else? outside here?
-  int size = nh_pixels * nv_pixels;
-  for (int i = 0; i < size; i++)
-    i_dark[i] /= pixel_type(n_idark);
-  for (int i = 0; i < size; i++)
-    f_dark[i] /= pixel_type(n_fdark);
-  for (int i = 0; i < size; i++)
-    i_bright[i] /= pixel_type(n_ibright);
-  for (int i = 0; i < size; i++)
-    f_bright[i] /= pixel_type(n_fbright);
-  // destructor closes file
+  if (read_data) {
+    ldtime.accumulate();
+    ldtime.output("NeXus load");
+    // Average bright/dark frames - Todo, something else? outside here?
+    int size = nh_pixels * nv_pixels;
+    for (int i = 0; i < size; i++)
+      i_dark[i] /= pixel_type(n_idark);
+    for (int i = 0; i < size; i++)
+      f_dark[i] /= pixel_type(n_fdark);
+    for (int i = 0; i < size; i++)
+      i_bright[i] /= pixel_type(n_ibright);
+    for (int i = 0; i < size; i++)
+      f_bright[i] /= pixel_type(n_fbright);
+    // destructor closes file
+  }
   return ok;
 }
