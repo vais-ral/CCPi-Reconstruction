@@ -43,7 +43,7 @@ iterations = 10;
 voxels = [500 500 500];
 %------------------------------------------------------------------------
 
-addpath c/
+addpath mex/
 addpath tools/
 
 % Load data and geometrical parameters from file
