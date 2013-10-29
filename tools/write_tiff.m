@@ -24,8 +24,8 @@ function [] = write_tiff(w, pathname, filename, nvoxels, nbits)
     data = x(:,:,i);
     % memory order was x,y,z, tiff is y first
     data = permute(data, [2 1]);
-    % tiff y pixel goes down screen, ours was -y to + y up, AVS understands this
-    %data = flipdim(data, 1);
+    % tiff y pixel goes down screen, ours was -y to + y up
+    data = flipdim(data, 1);
     if nbits == 8
       data = uint8(data);
     else

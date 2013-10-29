@@ -21,6 +21,6 @@
 
 % 03/04/2012
 
-mex c/CBbackproject_single_newgeom_c.c c/backproject_singledata.c -largeArrayDims CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-mex c/CBproject_single_newgeom_c.c c/project_singledata.c -largeArrayDims CFLAGS="\$CFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-
+mex mex/CBbackproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+mex mex/CBproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+mex mex/tvreg_upn_c.cpp src/tv_core.cpp src/instruments.cpp src/matrix2D.cpp src/timer.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
