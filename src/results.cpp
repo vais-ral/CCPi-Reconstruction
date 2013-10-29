@@ -4,37 +4,47 @@
 #include "base_types.hpp"
 #include "results.hpp"
 #include "tiff.hpp"
+#include "mpi.hpp"
 
 namespace CCPi {
 
   void write_as_tiff(const std::string basename, const voxel_data &voxels,
-		     const unsigned int max_value, const unsigned int width,
-		     const bool clamp);
-  void write_real(const std::string basename, const voxel_data &voxels);
+		     const int offset, const unsigned int max_value,
+		     const unsigned int width, const bool clamp);
+  void write_real(const std::string basename, const voxel_data &voxels,
+		  const int offset);
   void write_bgs(const std::string basename, const voxel_data &voxels,
-		 const real voxel_origin[3], const real voxel_size[3]);
+		 const real voxel_origin[3], const real voxel_size[3],
+		 const int offset, const int nz_voxels);
 
 }
 
 void CCPi::write_results(const std::string basename, const voxel_data &voxels,
 			 const real voxel_origin[3], const real voxel_size[3],
+			 const int offset, const int nz_voxels,
 			 const output_format format, const bool clamp)
 {
   switch (format) {
   case unsigned_byte_tiff:
-    write_as_tiff(basename, voxels, 255, 8, clamp);
+    write_as_tiff(basename, voxels, offset, 255, 8, clamp);
     break;
   case unsigned_short_tiff:
-    write_as_tiff(basename, voxels, 65535, 16, clamp);
+    write_as_tiff(basename, voxels, offset, 65535, 16, clamp);
     break;
   case native_dump:
-    write_real(basename, voxels);
+    if (machine::get_number_of_processors() > 1)
+      std::cerr << "Format does not support distributed memory\n";
+    else
+      write_real(basename, voxels, offset);
     break;
   case signed_short_tiff:
-    write_as_tiff(basename, voxels, 32767, 16, clamp);
+    write_as_tiff(basename, voxels, offset, 32767, 16, clamp);
     break;
   case bgs_float_dump:
-    write_bgs(basename, voxels, voxel_origin, voxel_size);
+    if (machine::get_number_of_processors() > 1)
+      std::cerr << "Format does not support distributed memory\n";
+    else
+      write_bgs(basename, voxels, voxel_origin, voxel_size, offset, nz_voxels);
     break;
   default:
     std::cerr << "Unknown output format\n";
@@ -43,9 +53,10 @@ void CCPi::write_results(const std::string basename, const voxel_data &voxels,
 }
 
 void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
-			 const unsigned int max_value, const unsigned int width,
-			 const bool clamp)
+			 const int offset, const unsigned int max_value,
+			 const unsigned int width, const bool clamp)
 {
+  std::cerr << "Tiff data range issue with blocks - Todo\n";
   if (width != 8 and width != 16)
     std::cerr << "Width not supported for tiff writing\n";
   else {
@@ -73,7 +84,7 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
     char index[8];
     bool ok = true;
     for (int k = 0; (k < (int)s[2] and ok); k++) {
-      snprintf(index, 8, "_%04d", k + 1);
+      snprintf(index, 8, "_%04d", offset + k + 1);
       std::string name = basename + index + ".tif";
       int idx = 0;
       if (width == 8) {
@@ -115,16 +126,19 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
   }
 }
 
-void CCPi::write_real(const std::string basename, const voxel_data &voxels)
+void CCPi::write_real(const std::string basename, const voxel_data &voxels,
+		      const int offset)
 {
   std::cout << "start dump\n";
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
-  std::FILE *file = fopen(name.c_str(), "w");
+  std::FILE *file = fopen(name.c_str(), "a");
   if (file == 0)
     std::cerr << " Failed to open output file - " << name << '\n';
   else {
+    std::size_t o = s[0] * s[1] * std::size_t(offset);
+    fseek(file, o, SEEK_SET);
     fwrite(voxels.data(), sizeof(voxel_type), n, file);
     fclose(file);
   }
@@ -132,32 +146,46 @@ void CCPi::write_real(const std::string basename, const voxel_data &voxels)
 }
 
 void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
-		     const real voxel_origin[3], const real voxel_size[3])
+		     const real voxel_origin[3], const real voxel_size[3],
+		     const int offset, const int nz_voxels)
 {
+  // Assumes linear update of offset so each new block goes at end - Todo?
   std::cout << "start dump\n";
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
-  std::FILE *file = fopen(name.c_str(), "w");
+  char mode[2];
+  mode[1] = '\0';
+  if (offset == 0)
+    mode[0] = 'w';
+  else
+    mode[0] = 'a';
+  std::FILE *file = fopen(name.c_str(), mode);
   if (file == 0)
     std::cerr << " Failed to open output file - " << name << '\n';
   else {
     float *x = new float[n];
     for (std::size_t i = 0; i < n; i++)
       x[i] = (float)((voxels.data())[i]);
-    fprintf(file, "%d %d %d\n", int(s[0]), int(s[1]), int(s[2]));
-    // centre value in voxel rather than on edge, since not writing n+1
-    // values to get final voxel boundary.
-    real shift[3];
-    shift[0] = voxel_origin[0] + voxel_size[0] / 2.0;
-    shift[1] = voxel_origin[1] + voxel_size[1] / 2.0;
-    shift[2] = voxel_origin[2] + voxel_size[2] / 2.0;
-    // for k.p need to scale by bohr to angstrom
-    fprintf(file, "%12.6f %12.6f %12.6f\n", shift[0], shift[1], shift[2]);
-    fprintf(file, "%12.6f 0.0 0.0\n", voxel_size[0]);
-    fprintf(file, "0.0 %12.6f 0.0\n", voxel_size[1]);
-    fprintf(file, "0.0 0.0 %12.6f\n", voxel_size[2]);
-    fprintf(file, "Image\n");
+    if (offset == 0) {
+      fprintf(file, "%d %d %d\n", int(s[0]), int(s[1]), nz_voxels);
+      // centre value in voxel rather than on edge, since not writing n+1
+      // values to get final voxel boundary.
+      real shift[3];
+      shift[0] = voxel_origin[0] + voxel_size[0] / 2.0;
+      shift[1] = voxel_origin[1] + voxel_size[1] / 2.0;
+      shift[2] = voxel_origin[2] + voxel_size[2] / 2.0;
+      // for k.p need to scale by bohr to angstrom
+      fprintf(file, "%12.6f %12.6f %12.6f\n", shift[0], shift[1], shift[2]);
+      fprintf(file, "%12.6f 0.0 0.0\n", voxel_size[0]);
+      fprintf(file, "0.0 %12.6f 0.0\n", voxel_size[1]);
+      fprintf(file, "0.0 0.0 %12.6f\n", voxel_size[2]);
+      fprintf(file, "Image\n");
+    }
+    // would need use to store an offset for end of header block to work
+    //std::size_t o = s[0] * s[1] * std::size_t(offset);
+    //fseek(file, o, SEEK_CUR);
+    //fseek(file, 0, SEEK_END); achieved by fopen("a")
     fwrite(x, sizeof(float), n, file);
     delete [] x;
     fclose(file);

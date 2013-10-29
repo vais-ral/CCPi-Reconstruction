@@ -63,6 +63,26 @@ void CCPi::instrument::set_phi(real *p, const int n)
   n_angles = n;
 }
 
+bool CCPi::cone_beam::supports_distributed_memory() const
+{
+  return false;
+}
+
+bool CCPi::parallel_beam::supports_distributed_memory() const
+{
+  return true;
+}
+
+bool CCPi::cone_beam::supports_blocks() const
+{
+  return false;
+}
+
+bool CCPi::parallel_beam::supports_blocks() const
+{
+  return true;
+}
+
 void CCPi::cone_beam::set_params(const real sx, const real sy, const real sz,
 				 const real dx, real dy[], real dz[],
 				 real ang[], const int ny, const int nz,

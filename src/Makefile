@@ -12,7 +12,8 @@ MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_intel_ilp64.a /opt/intel/c
 LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB) 
 
 OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o \
-	tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o timer.o utils.o point.o
+	tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o timer.o utils.o mpi.o \
+	point.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -23,7 +24,7 @@ clean:
 $(OBJECTS): base_types.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
-recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp
+recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp mpi.hpp
 
 cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp
 
@@ -34,7 +35,7 @@ diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
 
 xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp
 
-results.o: results.cpp results.hpp tiff.hpp
+results.o: results.cpp results.hpp tiff.hpp mpi.hpp
 
 tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp
 
@@ -49,5 +50,7 @@ nexus.o: nexus.cpp nexus.hpp timer.hpp
 timer.o: timer.cpp timer.hpp
 
 utils.o: utils.cpp utils.hpp
+
+mpi.o: mpi.cpp mpi.hpp
 
 point.o: point.cpp
