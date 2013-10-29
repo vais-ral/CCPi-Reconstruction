@@ -224,21 +224,37 @@ bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
 }
 
 bool CCPi::Nikon_XTek::finish_voxel_geometry(real voxel_origin[3],
-					     real voxel_size[3],
-					     const voxel_data &voxels) const
+					     real voxel_size[3], const int nx,
+					     const int ny, const int nz) const
 {
-  const voxel_data::size_type *s = voxels.shape();
-  real size = 2.0 * mask_radius / real(s[0]);
+  //const voxel_data::size_type *s = voxels.shape();
+  real size = 2.0 * mask_radius / real(nx);
   voxel_size[0] = size;
   voxel_size[1] = size;
   voxel_size[2] = size;
-  voxel_origin[0] = -voxel_size[0] * real(s[0]) / 2.0 + offset[0];
-  voxel_origin[1] = -voxel_size[1] * real(s[1]) / 2.0 + offset[1];
-  voxel_origin[2] = -voxel_size[2] * real(s[2]) / 2.0 + offset[2];
+  voxel_origin[0] = -voxel_size[0] * real(nx) / 2.0 + offset[0];
+  voxel_origin[1] = -voxel_size[1] * real(ny) / 2.0 + offset[1];
+  voxel_origin[2] = -voxel_size[2] * real(nz) / 2.0 + offset[2];
   return true;
 }
 
-bool CCPi::Nikon_XTek::read_scans(const std::string path, const bool phantom)
+bool CCPi::Nikon_XTek::read_data_size(const std::string path,
+				      const bool phantom)
+{
+  // phantom already done by setup
+  if (phantom) {
+    real *h_pixels = get_h_pixels();
+    int n_h_pixels = get_num_h_pixels();
+    mask_radius = -get_source_x()
+      * std::sin(std::atan(h_pixels[n_h_pixels - 1] /
+			   (get_detector_x() - get_source_x())));
+  } // else already done by read_config_file
+  return true;
+}
+
+bool CCPi::Nikon_XTek::read_scans(const std::string path, const int offset,
+				  const int block_size, const bool first,
+				  const bool phantom)
 {
   if (phantom)
     return build_phantom();
@@ -253,11 +269,11 @@ bool CCPi::Nikon_XTek::build_phantom()
   int ny = 500;
   int nz = 500;
 
-  real *h_pixels = get_h_pixels();
-  int n_h_pixels = get_num_h_pixels();
-  mask_radius = -get_source_x()
-    * std::sin(std::atan(h_pixels[n_h_pixels - 1] /
-			 (get_detector_x() - get_source_x())));
+  //real *h_pixels = get_h_pixels();
+  //int n_h_pixels = get_num_h_pixels();
+  //mask_radius = -get_source_x()
+  //* std::sin(std::atan(h_pixels[n_h_pixels - 1] /
+  //		 (get_detector_x() - get_source_x())));
   real voxel_size[3];
   voxel_size[0] = (2 * mask_radius / nx);
   voxel_size[1] = voxel_size[0];
