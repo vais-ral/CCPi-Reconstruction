@@ -210,7 +210,10 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 	      sizes[1] = block_size;
 	      sizes[2] = (long)info.dims[2];
 	      nh_pixels = sizes[2];
-	      nv_pixels = sizes[1];
+	      if (read_data)
+                nv_pixels = sizes[1];
+              else
+                nv_pixels = info.dims[1];
 	      long offset = sizes[1] * sizes[2];
 	      // count angles for allocation
 	      nangles = 0;

@@ -196,7 +196,7 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
     f_dark = new pixel_type[sz];
     i_bright = new pixel_type[sz];
     f_bright = new pixel_type[sz];
-    for (long i = 0; i < offset; i++) {
+    for (long i = 0; i < sz; i++) {
       i_dark[i] = 0.0;
       f_dark[i] = 0.0;
       i_bright[i] = 0.0;
