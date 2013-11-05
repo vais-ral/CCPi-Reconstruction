@@ -126,7 +126,7 @@ int main()
 	    }
 	    real voxel_origin[3];
 	    voxel_origin[0] = full_vox_origin[0];
-	    voxel_origin[1] = full_vox_origin[2];
+	    voxel_origin[1] = full_vox_origin[1];
 	    voxel_origin[2] = full_vox_origin[2] + block_offset * voxel_size[2];
 	    if (instrument->read_scans(path, z_data_offset,
 				       z_data_size, first, phantom)) {
