@@ -185,27 +185,25 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   int nangles = 0;
   real hsize = 0.0;
   real vsize = 0.0;
-  pixel_type *i_dark = 0;
-  pixel_type *f_dark = 0;
-  pixel_type *i_bright = 0;
-  pixel_type *f_bright = 0;
   long sz = get_num_v_pixels() * get_num_h_pixels();
-  if (first) {
+  if (first)
     pixels = new pixel_type[get_num_angles() * sz];
-    i_dark = new pixel_type[sz];
-    f_dark = new pixel_type[sz];
-    i_bright = new pixel_type[sz];
-    f_bright = new pixel_type[sz];
-    for (long i = 0; i < sz; i++) {
-      i_dark[i] = 0.0;
-      f_dark[i] = 0.0;
-      i_bright[i] = 0.0;
-      f_bright[i] = 0.0;
-    }
+  else
+    pixels = get_pixel_data();
+  pixel_type *i_dark = new pixel_type[sz];
+  pixel_type *f_dark = new pixel_type[sz];
+  pixel_type *i_bright = new pixel_type[sz];
+  pixel_type *f_bright = new pixel_type[sz];
+  for (long i = 0; i < sz; i++) {
+    i_dark[i] = 0.0;
+    f_dark[i] = 0.0;
+    i_bright[i] = 0.0;
+    f_bright[i] = 0.0;
   }
   ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
 		  nv_pixels, angles, nangles, hsize, vsize, fullname,
 		  false, true, offset, block_size);
+  nangles = get_num_angles();
   // store data in class - now done by read_data_sizes
   /*
   real *h_pixels = new real[nh_pixels];

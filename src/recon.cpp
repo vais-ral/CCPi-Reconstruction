@@ -21,7 +21,7 @@ int main()
     - ?
   */
   // Todo - usage messages if started up wrong?
-  bool phantom = true;
+  bool phantom = false;
   bool beam_harden = false;
   bool fast_projection = false;
   int niterations = 5;
@@ -36,7 +36,7 @@ int main()
     "/home/bgs/scratch/ccpi/Bird_skull/Bird_skull_2001.xtekct";
   const int pixels_per_voxel = 1;
   // vertical size to break data up into for processing
-  const int blocking_factor = 250;
+  const int blocking_factor = 0;
   // number of GPUs etc if using accelerated code
   //const int num_devices = 1;
   // Todo - improve for TVReg

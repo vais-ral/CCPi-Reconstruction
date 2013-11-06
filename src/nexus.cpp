@@ -215,16 +215,10 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
               else
                 nv_pixels = info.dims[1];
 	      long offset = sizes[1] * sizes[2];
-	      // count angles for allocation
-	      nangles = 0;
-	      for (long i = 0; i < n_ang; i++) {
-		if (keys[i] == 0)
-		  nangles++;
-	      }
 	      uint16_t *ptr = 0;
 	      if (read_data)
 		ptr = new uint16_t[sizes[1] * sizes[2]];
-	      nangles = 0;
+	      int n_angles = 0;
 	      for (long i = 0; i < n_ang; i++) {
 		index[0] = i;
 		if (read_data)
@@ -238,11 +232,11 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		  // sample
 		  if (read_data) {
 		    for (long j = 0; j < offset; j++) {
-		      pixels[j + nangles * offset] = pixel_type(ptr[j]);
+		      pixels[j + n_angles * offset] = pixel_type(ptr[j]);
 		    }
 		  }
-		  angles[nangles] = M_PI * angle_data[i] / 180.0;
-		  nangles++;
+		  angles[n_angles] = M_PI * angle_data[i] / 180.0;
+		  n_angles++;
 		} else if (keys[i] == 1) {
 		  if (read_data) {
 		    // bright
@@ -274,6 +268,8 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 	      }
 	      if (read_data)
 		delete [] ptr;
+	      else
+		nangles = n_angles;
 	    }
 	    input.closeData();
 	    input.closeGroup();
