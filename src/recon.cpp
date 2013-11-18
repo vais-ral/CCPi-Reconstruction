@@ -104,8 +104,6 @@ int main()
 	instrument->set_v_block(z_data_size);
 	int block_offset = machine::get_processor_id() * block_size;
 	int z_data_offset = block_offset * pixels_per_voxel;
-	voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
-			  boost::fortran_storage_order());
 	real full_vox_origin[3];
 	real voxel_size[3];
 	if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
@@ -118,18 +116,21 @@ int main()
 	  bool first = true;
 	  do {
 	    ok = false;
-	    if (block_offset + block_size > nz_voxels)
-	      block_size = nz_voxels - block_offset;
+	    if (block_offset + block_size > maxz_voxels)
+	      block_size = maxz_voxels - block_offset;
 	    if (z_data_offset + z_data_size > end_value) {
 	      z_data_size = end_value - z_data_offset;
 	      instrument->set_v_block(z_data_size);
 	    }
+	    nz_voxels = block_size;
 	    real voxel_origin[3];
 	    voxel_origin[0] = full_vox_origin[0];
 	    voxel_origin[1] = full_vox_origin[1];
 	    voxel_origin[2] = full_vox_origin[2] + block_offset * voxel_size[2];
 	    if (instrument->read_scans(path, z_data_offset,
 				       z_data_size, first, phantom)) {
+	      voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
+				boost::fortran_storage_order());
 	      for (int i = 0; i < nz_voxels; i++) {
 		for (int j = 0; j < ny_voxels; j++) {
 		  for (int k = 0; k < nx_voxels; k++) {
