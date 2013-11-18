@@ -231,8 +231,13 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		if (keys[i] == 0) {
 		  // sample
 		  if (read_data) {
-		    for (long j = 0; j < offset; j++) {
-		      pixels[j + n_angles * offset] = pixel_type(ptr[j]);
+		    long j = 0;
+		    for (int h = 0; h < sizes[2]; h++) {
+		      for (int v = 0; v < sizes[1]; v++) {
+			pixels[j + n_angles * offset] =
+			  pixel_type(ptr[v * sizes[2] * h]);
+			j++;
+		      }
 		    }
 		  }
 		  angles[n_angles] = M_PI * angle_data[i] / 180.0;
@@ -247,8 +252,12 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		      n_fbright++;
 		    } else
 		      n_ibright++;
-		    for (long j = 0; j < offset; j++) {
-		      bptr[j] += pixel_type(ptr[j]);
+		    long j = 0;
+		    for (int h = 0; h < sizes[2]; h++) {
+		      for (int v = 0; v < sizes[1]; v++) {
+			bptr[j] += pixel_type(ptr[v * sizes[2] * h]);
+			j++;
+		      }
 		    }
 		  }
 		} else if (keys[i] == 2) {
@@ -260,8 +269,12 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		      n_fdark++;
 		    } else
 		      n_idark++;
-		    for (long j = 0; j < offset; j++) {
-		      dptr[j] += pixel_type(ptr[j]);
+		    long j = 0;
+		    for (int h = 0; h < sizes[2]; h++) {
+		      for (int v = 0; v < sizes[1]; v++) {
+			dptr[j] += pixel_type(ptr[v * sizes[2] * h]);
+			j++;
+		      }
 		    }
 		  }
 		}

@@ -79,12 +79,12 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
 		// (0,0) at top left means vertical order needs to be reversed
 		// for voxel box where the origin is at the bottom
 		// It looks like strips are [h][v] col-major
-		// storage order is [horiz][vert][angles] fortran order
+		// storage order is [vert][horiz][angles] fortran order
 		// for compatibility with Matlab.
 		uint16 *b = (uint16 *)buf;
 		long angle_offset = 0;
-		for (int v = 0; v < n_v_pixels; v++) {
-		  for (int h = 0; h < n_h_pixels; h++) {
+		for (int h = 0; h < n_h_pixels; h++) {
+		  for (int v = 0; v < n_v_pixels; v++) {
 		    pixel_data[angle_offset] =
 		      pixel_type(b[(n_v_pixels - v - 1) * n_h_pixels + h]);
 		    angle_offset++;

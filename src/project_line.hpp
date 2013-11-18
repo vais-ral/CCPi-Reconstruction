@@ -330,10 +330,10 @@ void CCPi::project_singledata(const real start[], const real end[],
 
 
 	alpha_c=alpha_min;
-	ray_index = (k+z_offset)*im_size_y*im_size_x + j*im_size_x + i;
-	i_step = i_u;
-	j_step = j_u * im_size_x;
-	k_step = k_u * im_size_y * im_size_x;
+	ray_index = i*im_size_y*im_size_z + j*im_size_z + (k+z_offset);
+	i_step = i_u * im_size_y * im_size_z;
+	j_step = j_u * im_size_z;
+	k_step = k_u;
 	recon_type data = 0.0;
 	recon_type rdata = (recon_type)ray_data;
 

@@ -297,21 +297,21 @@ bool CCPi::Nikon_XTek::build_phantom()
   for (int i = 108-1; i < 189; i++) {
     for (int j = 108-1; j < 189; j++) {
       for (int k = 58-1; k < 139; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i * ny * nz + j * nz + k] = 1;
       }
     }
   }
   for (int i = 190-1; i < 271; i++) {
     for (int j = 190-1; j < 271; j++) {
       for (int k = 140-1; k < 221; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i * ny * nz + j * nz + k] = 1;
       }
     }
   }
   for (int i = 272-1; i < 353; i++) {
     for (int j = 272-1; j < 353; j++) {
       for (int k = 222-1; k < 303; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i * ny * nz + j * nz + k] = 1;
       }
     }
   }
@@ -421,23 +421,23 @@ pixel_type angles_bilinear(const int ph1, const real h[], const int v_slice,
   }
   if (angles[pa1] == new_angle) {
     return linear(h[ph1], h[ph1 + 1],
-		  data[ph1 + v_slice * nh + pa1 * nh * nv],
-		  data[ph1 + 1 + v_slice * nh + pa1 * nh * nv], new_h);
+		  data[ph1 *nv + v_slice + pa1 * nh * nv],
+		  data[(ph1 + 1) * nv + v_slice + pa1 * nh * nv], new_h);
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
       return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[0] + 2 * M_PI,
-		      data[ph1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + v_slice * nh + 0 * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + 0 * nh * nv],
+		      data[ph1 * nv + v_slice + pa1 * nh * nv],
+		      data[ph1 * nv + v_slice + 0 * nh * nv],
+		      data[(ph1 + 1) * nv + v_slice + pa1 * nh * nv],
+		      data[(ph1 + 1) * nv + v_slice + 0 * nh * nv],
 		      new_h, new_angle);
     else
       return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[pa1 + 1],
-		      data[ph1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + v_slice * nh + (pa1 + 1) * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + (pa1 + 1) * nh * nv],
+		      data[ph1 * nv + v_slice + pa1 * nh * nv],
+		      data[ph1 * nv + v_slice + (pa1 + 1) * nh * nv],
+		      data[(ph1 + 1) * nv + v_slice + pa1 * nh * nv],
+		      data[(ph1 + 1) * nv + v_slice + (pa1 + 1) * nh * nv],
 		      new_h, new_angle);
   }
 }
@@ -514,7 +514,7 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 	    pixel_type p = interpolate2D(h_pixels, v_slice, ph, px,
 					 s2[k], alpha_beta, nh, na, nv);
 	    // if (p > 0.0) { ?
-	    pixel_type t = px[k + v_slice * nh + a * nh * nv] - p;
+	    pixel_type t = px[k * nv + v_slice + a * nh * nv] - p;
 	    sum += t * t;
 	    count++;
 	    //} ?

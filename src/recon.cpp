@@ -130,7 +130,7 @@ int main()
 	    if (instrument->read_scans(path, z_data_offset,
 				       z_data_size, first, phantom)) {
 	      voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
-				boost::fortran_storage_order());
+				boost::c_storage_order());
 	      for (int i = 0; i < nz_voxels; i++) {
 		for (int j = 0; j < ny_voxels; j++) {
 		  for (int k = 0; k < nx_voxels; k++) {
