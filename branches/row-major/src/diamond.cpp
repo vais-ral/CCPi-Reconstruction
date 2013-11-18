@@ -145,21 +145,21 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   for (int i = 108-1; i < 189; i++) {
     for (int j = 108-1; j < 189; j++) {
       for (int k = 58-1; k < 139; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i * nx * nz + j * ny + k] = 1;
       }
     }
   }
   for (int i = 190-1; i < 271; i++) {
     for (int j = 190-1; j < 271; j++) {
       for (int k = 140-1; k < 221; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i * nx * nz + j * ny + k] = 1;
       }
     }
   }
   for (int i = 272-1; i < 353; i++) {
     for (int j = 272-1; j < 353; j++) {
       for (int k = 222-1; k < 303; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i * nx * nz + j * ny + k] = 1;
       }
     }
   }

@@ -329,7 +329,7 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
 
 
 	alpha_c=alpha_min;
-	ray_index = (k+z_offset)*im_size_y*im_size_x + j*im_size_x + i;
+	ray_index = i*im_size_y*im_size_z + j*im_size_z + (k+z_offset);
 	i_step = i_u;
 	j_step = j_u * im_size_x;
 	k_step = k_u * im_size_y * im_size_x;
@@ -520,10 +520,11 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   offset = 0;
   for (curr_angle = 0; curr_angle < n_angles; curr_angle++) {
     for (curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
-      row = curr_angle * n_rays_y * n_rays_z + curr_ray_y;
+      row = curr_angle * n_rays_y * n_rays_z + curr_ray_y * n_rays_z;
       if (forward_sizes[offset] > 0) {
 	for (int i = 0; i < forward_sizes[offset]; i++) {
-	  column = forward_y[offset][i] * nx_voxels + forward_x[offset][i];
+	  column = (forward_y[offset][i] + forward_x[offset][i] * ny_voxels)
+	    * nz_voxels;
 	  forward_matrix[index] = forward_data[offset][i];
 	  forward_cols[index] = column;
 	  forward_rows[index] = row;
@@ -580,7 +581,7 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 	for (projection_map::const_iterator ptr = mapping[x].begin();
 	     ptr != mapping[x].end(); ++ptr) {
 	  column = long(ptr->first.x) * long(n_rays_y) * long(n_rays_z)
-	    + long(ptr->first.y);
+	    + long(ptr->first.y) * long(n_rays_z);
 	  backward_matrix[index] = ptr->second;
 	  backward_cols[index] = column;
 	  index++;

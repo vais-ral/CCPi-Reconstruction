@@ -69,9 +69,9 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
     voxel_type vmin = +1e10;
     if (!clamp) {
       // find range to scale
-      for (int k = 0; k < (int)s[2]; k++) {
+      for (int i = 0; i < (int)s[0]; i++) {
 	for (int j = 0; j < (int)s[1]; j++) {
-	  for (int i = 0; i < (int)s[0]; i++) {
+	  for (int k = 0; k < (int)s[2]; k++) {
 	    if (vmax < voxels[i][j][k])
 	      vmax = voxels[i][j][k];
 	    if (vmin > voxels[i][j][k])
@@ -165,8 +165,15 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
     std::cerr << " Failed to open output file - " << name << '\n';
   else {
     float *x = new float[n];
-    for (std::size_t i = 0; i < n; i++)
-      x[i] = (float)((voxels.data())[i]);
+    long l = 0;
+    for (std::size_t k = 0; k < s[2]; k++) {
+      for (std::size_t j = 0; j < s[1]; j++) {
+	for (std::size_t i = 0; i < s[0]; i++) {
+	  x[l] = (float)voxels[i][j][k];
+	  l++;
+	}
+      }
+    }
     if (offset == 0) {
       fprintf(file, "%d %d %d\n", int(s[0]), int(s[1]), nz_voxels);
       // centre value in voxel rather than on edge, since not writing n+1

@@ -246,8 +246,8 @@ void CCPi::parallel_beam::forward_project_matrix(const real det_z[],
 			       - grid_offset[2]) / voxel_size[2]);
     if (k < 0 or k >= nz_voxels)
       continue;
-    long k_offset = k * nx_voxels * ny_voxels;
-    long z_offset = curr_ray_z * n_rays_y;
+    long k_offset = k;
+    long z_offset = curr_ray_z;
 
     for (long i = 0; i < matrix_size; i++)
       ray_data[forward_rows[i] + z_offset] += forward_matrix[i]
@@ -282,7 +282,7 @@ void CCPi::parallel_beam::backward_project_matrix(const real det_z[],
 {
 #pragma omp parallel for shared(det_z, ray_data) schedule(dynamic)
   for (long k = 0; k < nz_voxels; k++) {
-    long k_offset = k * nx_voxels * ny_voxels;
+    long k_offset = k;
     long z_min = -1;
     long z_max = -1;
     // Todo - calculate range rather than looping
