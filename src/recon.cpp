@@ -23,7 +23,6 @@ int main()
   // Todo - usage messages if started up wrong?
   bool phantom = true;
   bool beam_harden = false;
-  bool fast_projection = false;
   int niterations = 10;
   //CCPi::devices device = CCPi::dev_Nikon_XTek;
   CCPi::devices device = CCPi::dev_Diamond_I12;
@@ -140,10 +139,6 @@ int main()
 	      }
 	      if (beam_harden)
 		instrument->apply_beam_hardening();
-	      if (fast_projection and first)
-		instrument->setup_projection_matrix(voxel_origin, voxel_size,
-						    nx_voxels, ny_voxels,
-						    nz_voxels);
 	      switch (algorithm) {
 	      case CCPi::alg_FDK:
 		std::cerr << "ERROR: FDK not implmented - Todo\n";
