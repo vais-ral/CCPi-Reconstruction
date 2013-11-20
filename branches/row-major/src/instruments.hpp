@@ -47,11 +47,6 @@ namespace CCPi {
 				  const int nx, const int ny,
 				  const int nz) const = 0;
 
-    virtual void setup_projection_matrix(const real origin[3],
-					 const real width[3],
-					 const int nx, const int ny,
-					 const int nz) = 0;
-
     virtual bool supports_distributed_memory() const = 0;
     virtual bool supports_blocks() const = 0;
     void set_v_block(const int size);
@@ -138,10 +133,6 @@ namespace CCPi {
 			  const real origin[3], const real width[3],
 			  const int nx, const int ny, const int nz) const;
 
-    void setup_projection_matrix(const real origin[3], const real width[3],
-				 const int nx, const int ny,
-				 const int nz);
-
     bool supports_distributed_memory() const;
     bool supports_blocks() const;
 
@@ -169,8 +160,6 @@ namespace CCPi {
 
   class parallel_beam : public instrument {
   public:
-    parallel_beam();
-
     void forward_project(pixel_type *pixels, voxel_type *const voxels,
 			 const real origin[3], const real width[3],
 			 const int nx, const int ny, const int nz) const;
@@ -181,10 +170,6 @@ namespace CCPi {
 			  const real origin[3], const real width[3],
 			  const int nx, const int ny, const int nz) const;
 
-    void setup_projection_matrix(const real origin[3], const real width[3],
-				 const int nx, const int ny,
-				 const int nz);
-
     bool supports_distributed_memory() const;
     bool supports_blocks() const;
 
@@ -194,16 +179,6 @@ namespace CCPi {
 			      const int nx, const int ny, const int nz) const;
 
   private:
-    bool has_projection_matrix;
-    long matrix_size;
-    real *forward_matrix;
-    long *forward_cols;
-    long *forward_rows;
-    real *backward_matrix;
-    long *backward_cols;
-    long *backward_rowb;
-    long *backward_rowe;
-
     static void f2D_parallel(const real start[], const real end[],
 			     const real b_x, const real b_y,
 			     const real d_x, const real d_y,
@@ -231,18 +206,6 @@ namespace CCPi {
 				 const int nv_pixels, const real grid_offset[3],
 				 const real voxel_size[3], const int nx_voxels,
 				 const int ny_voxels, const int nz_voxels);
-    static void map_2Dprojection(const real start[], const real end[],
-				 const real b_x, const real b_y,
-				 const real b_z, const real d_x,
-				 const real d_y, const real d_z,
-				 const int im_size_x, const int im_size_y,
-				 const int im_size_z, const long z_offset,
-				 projection_map &map);
-    void setup_2D_matrix(const real det_y[], const real phi[],
-			 const int n_angles, const int n_rays_z,
-			 const int n_rays_y, const real grid_offset[3],
-			 const real voxel_size[3], const int nx_voxels,
-			 const int ny_voxels, const int nz_voxels);
     void forward_project_matrix(const real det_z[], pixel_type ray_data[],
 				voxel_type *const vol_data, const int n_angles,
 				const int n_rays_y, const int n_rays_z,
@@ -413,13 +376,6 @@ inline void CCPi::cone_beam::set_source(const real x, const real y,
 inline void CCPi::cone_beam::set_detector(const real x)
 {
   detector_x = x;
-}
-
-inline CCPi::parallel_beam::parallel_beam()
-  : has_projection_matrix(false), matrix_size(0), forward_matrix(0),
-    forward_cols(0), forward_rows(0), backward_matrix(0), backward_cols(0),
-    backward_rowb(0), backward_rowe(0)
-{
 }
 
 #endif // CCPI_RECON_INSTRUMENTS
