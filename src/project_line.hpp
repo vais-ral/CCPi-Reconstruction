@@ -10,7 +10,8 @@ namespace CCPi {
 			  const real b_x, const real b_y, const real b_z,
 			  const real d_x, const real d_y, const real d_z,
 			  const int im_size_x, const int im_size_y,
-			  const int im_size_z, const long z_offset);
+			  const int im_size_z, const int z_step,
+			  const long z_offset);
 
 }
 
@@ -93,7 +94,8 @@ void CCPi::project_singledata(const real start[], const real end[],
 			      const real b_x, const real b_y, const real b_z,
 			      const real d_x, const real d_y, const real d_z,
 			      const int im_size_x, const int im_size_y,
-			      const int im_size_z, const long z_offset)
+			      const int im_size_z, const int z_step,
+			      const long z_offset)
 {
     
   int N_x, N_y, N_z, N_p/*, im_size_x, im_size_y, im_size_z*/;
@@ -125,7 +127,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 
 	N_x=im_size_x+1;
 	N_y=im_size_y+1;
-	N_z=im_size_z+1;
+	N_z=z_step+1;
 
 	/* d: voxel size */
 	//d_x = options->d_x;
@@ -190,7 +192,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 	alpha_z_min=-2;
 	alpha_z_max=2;
 	k=(int) floor_j( phi(0.0, p1_z, p2_z, b_z, d_z));
-	if ( k < 0 || k >= im_size_z)
+	if ( k < 0 || k >= z_step)
 	    return;
 	alpha_z=2;
 	k_min = 1;
@@ -408,7 +410,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 
 
 	    /* did we loop too far? */
-	    if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z)
+	    if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= z_step)
 		/* artificially end loop  */
 		N_p = n_count - 1;
 	    

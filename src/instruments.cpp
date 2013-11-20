@@ -154,6 +154,32 @@ void CCPi::parallel_beam::forward_project(pixel_type *pixels,
 			   get_num_h_pixels(), get_num_v_pixels(), origin,
 			   width, nx, ny, nz);
   else
+    /**/
+    f2D(get_h_pixels(), get_phi(), get_num_angles(), get_num_h_pixels(),
+	get_num_v_pixels(), origin, width, nx, ny, nz, pixels, voxels);
+  /**/ /*
+    instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
+				pixels, voxels, get_num_angles(),
+				get_num_h_pixels(), get_num_v_pixels(), origin,
+				width, nx, ny, nz);
+  */
+  fptime.accumulate();
+  fptime.output(" forward projection");
+}
+
+void CCPi::parallel_beam::safe_forward_project(pixel_type *pixels,
+					       voxel_type *const voxels,
+					       const real origin[3],
+					       const real width[3],
+					       const int nx, const int ny,
+					       const int nz) const
+{
+  timer fptime(USE_TIMER);
+  if (has_projection_matrix)
+    forward_project_matrix(get_v_pixels(), pixels, voxels, get_num_angles(),
+			   get_num_h_pixels(), get_num_v_pixels(), origin,
+			   width, nx, ny, nz);
+  else
     instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				pixels, voxels, get_num_angles(),
 				get_num_h_pixels(), get_num_v_pixels(), origin,
@@ -174,10 +200,17 @@ void CCPi::parallel_beam::backward_project(pixel_type *pixels,
 			    get_num_h_pixels(), get_num_v_pixels(), origin,
 			    width, nx, ny, nz);
   else
+    /*
     instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				 pixels, voxels, get_num_angles(),
 				 get_num_h_pixels(), get_num_v_pixels(), origin,
 				 width, nx, ny, nz);
+    */ /**/
+    my_back_project(get_h_pixels(), get_v_pixels(), get_phi(),
+				 pixels, voxels, get_num_angles(),
+				 get_num_h_pixels(), get_num_v_pixels(), origin,
+				 width, nx, ny, nz);
+  /**/
   bptime.accumulate();
   bptime.output("backward projection");
 }
@@ -193,10 +226,17 @@ void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
 			    get_num_angles(), get_num_h_pixels(),
 			    get_num_v_pixels(), origin, width, nx, ny, nz);
   else
+    /*
     instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				 get_pixel_data(), voxels,
 				 get_num_angles(), get_num_h_pixels(),
 				 get_num_v_pixels(), origin, width, nx, ny, nz);
+    */ /**/
+    my_back_project(get_h_pixels(), get_v_pixels(), get_phi(),
+				 get_pixel_data(), voxels,
+				 get_num_angles(), get_num_h_pixels(),
+				 get_num_v_pixels(), origin, width, nx, ny, nz);
+  /**/
   bptime.accumulate();
   bptime.output("backward projection");
 }

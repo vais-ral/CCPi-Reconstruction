@@ -21,12 +21,12 @@ int main()
     - ?
   */
   // Todo - usage messages if started up wrong?
-  bool phantom = false;
+  bool phantom = true;
   bool beam_harden = false;
   bool fast_projection = false;
-  int niterations = 5;
-  CCPi::devices device = CCPi::dev_Nikon_XTek;
-  //CCPi::devices device = CCPi::dev_Diamond_I12;
+  int niterations = 10;
+  //CCPi::devices device = CCPi::dev_Nikon_XTek;
+  CCPi::devices device = CCPi::dev_Diamond_I12;
   CCPi::algorithms algorithm = CCPi::alg_CGLS;
   CCPi::instrument *instrument = 0;
   CCPi::output_format write_format = CCPi::bgs_float_dump;
