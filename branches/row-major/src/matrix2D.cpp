@@ -330,9 +330,9 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
 
 	alpha_c=alpha_min;
 	ray_index = i*im_size_y*im_size_z + j*im_size_z + (k+z_offset);
-	i_step = i_u;
-	j_step = j_u * im_size_x;
-	k_step = k_u * im_size_y * im_size_x;
+	i_step = i_u * im_size_y * im_size_z;
+	j_step = j_u * im_size_z;
+	k_step = k_u;
 	map_index index;
 	real data = 0.0;
 

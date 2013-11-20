@@ -145,21 +145,21 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   for (int i = 108-1; i < 189; i++) {
     for (int j = 108-1; j < 189; j++) {
       for (int k = 58-1; k < 139; k++) {
-        x[i * nx * nz + j * ny + k] = 1;
+        x[i * ny * nz + j * nz + k] = 1;
       }
     }
   }
   for (int i = 190-1; i < 271; i++) {
     for (int j = 190-1; j < 271; j++) {
       for (int k = 140-1; k < 221; k++) {
-        x[i * nx * nz + j * ny + k] = 1;
+        x[i * ny * nz + j * nz + k] = 1;
       }
     }
   }
   for (int i = 272-1; i < 353; i++) {
     for (int j = 272-1; j < 353; j++) {
       for (int k = 222-1; k < 303; k++) {
-        x[i * nx * nz + j * ny + k] = 1;
+        x[i * ny * nz + j * nz + k] = 1;
       }
     }
   }
@@ -167,7 +167,7 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   set_v_offset(offset);
   pixel_type *pixels = create_pixel_data();
   // perform projection step
-  forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
+  safe_forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   delete [] x;
   return true;
 }

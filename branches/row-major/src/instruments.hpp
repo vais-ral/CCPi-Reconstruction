@@ -188,6 +188,11 @@ namespace CCPi {
     bool supports_distributed_memory() const;
     bool supports_blocks() const;
 
+  protected:
+    void safe_forward_project(pixel_type *pixels, voxel_type *const voxels,
+			      const real origin[3], const real width[3],
+			      const int nx, const int ny, const int nz) const;
+
   private:
     bool has_projection_matrix;
     long matrix_size;
@@ -199,6 +204,33 @@ namespace CCPi {
     long *backward_rowb;
     long *backward_rowe;
 
+    static void f2D_parallel(const real start[], const real end[],
+			     const real b_x, const real b_y,
+			     const real d_x, const real d_y,
+			     const int im_size_x,
+			     const int im_size_y,
+			     const int im_size_z,
+			     voxel_type *const voxels,
+			     pixel_type *pixels,
+			     const int pixels_per_voxel);
+    void f2D(const real det_y[], const real phi[],
+	     const int n_angles,
+	     const int n_rays_y,
+	     const int n_rays_z,
+	     const real grid_offset[3],
+	     const real voxel_size[3],
+	     const int nx_voxels,
+	     const int ny_voxels,
+	     const int nz_voxels,
+	     pixel_type ray_data[],
+	     voxel_type *const vol_data) const;
+    static void my_back_project(const real h_pixels[], const real v_pixels[],
+				 const real angles[], pixel_type pixels[],
+				 voxel_type *const voxels,
+				 const int n_angles, const int nh_pixels,
+				 const int nv_pixels, const real grid_offset[3],
+				 const real voxel_size[3], const int nx_voxels,
+				 const int ny_voxels, const int nz_voxels);
     static void map_2Dprojection(const real start[], const real end[],
 				 const real b_x, const real b_y,
 				 const real b_z, const real d_x,

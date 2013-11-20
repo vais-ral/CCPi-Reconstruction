@@ -82,7 +82,7 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 				 vol_data, grid_offset[0], grid_offset[1],
 				 b_z, voxel_size[0], voxel_size[1],
 				 voxel_size[2], nx_voxels, ny_voxels,
-				 nz_step, nz_offset);
+				 nz_voxels, nz_step, nz_offset);
 	    }
 	  }
 	}

@@ -48,7 +48,8 @@ void CCPi::instrument::forward_project(const real source_x, const real source_y,
 			   ray_data[ray_offset + curr_ray_y * long(n_rays_z)],
 			   vol_data, grid_offset[0], grid_offset[1],
 			   grid_offset[2], voxel_size[0], voxel_size[1],
-			   voxel_size[2], nx_voxels, ny_voxels, nz_voxels, 0);
+			   voxel_size[2], nx_voxels, ny_voxels, nz_voxels,
+						    nz_voxels, 0);
       }
     }
   }
