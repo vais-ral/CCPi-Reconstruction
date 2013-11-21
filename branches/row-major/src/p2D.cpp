@@ -409,19 +409,19 @@ void CCPi::parallel_beam::f2D(const real det_y[], const real phi[],
 
 // Todo - reorder i,j; think about scaling to 1.0 ideas, best loop order...
 // Loop blocking to improve cache reuse?
-void CCPi::parallel_beam::my_back_project(const real h_pixels[],
-					  const real v_pixels[],
-					  const real angles[],
-					  pixel_type pixels[],
-					  voxel_type *const voxels,
-					  const int n_angles,
-					  const int nh_pixels,
-					  const int nv_pixels,
-					  const real vox_origin[3],
-					  const real vox_size[3],
-					  const int nx,
-					  const int ny,
-					  const int nz)
+void CCPi::parallel_beam::b2D(const real h_pixels[],
+			      const real v_pixels[],
+			      const real angles[],
+			      pixel_type pixels[],
+			      voxel_type *const voxels,
+			      const int n_angles,
+			      const int nh_pixels,
+			      const int nv_pixels,
+			      const real vox_origin[3],
+			      const real vox_size[3],
+			      const int nx,
+			      const int ny,
+			      const int nz)
 {
   //const real tol = 1e-13;
   long nyz = long(ny) * long(nz);
@@ -515,21 +515,20 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
       //const int npixels = int(y_bot * inv_pixel_step) + 2;
       // Its always scaled by L
       real inv_y_l1 = L / y_l1;
-      //#pragma omp parallel for shared(xx_coords, yy_coords, h_pixels, pixels) firstprivate(inv_y_l1, pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step, pix_av, y_l1, y_l2, y_top, y_bot, nyz, cphi, sphi, L) schedule(dynamic)
-      for (int j = 0; j < ny; j++) {
+#pragma omp parallel for shared(xx_coords, yy_coords, h_pixels, pixels) firstprivate(inv_y_l1, pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step, pix_av, y_l1, y_l2, y_top, y_bot, nyz, cphi, sphi, L) schedule(dynamic)
+      for (int i = 0; i < nx; i++) {
 #ifdef TESTBP
 	std::vector<real> lengths(nh_pixels);
 #endif // TESTBP
-	real yj = yy_coords[j + jm];
-	long vox_zy = j * long(nz);
-	int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
-	if (p >= nh_pixels)
-	  p = nh_pixels - 1;
-	else if (p < 0)
-	  continue;
-	for (int i = 0; i < nx; i++) {
-	  // Todo ? ytop decreases by y_l1 for each i step
-	  long vox_xy = vox_zy + i * nyz;
+	long vox_xy = i * nyz;
+	for (int j = 0; j < ny; j++) {
+	  real yj = yy_coords[j + jm];
+	  long vox_y = vox_xy + j * long(nz);
+	  int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
+	  if (p >= nh_pixels)
+	    p = nh_pixels - 1;
+	  else if (p < 0)
+	    continue;
 	  y_top = xx_coords[i] + yj;
 	  while (h_pixels[p] > y_top) {
 	    p--;
@@ -561,7 +560,7 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	      int k_range = pix_av + q * long(nv_pixels);
 	      for (int k = 0; k < nz; k++) {
 		for (int v = 0; v < pixels_per_voxel; v++)
-		  voxels[vox_xy + k] += pixels[k_range + v] * len;
+		  voxels[vox_y + k] += pixels[k_range + v] * len;
 		k_range += pixels_per_voxel;
 	      }
 #ifdef TESTBP
@@ -614,21 +613,20 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	}
       }
       real inv_y_l1 = L / y_l1;
-      //#pragma omp parallel for shared(xx_coords, yy_coords, h_pixels, pixels) firstprivate(inv_y_l1, pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step, pix_av, y_l1, y_l2, y_top, y_bot, nyz, cphi, sphi, L) schedule(dynamic)
-      for (int j = 0; j < ny; j++) {
+#pragma omp parallel for shared(xx_coords, yy_coords, h_pixels, pixels) firstprivate(inv_y_l1, pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step, pix_av, y_l1, y_l2, y_top, y_bot, nyz, cphi, sphi, L) schedule(dynamic)
+      for (int i = 0; i < nx; i++) {
 #ifdef TESTBP
 	std::vector<real> lengths(nh_pixels);
 #endif // TESTBP
-	real yj = yy_coords[j + jm];
-	long vox_zy = j * long(nz);
-	int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
-	if (p < 0)
-	  p = 0;
-	else if (p >= nh_pixels)
-	  continue;
-	for (int i = 0; i < nx; i++) {
-	  long vox_xy = vox_zy + i * nyz;
-	  // Todo ? ybot increases by y_l1 for each i step
+	long vox_xy = i * nyz;
+	for (int j = 0; j < ny; j++) {
+	  real yj = yy_coords[j + jm];
+	  long vox_y = vox_xy + j * long(nz);
+	  int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
+	  if (p < 0)
+	    p = 0;
+	  else if (p >= nh_pixels)
+	    continue;
 	  y_bot = xx_coords[i] + yj;
 	  while (h_pixels[p] < y_bot) {
 	    p++;
@@ -660,7 +658,7 @@ void CCPi::parallel_beam::my_back_project(const real h_pixels[],
 	      int k_range = pix_av + q * long(nv_pixels);
 	      for (int k = 0; k < nz; k++) {
 		for (int v = 0; v < pixels_per_voxel; v++)
-		  voxels[vox_xy + k] += pixels[k_range + v] * len;
+		  voxels[vox_y + k] += pixels[k_range + v] * len;
 		k_range += pixels_per_voxel;
 	      }
 #ifdef TESTBP
