@@ -33,7 +33,7 @@ int main()
   std::string output_name = "phantom";
   std::string data_file =
     "/home/bgs/scratch/ccpi/Bird_skull/Bird_skull_2001.xtekct";
-  const int pixels_per_voxel = 1;
+  const int pixels_per_voxel = 2;
   // vertical size to break data up into for processing
   const int blocking_factor = 0;
   // number of GPUs etc if using accelerated code

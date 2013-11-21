@@ -191,10 +191,10 @@ void CCPi::parallel_beam::backward_project(pixel_type *pixels,
 				 get_num_h_pixels(), get_num_v_pixels(), origin,
 				 width, nx, ny, nz);
     */ /**/
-  my_back_project(get_h_pixels(), get_v_pixels(), get_phi(),
-		  pixels, voxels, get_num_angles(),
-		  get_num_h_pixels(), get_num_v_pixels(), origin,
-		  width, nx, ny, nz);
+  b2D(get_h_pixels(), get_v_pixels(), get_phi(),
+      pixels, voxels, get_num_angles(),
+      get_num_h_pixels(), get_num_v_pixels(), origin,
+      width, nx, ny, nz);
   /**/
   bptime.accumulate();
   bptime.output("backward projection");
@@ -212,10 +212,10 @@ void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
 				 get_num_angles(), get_num_h_pixels(),
 				 get_num_v_pixels(), origin, width, nx, ny, nz);
     */ /**/
-  my_back_project(get_h_pixels(), get_v_pixels(), get_phi(),
-		  get_pixel_data(), voxels,
-		  get_num_angles(), get_num_h_pixels(),
-		  get_num_v_pixels(), origin, width, nx, ny, nz);
+  b2D(get_h_pixels(), get_v_pixels(), get_phi(),
+      get_pixel_data(), voxels,
+      get_num_angles(), get_num_h_pixels(),
+      get_num_v_pixels(), origin, width, nx, ny, nz);
   /**/
   bptime.accumulate();
   bptime.output("backward projection");

@@ -199,13 +199,13 @@ namespace CCPi {
 	     const int nz_voxels,
 	     pixel_type ray_data[],
 	     voxel_type *const vol_data) const;
-    static void my_back_project(const real h_pixels[], const real v_pixels[],
-				 const real angles[], pixel_type pixels[],
-				 voxel_type *const voxels,
-				 const int n_angles, const int nh_pixels,
-				 const int nv_pixels, const real grid_offset[3],
-				 const real voxel_size[3], const int nx_voxels,
-				 const int ny_voxels, const int nz_voxels);
+    static void b2D(const real h_pixels[], const real v_pixels[],
+		    const real angles[], pixel_type pixels[],
+		    voxel_type *const voxels,
+		    const int n_angles, const int nh_pixels,
+		    const int nv_pixels, const real grid_offset[3],
+		    const real voxel_size[3], const int nx_voxels,
+		    const int ny_voxels, const int nz_voxels);
     void forward_project_matrix(const real det_z[], pixel_type ray_data[],
 				voxel_type *const vol_data, const int n_angles,
 				const int n_rays_y, const int n_rays_z,
