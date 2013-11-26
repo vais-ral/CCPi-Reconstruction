@@ -407,8 +407,7 @@ void CCPi::parallel_beam::f2D(const real det_y[], const real phi[],
   }
 }
 
-// Todo - reorder i,j; think about scaling to 1.0 ideas, best loop order...
-// Loop blocking to improve cache reuse?
+// Todo - think about scaling to 1.0 ideas, loop blocking for cache reuse?
 void CCPi::parallel_beam::b2D(const real h_pixels[],
 			      const real v_pixels[],
 			      const real angles[],
@@ -443,9 +442,6 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
   for (int i = 0; i <= nz; i++)
     z_coords[i] = vox_origin[2] + real(i) * vox_size[2];
   real inv_pixel_step = 1.0 / (h_pixels[1] - h_pixels[0]);
-  // Todo - pre-rotated array of voxels? need for each angle, x, y though
-  // x' = x cos() + y sin()
-  // y' = -x sin() + y cos() - not used in current form
   std::vector<real> vox_lengths(n_angles);
   for (int i = 0; i < n_angles; i++) {
     if (std::abs(cangles[i]) > std::abs(sangles[i]))
@@ -453,83 +449,76 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
     else
       vox_lengths[i] = vox_size[0] / std::abs(sangles[i]);
   }
-  // Todo can precalc 2D i0/inh1, yc0, xh_coords here
-  // its probably p that is the tricky one though
-  // put end value to stop while loop without over-run
   std::vector<real> v_coords(nv_pixels + 1);
   for (int i = 0; i < nv_pixels; i++)
     v_coords[i] = v_pixels[i];
   v_coords[nv_pixels] = z_coords[nz] + 1.0;
-  std::vector<real> xx_coords(nx + 1);
-  std::vector<real> yy_coords(ny + 1);
   if (v_pixels[0] < z_coords[0] or v_pixels[pixels_per_voxel] < z_coords[1])
     std::cerr << "Oops - bad back projection\n";
-  // Todo - what is best order of a/j loops and which to parallelise?
-  for (int a = 0; a < n_angles; a++) {
-    long pix_av = a * long(nv_pixels) * long(nh_pixels);
-    real cphi = cangles[a];
-    real sphi = sangles[a];
-    real L = vox_lengths[a];
-    //for (int i = 0; i < nx; i++)
-    //xh_coords[i] = - x_coords[i] * sphi * inv_pixel_step;
-    for (int i = 0; i <= nx; i++)
-      xx_coords[i] = - x0_coords[i] * sphi;
-    for (int i = 0; i <= ny; i++)
-      yy_coords[i] = y0_coords[i] * cphi;
-    real y_00 = xx_coords[0] + yy_coords[0];
-    real y_01 = xx_coords[0] + yy_coords[1];
-    real y_10 = xx_coords[1] + yy_coords[0];
-    real y_11 = xx_coords[1] + yy_coords[1];
-    real y_top = 0.0;
-    real y_l1;
-    real y_l2;
-    real y_bot = 0.0;
-    if (sphi >= 0.0) {
-      // <= 180, scanning from 0 to nx decreases p
-      // orientation of voxels is the same for all so can get rotated shape
-      // from any single one - use 0.0
-      int jm;
-      if (cphi >= 0.0) { // 0-90
-	jm = 1;
-	if (cphi >= sphi) { // 0-45
-	  y_l1 = y_01 - y_11;
-	  y_l2 = y_01 - y_00;
-	  y_bot = y_01 - y_10;
-	} else {
-	  y_l1 = y_01 - y_00;
-	  y_l2 = y_01 - y_11;
-	  y_bot = y_01 - y_10;
-	}
-      } else {
-	jm = 0;
-	if (std::abs(cphi) > sphi) { // 135-180
-	  y_l1 = y_00 - y_10;
-	  y_l2 = y_00 - y_01;
-	  y_bot = y_00 - y_11;
-	} else {
-	  y_l1 = y_00 - y_01;
-	  y_l2 = y_00 - y_10;
-	  y_bot = y_00 - y_11;
-	}
-      }
-      //const int npixels = int(y_bot * inv_pixel_step) + 2;
-      // Its always scaled by L
-      real inv_y_l1 = L / y_l1;
-#pragma omp parallel for shared(xx_coords, yy_coords, h_pixels, pixels) firstprivate(inv_y_l1, pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step, pix_av, y_l1, y_l2, y_top, y_bot, nyz, cphi, sphi, L) schedule(dynamic)
-      for (int i = 0; i < nx; i++) {
+#pragma omp parallel for shared(h_pixels, pixels, x0_coords, y0_coords, cangles, sangles, vox_lengths) firstprivate(pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step) schedule(dynamic)
+  for (int i = 0; i < nx; i++) {
 #ifdef TESTBP
-	std::vector<real> lengths(nh_pixels);
+    std::vector<real> lengths(nh_pixels);
 #endif // TESTBP
-	long vox_xy = i * nyz;
-	for (int j = 0; j < ny; j++) {
-	  real yj = yy_coords[j + jm];
-	  long vox_y = vox_xy + j * long(nz);
-	  int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
+    long vox_xy = i * nyz;
+    for (int j = 0; j < ny; j++) {
+      long vox_y = vox_xy + j * long(nz);
+      for (int a = 0; a < n_angles; a++) {
+	long pix_av = a * long(nv_pixels) * long(nh_pixels);
+	real cphi = cangles[a];
+	real sphi = sangles[a];
+	real L = vox_lengths[a];
+	real xx_0 = - x0_coords[i] * sphi;
+	real xx_1 = - x0_coords[i + 1] * sphi;
+	real x0_0 = - x0_coords[0] * sphi;
+	real yy_0 = y0_coords[j] * cphi;
+	real yy_1 = y0_coords[j + 1] * cphi;
+	real y_00 = xx_0 + yy_0;
+	real y_01 = xx_0 + yy_1;
+	real y_10 = xx_1 + yy_0;
+	real y_11 = xx_1 + yy_1;
+	real y_top = 0.0;
+	real y_l1;
+	real y_l2;
+	real y_bot = 0.0;
+	real yj = 0.0;
+	if (sphi >= 0.0) {
+	  // <= 180, scanning from 0 to nx decreases p
+	  // orientation of voxels is the same for all so can get rotated shape
+	  // from any single one - use 0.0
+	  //int jm;
+	  if (cphi >= 0.0) { // 0-90
+	    //jm = 1;
+	    yj = yy_1;
+	    if (cphi >= sphi) { // 0-45
+	      y_l1 = y_01 - y_11;
+	      y_l2 = y_01 - y_00;
+	      y_bot = y_01 - y_10;
+	    } else {
+	      y_l1 = y_01 - y_00;
+	      y_l2 = y_01 - y_11;
+	      y_bot = y_01 - y_10;
+	    }
+	  } else {
+	    //jm = 0;
+	    yj = yy_0;
+	    if (std::abs(cphi) > sphi) { // 135-180
+	      y_l1 = y_00 - y_10;
+	      y_l2 = y_00 - y_01;
+	      y_bot = y_00 - y_11;
+	    } else {
+	      y_l1 = y_00 - y_01;
+	      y_l2 = y_00 - y_10;
+	      y_bot = y_00 - y_11;
+	    }
+	  }
+	  real inv_y_l1 = L / y_l1;
+	  int p = int((x0_0 + yj - h_pixels[0]) * inv_pixel_step);
 	  if (p >= nh_pixels)
 	    p = nh_pixels - 1;
 	  else if (p < 0)
 	    continue;
-	  y_top = xx_coords[i] + yj;
+	  y_top = xx_0 + yj;
 	  while (h_pixels[p] > y_top) {
 	    p--;
 	    if (p < 0)
@@ -584,50 +573,41 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
 		       cphi, sphi, nx, ny, nz, "p-");
 	  }
 #endif // TESTBP
-	}
-      }
-    } else {
-      // 0-nx increases p
-      int jm;
-      if (cphi < 0.0) { // 180-270
-	jm = 1;
-	if (cphi < sphi) { // 180-225
-	  y_l1 = y_11 - y_01;
-	  y_l2 = y_00 - y_01;
-	  y_top = y_10 - y_01;
 	} else {
-	  y_l1 = y_00 - y_01;
-	  y_l2 = y_11 - y_01;
-	  y_top = y_10 - y_01;
-	}
-      } else { //270-360
-	jm = 0;
-	if (cphi > std::abs(sphi)) { // 315-360
-	  y_l1 = y_10 - y_00;
-	  y_l2 = y_01 - y_00;
-	  y_top = y_11 - y_00;
-	} else {
-	  y_l1 = y_01 - y_00;
-	  y_l2 = y_10 - y_00;
-	  y_top = y_11 - y_00;
-	}
-      }
-      real inv_y_l1 = L / y_l1;
-#pragma omp parallel for shared(xx_coords, yy_coords, h_pixels, pixels) firstprivate(inv_y_l1, pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step, pix_av, y_l1, y_l2, y_top, y_bot, nyz, cphi, sphi, L) schedule(dynamic)
-      for (int i = 0; i < nx; i++) {
-#ifdef TESTBP
-	std::vector<real> lengths(nh_pixels);
-#endif // TESTBP
-	long vox_xy = i * nyz;
-	for (int j = 0; j < ny; j++) {
-	  real yj = yy_coords[j + jm];
-	  long vox_y = vox_xy + j * long(nz);
-	  int p = int((xx_coords[0] + yj - h_pixels[0]) * inv_pixel_step);
+	  // 0-nx increases p
+	  //int jm;
+	  if (cphi < 0.0) { // 180-270
+	    //jm = 1;
+	    yj = yy_1;
+	    if (cphi < sphi) { // 180-225
+	      y_l1 = y_11 - y_01;
+	      y_l2 = y_00 - y_01;
+	      y_top = y_10 - y_01;
+	    } else {
+	      y_l1 = y_00 - y_01;
+	      y_l2 = y_11 - y_01;
+	      y_top = y_10 - y_01;
+	    }
+	  } else { //270-360
+	    //jm = 0;
+	    yj = yy_0;
+	    if (cphi > std::abs(sphi)) { // 315-360
+	      y_l1 = y_10 - y_00;
+	      y_l2 = y_01 - y_00;
+	      y_top = y_11 - y_00;
+	    } else {
+	      y_l1 = y_01 - y_00;
+	      y_l2 = y_10 - y_00;
+	      y_top = y_11 - y_00;
+	    }
+	  }
+	  real inv_y_l1 = L / y_l1;
+	  int p = int((x0_0 + yj - h_pixels[0]) * inv_pixel_step);
 	  if (p < 0)
 	    p = 0;
 	  else if (p >= nh_pixels)
 	    continue;
-	  y_bot = xx_coords[i] + yj;
+	  y_bot = xx_0 + yj;
 	  while (h_pixels[p] < y_bot) {
 	    p++;
 	    if (p >= nh_pixels)
