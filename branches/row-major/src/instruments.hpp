@@ -179,26 +179,12 @@ namespace CCPi {
 			      const int nx, const int ny, const int nz) const;
 
   private:
-    static void f2D_parallel(const real start[], const real end[],
-			     const real b_x, const real b_y,
-			     const real d_x, const real d_y,
-			     const int im_size_x,
-			     const int im_size_y,
-			     const int im_size_z,
-			     voxel_type *const voxels,
-			     pixel_type *pixels,
-			     const int pixels_per_voxel);
-    void f2D(const real det_y[], const real phi[],
-	     const int n_angles,
-	     const int n_rays_y,
-	     const int n_rays_z,
-	     const real grid_offset[3],
-	     const real voxel_size[3],
-	     const int nx_voxels,
-	     const int ny_voxels,
-	     const int nz_voxels,
-	     pixel_type ray_data[],
-	     voxel_type *const vol_data) const;
+    static void f2D(const real h_pixels[], const real v_pixels[],
+		    const real angles[], const int n_angles,
+		    const int nh_pixels, const int nv_pixels,
+		    const real vox_origin[3], const real vox_size[3],
+		    const int nx, const int ny, const int nz,
+		    pixel_type pixels[], voxel_type *const voxels);
     static void b2D(const real h_pixels[], const real v_pixels[],
 		    const real angles[], pixel_type pixels[],
 		    voxel_type *const voxels,
