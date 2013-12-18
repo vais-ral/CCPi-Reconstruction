@@ -150,8 +150,9 @@ void CCPi::parallel_beam::forward_project(pixel_type *pixels,
 {
   timer fptime(USE_TIMER);
   /**/
-  f2D(get_h_pixels(), get_phi(), get_num_angles(), get_num_h_pixels(),
-	get_num_v_pixels(), origin, width, nx, ny, nz, pixels, voxels);
+  f2D(get_h_pixels(), get_v_pixels(), get_phi(), get_num_angles(),
+      get_num_h_pixels(), get_num_v_pixels(), origin, width, nx, ny, nz,
+      pixels, voxels);
   /**/ /*
     instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				pixels, voxels, get_num_angles(),
