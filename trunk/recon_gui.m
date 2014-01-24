@@ -12,17 +12,26 @@ pathname = strcat(pathname, '/');
 % strip .xtekct from filename to get base
 filebase = strrep(filename, '.xtekct', '');
 
-[nvoxels iterations beam_harden ok] = input_recon_data();
+[pix_per_vox iterations beam_harden ok] = input_recon_data();
 
 if ok
-
-  voxels = [nvoxels nvoxels nvoxels];
 
 % Load data and geometrical parameters from file
 % Use this if you are using a reconstruction.xtekct file from FDK reconstruction
 %[data geom] = load_data(pathname, filename, pathname2, filename2);
 % Use this otherwise
   [data geom] = load_data(pathname, filebase);
+
+  nvoxels_xy = geom.dets.ny / pix_per_vox;
+  if mod(geom.dets.ny, pix_per_vox) > 0
+    nvoxels_xy = nvoxels_xy + 1;
+  end
+  nvoxels_z = geom.dets.nz / pix_per_vox;
+  if mod(geom.dets.nz, pix_per_vox) > 0
+    nvoxels_z = nvoxels_z + 1;
+  end
+
+  voxels = [nvoxels_xy nvoxels_xy nvoxels_z];
 
 % Find centre of rotation
   geom = centre_geom(data, geom);
