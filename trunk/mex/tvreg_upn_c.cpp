@@ -29,9 +29,11 @@ namespace CCPi {
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
 				     const bool phantom = false);
-    bool read_scans(const std::string path, const bool phantom = false);
+    bool read_scans(const std::string path, const int offset,
+		    const int block_size, const bool first, const bool phantom);
+    bool read_data_size(const std::string path, const bool phantom);
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
-			       const voxel_data &voxels) const;
+			       const int nx, const int ny, const int nz) const;
     void apply_beam_hardening();
   };
 }
@@ -222,14 +224,22 @@ bool CCPi::dummy_cone::setup_experimental_geometry(const std::string path,
   return false;
 }
 
-bool CCPi::dummy_cone::read_scans(const std::string path, const bool phantom)
+bool CCPi::dummy_cone::read_scans(const std::string path, const int offset,
+				  const int block_size, const bool first,
+				  const bool phantom)
+{
+  return false;
+}
+
+bool CCPi::dummy_cone::read_data_size(const std::string path,
+				      const bool phantom)
 {
   return false;
 }
 
 bool CCPi::dummy_cone::finish_voxel_geometry(real voxel_origin[3],
-					     real voxel_size[3],
-					     const voxel_data &voxels) const
+					     real voxel_size[3], const int nx,
+					     const int ny, const int nz) const
 {
   return false;
 }
