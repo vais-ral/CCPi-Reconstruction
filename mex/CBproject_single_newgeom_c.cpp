@@ -13,6 +13,7 @@
 #include <matrix.h>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <omp.h>
 #include "mex_types.hpp"
 #include "instruments.hpp"
