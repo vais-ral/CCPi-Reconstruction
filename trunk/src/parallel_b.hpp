@@ -25,9 +25,9 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
   real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
 
-  real det_x = 2.0 * std::max(std::abs(grid_offset[0]),
-			      std::max(std::abs(grid_offset[1]),
-				       std::abs(grid_offset[2])));
+  real det_x = real(2.0) * std::max(std::abs(grid_offset[0]),
+				    std::max(std::abs(grid_offset[1]),
+					     std::abs(grid_offset[2])));
 
 #pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset, cos_curr_angle, sin_curr_angle), firstprivate(det_x)
   {
@@ -73,8 +73,8 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 		- sin_curr_angle * det_y[curr_ray_y];
 	      end[1] = sin_curr_angle * det_x
 		+ cos_curr_angle * det_y[curr_ray_y];
-	      start[0] = end[0] - 3.0 * cos_curr_angle * det_x;
-	      start[1] = end[1] - 3.0 * sin_curr_angle * det_x;
+	      start[0] = end[0] - real(3.0) * cos_curr_angle * det_x;
+	      start[1] = end[1] - real(3.0) * sin_curr_angle * det_x;
 
 	      /* loop over z values on detector */
 	      project_singledata<pixel_t, voxel_t, true>(start, end,

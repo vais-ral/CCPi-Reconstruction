@@ -42,7 +42,7 @@ $Date: 2008/09/08 13:20:38 $
 
 /* 09/09/2011 this version operates on single precision ray and volume data, but performs internal calculations in double precision */
 
-#define PRECISION 0.00000001 /* for calculating rays intersecting voxels*/
+#define PRECISION real(0.00000001) /* for calculating rays intersecting voxels*/
 
 static inline real alpha_fn(const int n, const real p1, const real p2,
 			    const real b, const real d)
@@ -158,7 +158,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     else {
 	alpha_x_min=-2;
 	alpha_x_max=2;
-	i=(int) floor_j( phi(0.0, p1_x, p2_x, b_x, d_x));
+	i=(int) floor_j( phi(real(0.0), p1_x, p2_x, b_x, d_x));
 	if ( i < 0 || i >= im_size_x)
 	    return;
 	alpha_x=2;
@@ -173,7 +173,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     else {
 	alpha_y_min=-2;
 	alpha_y_max=2;
-	j=(int) floor_j( phi(0.0, p1_y, p2_y, b_y, d_y));
+	j=(int) floor_j( phi(real(0.0), p1_y, p2_y, b_y, d_y));
 	if ( j < 0 || j >= im_size_y)
 	    return;
 	alpha_y=2;
@@ -189,7 +189,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     else {
 	alpha_z_min=-2;
 	alpha_z_max=2;
-	k=(int) floor_j( phi(0.0, p1_z, p2_z, b_z, d_z));
+	k=(int) floor_j( phi(real(0.0), p1_z, p2_z, b_z, d_z));
 	if ( k < 0 || k >= im_size_z)
 	    return;
 	alpha_z=2;
@@ -197,8 +197,10 @@ void CCPi::project_singledata(const real start[], const real end[],
 	k_max = 0;
     }
 		
-    alpha_min=std::max(0.0, max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
-    alpha_max=std::min(1.0, min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
+    alpha_min=std::max(real(0.0),
+		       max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
+    alpha_max=std::min(real(1.0),
+		       min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
 
     /* if ray intersects voxel grid */
     if (alpha_min < alpha_max) {
@@ -425,7 +427,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 	  // Trap for issues with large umber of threads
 	  if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z) {
 #ifdef DEBUG
-	    if (alpha_max - alpha_c > 0.005)
+	    if (alpha_max - alpha_c > recon_type(0.005))
 	      std::cerr << "Data left on voxel boundary " << alpha_max - alpha_c << '\n';
 #endif //DEBUG
 	  } else {

@@ -80,12 +80,12 @@ bool CCPi::Diamond::read_data_size(const std::string path,
 		    false, false, 0, 10000);
     // store data in class
     real *h_pixels = new real[nh_pixels];
-    h_pixels[0] = - ((nh_pixels - 1) * hsize) / 2.0;
+    h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0);
     for (int i = 1; i < nh_pixels; i++)
       h_pixels[i] = h_pixels[0] + real(i) * hsize;
     set_h_pixels(h_pixels, nh_pixels);
     real *v_pixels = new real[nv_pixels];
-    v_pixels[0] = - ((nv_pixels - 1) * vsize) / 2.0;
+    v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
     for (int i = 1; i < nv_pixels; i++)
       v_pixels[i] = v_pixels[0] + real(i) * vsize;
     set_v_pixels(v_pixels, nv_pixels);
@@ -123,7 +123,7 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   real vlim = std::max(vmax, vmin);
   real lim = std::max(hlim, vlim);
   real voxel_size[3];
-  voxel_size[0] = 2.0 * lim / real(nx);
+  voxel_size[0] = real(2.0) * lim / real(nx);
   voxel_size[1] = voxel_size[0];
   voxel_size[2] = voxel_size[0];
   real image_vol[3];
@@ -236,19 +236,19 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
       real w = angles[i] / angles[nangles - 1];
       for (long j = 0; j < n; j++)
-	dark[j] = i_dark[j] * (1.0 - w) + f_dark[j] * w;
+	dark[j] = i_dark[j] * (real(1.0) - w) + f_dark[j] * w;
       for (long j = 0; j < n; j++)
-	bright[j] = i_bright[j] * (1.0 - w) + f_bright[j] * w;
+	bright[j] = i_bright[j] * (real(1.0) - w) + f_bright[j] * w;
       // subtract dark from data/bright
       // and clamp min data/bright value to 0.1
       for (long j = 0; j < n; j++) {
 	bright[j] -= dark[j];
-	if (bright[j] < 0.1)
+	if (bright[j] < real(0.1))
 	  bright[j] = 0.1;
       }
       for (long j = 0; j < n; j++) {
 	pixels[j + i * n] -= dark[j];
-	if (pixels[j + i * n] < 0.1)
+	if (pixels[j + i * n] < real(0.1))
 	  pixels[j + i * n] = 0.1;
       }
       // scale each data pixel by bright pixel
@@ -287,9 +287,9 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
   voxel_size[0] = hsize;
   voxel_size[1] = hsize;
   voxel_size[2] = vsize;
-  voxel_origin[0] = -voxel_size[0] * real(nx) / 2.0; // + offset[0];
-  voxel_origin[1] = -voxel_size[1] * real(ny) / 2.0; // + offset[1];
-  voxel_origin[2] = -voxel_size[2] * real(nz) / 2.0; // + offset[2];
+  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0); // + offset[0];
+  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0); // + offset[1];
+  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0); // + offset[2];
   return true;
 }
 
