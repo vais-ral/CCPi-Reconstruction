@@ -304,11 +304,19 @@ void CCPi::project_singledata(const real start[], const real end[],
 	if (x_defined) {
 	    i=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_x, p2_x, b_x, d_x) );
 	alpha_x_u = d_x/std::abs(p2_x-p1_x);
+	  if (i < 0)
+	    i = 0;
+	  else if (i >= im_size_x)
+	    i = im_size_x - 1;
 	}
 
 	if (y_defined) {
 	    j=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_y, p2_y, b_y, d_y) );
 	alpha_y_u = d_y/std::abs(p2_y-p1_y);
+	  if (j < 0)
+	    j = 0;
+	  else if (j >= im_size_y)
+	    j = im_size_y - 1;
 	}
 	if (z_defined) {
 	    k=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_z, p2_z, b_z, d_z) );
