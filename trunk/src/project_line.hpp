@@ -311,6 +311,10 @@ void CCPi::project_singledata(const real start[], const real end[],
 	if (z_defined) {
 	    k=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_z, p2_z, b_z, d_z) );
 	alpha_z_u = d_z/std::abs(p2_z-p1_z);
+	  if (k < 0)
+	    k = 0;
+	  else if (k >= im_size_z)
+	    k = im_size_z - 1;
 	}
 
 	if (p1_x < p2_x)
@@ -410,7 +414,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 	    /* did we loop too far? */
 	    if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z)
 		/* artificially end loop  */
-		N_p = n_count - 1;
+	      break;
 	    
 
 
@@ -420,8 +424,10 @@ void CCPi::project_singledata(const real start[], const real end[],
 	if( (alpha_max - alpha_c) > PRECISION) {
 	  // Trap for issues with large umber of threads
 	  if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z) {
-	    if (alpha_max - alpha_c > 0.001)
-	      std::cerr << "Data left on voxel boundary\n";
+#ifdef DEBUG
+	    if (alpha_max - alpha_c > 0.005)
+	      std::cerr << "Data left on voxel boundary " << alpha_max - alpha_c << '\n';
+#endif //DEBUG
 	  } else {
 	    /* this is the last step so don't need to worry about incrementing i or j*/
 	    l_ij=(alpha_max-alpha_c)*d_conv;
