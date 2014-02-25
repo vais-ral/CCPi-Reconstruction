@@ -116,7 +116,7 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
 
   (*numFunc)++;
   /* fyk + 0.5*||A*y_k - b||^2 */
-  fyk += 0.5 * pow(dnrm2(n_rays, tv2, 1), 2);
+  fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
   for (long i = 0; i < prodDims; i++)
     tv[i] = 0;
@@ -155,14 +155,14 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
     tv2[i] -= b[i];
 
   /* 0.5*||A*x_k+1 - b||^2 */
-  *gxkp1 = 0.5 * pow(dnrm2(n_rays, tv2, 1), 2);
+  *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
   (*numFunc)++;
   // f(x_k+1) = h(x_k+1) + g(x_k+1) = alpha*T_tau(x_k+1) + 0.5*||A*x_k+1 - b||^2
   *fxkp1 = *hxkp1 + *gxkp1;
 
   while (*fxkp1 / (1+1e-14) > fyk + ddot(prodDims, Nablafyk, 1, tv, 1)
-	 + (bL / 2) * pow(dnrm2(prodDims, tv, 1), 2)) {
+	 + (bL / 2) * std::pow(dnrm2(prodDims, tv, 1), 2)) {
     (*numBack)++;
     bL *= s_L;
 
@@ -194,7 +194,7 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
       tv2[i] -= b[i];
 
     /* 0.5*||A*x_k+1 - b||^2 */
-    *gxkp1 = 0.5 * pow(dnrm2(n_rays, tv2, 1), 2);
+    *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
     (*numFunc)++;
     /* f(x_k+1) = h(x_k+1) + g(x_k+1)
@@ -237,7 +237,7 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
     tv2[i] -= b[i];
 
   (*numFunc)++;
-  fxk += 0.5 * pow(dnrm2(n_rays, tv2, 1), 2);
+  fxk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
   // BGS - does this duplicate at lot of the previous code suggesting a common
   // subroutine?
@@ -261,7 +261,7 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
       tv2[i] -= b[i];
 
     (*numFunc)++;
-    fyk += 0.5 * pow(dnrm2(n_rays, tv2, 1), 2);
+    fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
     for (long i = 0; i < prodDims; i++)
       tv[i] = 0;
@@ -280,9 +280,11 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
       for (long i = 0; i < prodDims; i++)
 	tv[i] = xk[i] - yk[i];
 
-      bmu = std::max(std::min(2 * (fxk * (1 + 1e-14)
-				   - (fyk + ddot(prodDims, Nablafyk, 1, tv, 1)))
-			      / pow(dnrm2(prodDims, tv, 1), 2), bmu), 0.0);
+      bmu = std::max(std::min(real(2) * (fxk * (real(1) + real(1e-14))
+					 - (fyk + ddot(prodDims, Nablafyk,
+						       1, tv, 1)))
+			      / std::pow(dnrm2(prodDims, tv, 1), 2), bmu),
+		     real(0.0));
     }
 
     /* Take the projected step from yk to xkp1 */
@@ -306,13 +308,14 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
     for (long i = 0; i < n_rays; i++)
       tv2[i] -= b[i];
 
-    *gxkp1 = 0.5 * pow(dnrm2(n_rays, tv2, 1), 2);
+    *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
     (*numFunc)++;
     *fxkp1 = *hxkp1 + *gxkp1;
 
-    while (*fxkp1 / (1 + 1e-14) > fyk + ddot(prodDims, Nablafyk, 1, tv, 1)
-	   + (bL / 2) * pow(dnrm2(prodDims, tv, 1), 2)) {
+    while (*fxkp1 / (real(1) + real(1e-14)) > fyk
+	   + ddot(prodDims, Nablafyk, 1, tv, 1)
+	   + (bL / real(2)) * std::pow(dnrm2(prodDims, tv, 1), 2)) {
       (*numBack)++;
       bL *= s_L;
 
@@ -336,7 +339,7 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
       for (long i = 0; i < n_rays; i++)
 	tv2[i] -= b[i];
 
-      *gxkp1 = 0.5 * pow(dnrm2(n_rays, tv2, 1), 2);
+      *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
       (*numFunc)++;
       *fxkp1 = *hxkp1 + *gxkp1;
@@ -422,11 +425,11 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
     q = bmu / bL;
 
     if (k != 0)
-      cumprod *= (1 - std::sqrt(q));
+      cumprod *= (real(1) - std::sqrt(q));
     /*tjeck if the convergence rate is fast enough*/
     if (bmu > 0) {
-      if (nGt * nGt > cumprod * (4 * bL / bmu - bL / Lm1 + 4 *gamma0
-				 * bL / pow(bmu, 2)) * nGtm1 * nGtm1) {
+      if (nGt * nGt > cumprod * (real(4) * bL / bmu - bL / Lm1 + real(4) *gamma0
+				 * bL / std::pow(bmu, 2)) * nGtm1 * nGtm1) {
 	/*printf("not fast enough %d\n",kk);*/
 	/*printf("%f %f %f %f\n",nGt,nGtm1*nGtm1,cumprod,
 	       (4*bL/bmu-bL/Lm1+4*gamma0*bL/pow(bmu,2)));*/
@@ -439,12 +442,13 @@ void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
     }
     /*printf("%f\n",q);DRAW;*/
 
-    thetakp1 = (-(pow(thetak, 2) - q) + std::sqrt(pow(pow(thetak, 2) - q, 2)
-						  + 4 * pow(thetak, 2))) / 2.0;
-    betak = (thetak * (1 - thetak)) / (pow(thetak, 2) + thetakp1);
+    thetakp1 = (-(std::pow(thetak, 2) - q)
+		+ std::sqrt(std::pow(std::pow(thetak, 2) - q, 2)
+			    + real(4) * std::pow(thetak, 2))) / real(2.0);
+    betak = (thetak * (real(1) - thetak)) / (std::pow(thetak, 2) + thetakp1);
 
     if (k == 0) {
-      gamma0 = thetakp1 * (thetakp1 * bL - bmu) / (1 - thetakp1);
+      gamma0 = thetakp1 * (thetakp1 * bL - bmu) / (real(1) - thetakp1);
       /*printf("gamma0 %f\n",gamma0);*/
     }
 

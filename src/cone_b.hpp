@@ -73,7 +73,7 @@ void CCPi::instrument::backward_project(const real source_x,
 	end[2] = det_z[curr_ray_z];
 
 	delta_z = end[2] - start[2];
-	if (std::abs(delta_z) > 0.00000001) {
+	if (std::abs(delta_z) > real(0.00000001)) {
 	  alpha_z_0 = (cb_r_i(0, b_z, voxel_size[2])
 		       - start[2]) / delta_z;
 	  alpha_z_N = (cb_r_i(nz_step, b_z, voxel_size[2])
@@ -84,8 +84,8 @@ void CCPi::instrument::backward_project(const real source_x,
 	  alpha_z_min = -2.0;
 	  alpha_z_max = 2.0;
 	}
-	alpha_min = std::max(0.0, alpha_z_min);
-	alpha_max = std::min(1.0, alpha_z_max);
+	alpha_min = std::max(real(0.0), alpha_z_min);
+	alpha_max = std::min(real(1.0), alpha_z_max);
 
 	if (alpha_min < alpha_max) {
 	  for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {

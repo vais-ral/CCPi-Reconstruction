@@ -39,7 +39,7 @@ $Date: 2008/09/08 13:20:38 $
 
 /* 09/09/2011 this version operates on single precision ray and volume data, but performs internal calculations in double precision */
 
-#define PRECISION 0.00000001 /* for calculating rays intersecting voxels*/
+#define PRECISION real(0.00000001) /* for calculating rays intersecting voxels*/
 
 static inline real alpha_fn(const int n, const real p1, const real p2,
 			    const real b, const real d)
@@ -157,7 +157,7 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
     else {
 	alpha_x_min=-2;
 	alpha_x_max=2;
-	i=(int) floor_j( phix(0.0, p1_x, p2_x, b_x, d_x));
+	i=(int) floor_j( phix(real(0.0), p1_x, p2_x, b_x, d_x));
 	if ( i < 0 || i >= im_size_x)
 	    return;
 	alpha_x=2;
@@ -172,7 +172,7 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
     else {
 	alpha_y_min=-2;
 	alpha_y_max=2;
-	j=(int) floor_j( phix(0.0, p1_y, p2_y, b_y, d_y));
+	j=(int) floor_j( phix(real(0.0), p1_y, p2_y, b_y, d_y));
 	if ( j < 0 || j >= im_size_y)
 	    return;
 	alpha_y=2;
@@ -188,7 +188,7 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
     else {
 	alpha_z_min=-2;
 	alpha_z_max=2;
-	k=(int) floor_j( phix(0.0, p1_z, p2_z, b_z, d_z));
+	k=(int) floor_j( phix(real(0.0), p1_z, p2_z, b_z, d_z));
 	if ( k < 0 || k >= im_size_z)
 	    return;
 	alpha_z=2;
@@ -196,8 +196,10 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
 	k_max = 0;
     }
 
-    alpha_min=std::max(0.0, max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
-    alpha_max=std::min(1.0, min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
+    alpha_min=std::max(real(0.0),
+		       max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
+    alpha_max=std::min(real(1.0),
+		       min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
 
     /* if ray intersects voxel grid */
     if (alpha_min < alpha_max) {
@@ -447,9 +449,9 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 
   // set detector z to 2* the yz limits of the voxels, so it misses
   // longest voxel dim should be sqrt(3), so 2 should be safe
-  real det_x = 2.0 * std::max(std::abs(grid_offset[0]),
-			      std::max(std::abs(grid_offset[1]),
-				       std::abs(grid_offset[2])));
+  real det_x = real(2.0) * std::max(std::abs(grid_offset[0]),
+				    std::max(std::abs(grid_offset[1]),
+					     std::abs(grid_offset[2])));
 
   end[2] = 0.000001;
   start[2] = end[2];
@@ -472,8 +474,8 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
     for (curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
       end[0] = cos_curr_angle * det_x - sin_curr_angle * det_y[curr_ray_y];
       end[1] = sin_curr_angle * det_x + cos_curr_angle * det_y[curr_ray_y];
-      start[0] = end[0] - 3.0 * cos_curr_angle * det_x;
-      start[1] = end[1] - 3.0 * sin_curr_angle * det_x;
+      start[0] = end[0] - real(3.0) * cos_curr_angle * det_x;
+      start[1] = end[1] - real(3.0) * sin_curr_angle * det_x;
 
       /* loop over z values on detector */
 

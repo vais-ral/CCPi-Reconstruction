@@ -239,7 +239,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		      }
 		    }
 		  }
-		  angles[n_angles] = M_PI * angle_data[i] / 180.0;
+		  angles[n_angles] = real(M_PI) * angle_data[i] / real(180.0);
 		  n_angles++;
 		} else if (keys[i] == 1) {
 		  if (read_data) {
