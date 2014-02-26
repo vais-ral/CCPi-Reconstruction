@@ -7,11 +7,12 @@
 namespace CCPi {
 
   template <class pixel_t, class voxel_t, bool backward>
-  void generate_line(real L, real x, real y, real z, const real L_x_inc,
-		     const real L_y_inc, const real L_z_inc, const long i_step,
+  void generate_line(double L, double x, double y, double z,
+		     const double L_x_inc, const double L_y_inc,
+		     const double L_z_inc, const long i_step,
 		     const long j_step, const long k_step, long ray_index,
-		     pixel_t &pixel, voxel_t *const vol_data, const real tol1,
-		     const real tol2);
+		     pixel_t &pixel, voxel_t *const vol_data, const double tol1,
+		     const double tol2);
   template <class pixel_t, class voxel_t, bool backward>
   void project_singledata(const real start[], const real end[],
 			  pixel_t &ray_data, voxel_t *const vol_data,
@@ -24,25 +25,15 @@ namespace CCPi {
 
 #define PRECISION 0.00000001
 
-static inline real min_dbl(const real a, const real b)
-{
-  return a < b ? a : b;
-}
-
-static inline real max_dbl(const real a, const real b)
-{
-  return a > b ? a : b;
-}
-
 template <class pixel_t, class voxel_t, bool backward>
-void CCPi::generate_line(real L, real x, real y, real z, const real L_x_inc,
-			 const real L_y_inc, const real L_z_inc,
-			 const long i_step, const long j_step,
-			 const long k_step, long ray_index, pixel_t &pixel,
-			 voxel_t *const vol_data, const real tol1,
-			 const real tol2)
+void CCPi::generate_line(double L, double x, double y, double z,
+			 const double L_x_inc, const double L_y_inc,
+			 const double L_z_inc, const long i_step,
+			 const long j_step, const long k_step, long ray_index,
+			 pixel_t &pixel, voxel_t *const vol_data,
+			 const double tol1, const double tol2)
 {
-  real sum = 0.0;
+  double sum = 0.0;
   while (L > tol2) {
     if (x < y - tol1) {
       if (x < z - tol1) {
@@ -166,47 +157,47 @@ void CCPi::project_singledata(const real start[], const real end[],
 			      const int im_size_x, const int im_size_y,
 			      const int im_size_z, const long z_offset)
 {
-  const real source_x = start[0];
-  const real source_y = start[1];
-  const real source_z = start[2];
-  const real detect_x = end[0];
-  const real detect_y = end[1];
-  const real detect_z = end[2];
+  const double source_x = start[0];
+  const double source_y = start[1];
+  const double source_z = start[2];
+  const double detect_x = end[0];
+  const double detect_y = end[1];
+  const double detect_z = end[2];
   const long nvoxels_x = im_size_x;
   const long nvoxels_y = im_size_y;
   const long nvoxels_z = im_size_z;
-  const real voxel_size_x = d_x;
-  const real voxel_size_y = d_y;
-  const real voxel_size_z = d_z;
-  const real voxel0_x = b_x;
-  const real voxel0_y = b_y;
-  const real voxel0_z = b_z;
+  const double voxel_size_x = d_x;
+  const double voxel_size_y = d_y;
+  const double voxel_size_z = d_z;
+  const double voxel0_x = b_x;
+  const double voxel0_y = b_y;
+  const double voxel0_z = b_z;
 
   /* spacing between source and detector */
-  const real delta_x = detect_x - source_x;
-  const real delta_y = detect_y - source_y;
-  const real delta_z = detect_z - source_z;
+  const double delta_x = detect_x - source_x;
+  const double delta_y = detect_y - source_y;
+  const double delta_z = detect_z - source_z;
 
-  const real delta_x_abs = fabs(delta_x);
-  const real delta_y_abs = fabs(delta_y);
-  const real delta_z_abs = fabs(delta_z);
+  const double delta_x_abs = std::abs(delta_x);
+  const double delta_y_abs = std::abs(delta_y);
+  const double delta_z_abs = std::abs(delta_z);
 
   if (delta_x_abs < PRECISION && delta_y_abs < PRECISION &&
       delta_z_abs < PRECISION)
     return;
 
   /* distance between source and detector */
-  const real distance = sqrt(delta_x * delta_x + delta_y * delta_y
+  const double distance = sqrt(delta_x * delta_x + delta_y * delta_y
 			     + delta_z * delta_z);
   /* coord at other edge of grid is */
-  const real voxeln_x = voxel0_x + nvoxels_x * voxel_size_x;
-  const real voxeln_y = voxel0_y + nvoxels_y * voxel_size_y;
-  const real voxeln_z = voxel0_z + nvoxels_z * voxel_size_z;
+  const double voxeln_x = voxel0_x + nvoxels_x * voxel_size_x;
+  const double voxeln_y = voxel0_y + nvoxels_y * voxel_size_y;
+  const double voxeln_z = voxel0_z + nvoxels_z * voxel_size_z;
   /* The line between the source and detector is r + alpha delta_r,
      where alpha = 0.0 at the source and 1.0 at the detector, so it
      intercepts the limits of the voxel grid at (r' - r) / delta_r */
-  real alpha0_x;
-  real alphan_x;
+  double alpha0_x;
+  double alphan_x;
   if (delta_x_abs > PRECISION) {
     if (delta_x < 0.0) {
       alphan_x = (voxel0_x - source_x) / delta_x;
@@ -219,8 +210,8 @@ void CCPi::project_singledata(const real start[], const real end[],
     alpha0_x = -2.0;
     alphan_x = 2.0;
   }
-  real alpha0_y;
-  real alphan_y;
+  double alpha0_y;
+  double alphan_y;
   if (delta_y_abs > PRECISION) {
     if (delta_y < 0.0) {
       alphan_y = (voxel0_y - source_y) / delta_y;
@@ -233,8 +224,8 @@ void CCPi::project_singledata(const real start[], const real end[],
     alpha0_y = -2.0;
     alphan_y = 2.0;
   }
-  real alpha0_z;
-  real alphan_z;
+  double alpha0_z;
+  double alphan_z;
   if (delta_z_abs > PRECISION) {
     if (delta_z < 0.0) {
       alphan_z = (voxel0_z - source_z) / delta_z;
@@ -249,43 +240,43 @@ void CCPi::project_singledata(const real start[], const real end[],
   }
   /* The line doesn't intercept the grid until all 3 coords intercept,
      so take max of alpha0, min of alphan */
-  const real alpha0 = max_dbl(0.0, max_dbl(alpha0_x,
-					   max_dbl(alpha0_y, alpha0_z)));
-  const real alphan = min_dbl(1.0, min_dbl(alphan_x,
-					   min_dbl(alphan_y, alphan_z)));
+  const double alpha0 = std::max(0.0, std::max(alpha0_x,
+					       std::max(alpha0_y, alpha0_z)));
+  const double alphan = std::min(1.0, std::min(alphan_x,
+					       std::min(alphan_y, alphan_z)));
   /* if first intercept if beyond the second then it missed the grid */
   if (alpha0 < alphan) {
-    const real dalpha = alphan - alpha0;
+    const double dalpha = alphan - alpha0;
     /* x is the stride 1 index so order the loops so this is innermost,
        the alternative would be to order on the lengths in the different
        directions so the most steps in a direction is innermost which is
        a bit like Zhao and Reader (2003) */
     /* length of line within the grid */
-    const real length = distance * dalpha;
+    const double length = distance * dalpha;
 
     /* the delta alpha of a grid step is */
-    const real dalpha_x = voxel_size_x / delta_x_abs;
-    const real dalpha_y = voxel_size_y / delta_y_abs;
-    const real dalpha_z = voxel_size_z / delta_z_abs;
+    const double dalpha_x = voxel_size_x / delta_x_abs;
+    const double dalpha_y = voxel_size_y / delta_y_abs;
+    const double dalpha_z = voxel_size_z / delta_z_abs;
     /* start and end coords in voxel grid */
-    const real x_start = source_x + alpha0 * delta_x;
-    const real y_start = source_y + alpha0 * delta_y;
-    const real z_start = source_z + alpha0 * delta_z;
+    const double x_start = source_x + alpha0 * delta_x;
+    const double y_start = source_y + alpha0 * delta_y;
+    const double z_start = source_z + alpha0 * delta_z;
     /* converted into array indices */
-    real x_start_idx = (x_start - voxel0_x) / voxel_size_x;
-    real y_start_idx = (y_start - voxel0_y) / voxel_size_y;
-    real z_start_idx = (z_start - voxel0_z) / voxel_size_z;
+    double x_start_idx = (x_start - voxel0_x) / voxel_size_x;
+    double y_start_idx = (y_start - voxel0_y) / voxel_size_y;
+    double z_start_idx = (z_start - voxel0_z) / voxel_size_z;
 
     // Length of line from one voxel to the next
-    const real L_x_inc = dalpha_x * distance;
-    const real L_y_inc = dalpha_y * distance;
-    const real L_z_inc = dalpha_z * distance;
+    const double L_x_inc = dalpha_x * distance;
+    const double L_y_inc = dalpha_y * distance;
+    const double L_z_inc = dalpha_z * distance;
 
-    const real tol1 = distance * 5.0 * DBL_EPSILON;
+    const double tol1 = distance * 5.0 * DBL_EPSILON;
 
-    real x_min;
+    double x_min;
     long i_inc;
-    real x;
+    double x;
     if (delta_x_abs < tol1) {
       x = distance;
       i_inc = 1;
@@ -307,9 +298,9 @@ void CCPi::project_singledata(const real start[], const real end[],
     }
     const long i_min = (long)x_min;
     long i = i_min;
-    real y_min;
+    double y_min;
     long j_inc;
-    real y;
+    double y;
     if (delta_y_abs < tol1) {
       y = distance;
       j_inc = 1;
@@ -331,9 +322,9 @@ void CCPi::project_singledata(const real start[], const real end[],
     }
     const long j_min = (long)y_min;
     long j = j_min;
-    real z_min;
+    double z_min;
     long k_inc;
-    real z;
+    double z;
     if (delta_z_abs < tol1) {
       z = distance;
       k_inc = 1;
@@ -356,7 +347,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     const long k_min = (long)z_min;
     long k = k_min;
 
-    real L = length;
+    double L = length;
     long ray_index = (k+z_offset)*nvoxels_y*nvoxels_x + j*nvoxels_x + i;
     long i_step = i_inc;
     long j_step = j_inc * nvoxels_x;
@@ -364,7 +355,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     // This needs to be big enough to allow for the accumulated rounding errors
     // of subtracting lengths from L, whilst not overrunning the edge of the
     // voxels. Otherwise we would also need to test i/j/k >=0 < nvoxels.
-    const real tol2 = distance * 100.0 * DBL_EPSILON;
+    const double tol2 = distance * 100.0 * DBL_EPSILON;
     // try to order so that most common test in loop is the first one.
     if (L_x_inc < L_y_inc + tol1) {
       if (L_x_inc < L_z_inc + tol1) {
