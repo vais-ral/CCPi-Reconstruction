@@ -2,7 +2,7 @@
 #ifndef CCPI_PARALLEL_BACKWARD
 #define CCPI_PARALLEL_BACKWARD
 
-static inline real pb_r_i(const long i, const real r_0, const real step)
+static inline real pb_r_i(const sl_int i, const real r_0, const real step)
 {
   // coord at grid index i
   return r_0 + i * step;
@@ -20,8 +20,8 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 					const int ny_voxels,
 					const int nz_voxels)
 {
-  long curr_angle, curr_ray_y, curr_ray_z;
-  long ray_offset;
+  sl_int curr_angle, curr_ray_y, curr_ray_z;
+  sl_int ray_offset;
   real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
 
@@ -64,8 +64,8 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 	    cos_curr_angle = std::cos(phi[curr_angle]);
 	    sin_curr_angle = std::sin(phi[curr_angle]);
 
-	    ray_offset = curr_angle * long(n_rays_y) * long(n_rays_z)
-	      + curr_ray_z * long(n_rays_y);
+	    ray_offset = curr_angle * sl_int(n_rays_y) * sl_int(n_rays_z)
+	      + curr_ray_z * sl_int(n_rays_y);
 
 	    /* loop over y values on detector */
 	    for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {

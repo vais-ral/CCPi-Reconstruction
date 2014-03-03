@@ -10,7 +10,7 @@ namespace CCPi {
 			  const real b_x, const real b_y, const real b_z,
 			  const real d_x, const real d_y, const real d_z,
 			  const int im_size_x, const int im_size_y,
-			  const int im_size_z, const long z_offset);
+			  const int im_size_z, const sl_int z_offset);
 
 }
 
@@ -93,7 +93,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 			      const real b_x, const real b_y, const real b_z,
 			      const real d_x, const real d_y, const real d_z,
 			      const int im_size_x, const int im_size_y,
-			      const int im_size_z, const long z_offset)
+			      const int im_size_z, const sl_int z_offset)
 {
     
   int N_x, N_y, N_z, N_p/*, im_size_x, im_size_y, im_size_z*/;
@@ -101,16 +101,16 @@ void CCPi::project_singledata(const real start[], const real end[],
     real p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
     
     int x_defined, y_defined, z_defined;
-    long i=0,j=0,k=0;
+    sl_int i=0,j=0,k=0;
     
     recon_type alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max, 
 	alpha_z_max, alpha_min, alpha_max, alpha_x, alpha_y, alpha_z, alpha_c;
     recon_type alpha_x_u = 0.0, alpha_y_u = 0.0, alpha_z_u = 0.0;
     recon_type l_ij;
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
-    long i_step, j_step, k_step;
+    sl_int i_step, j_step, k_step;
     
-    long ray_index;
+    sl_int ray_index;
 	
     p1_x = start[0];
     p1_y = start[1];

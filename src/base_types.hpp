@@ -2,8 +2,15 @@
 #ifndef CCPI_RECON_TYPES
 #define CCPI_RECON_TYPES
 
+#include <climits>
 #include <string>
 #include <boost/multi_array.hpp>
+
+#if LONG_MAX == 2147483647L
+typedef long long sl_int;
+#else
+typedef long sl_int;
+#endif // LONG_MAX
 
 typedef double real;
 typedef double voxel_type;
