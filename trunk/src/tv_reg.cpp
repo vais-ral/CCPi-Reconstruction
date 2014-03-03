@@ -22,10 +22,10 @@ bool CCPi::tv_regularization(const instrument *device, voxel_data &voxels,
 			     const int constraint)
 {
   // Need copy of pixels before initial CGLS guess overwrites them
-  long n_pixels = device->get_data_size();
+  sl_int n_pixels = device->get_data_size();
   pixel_type *const p = device->get_pixel_data();
   pixel_type *b = new pixel_type[n_pixels];
-  for (long i = 0; i < n_pixels; i++)
+  for (sl_int i = 0; i < n_pixels; i++)
     b[i] = p[i];
   bool ok = cgls_reconstruction(device, voxels, origin, voxel_size, 5);
   if (ok)
@@ -44,7 +44,7 @@ bool CCPi::tv_regularization(const instrument *device, pixel_type *b,
 			     const real init_mu, const int constraint)
 {
   const voxel_data::size_type *sz = voxels.shape();
-  long n_vox = long(sz[0]) * long(sz[1]) * long(sz[2]);
+  sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
   voxel_type *const vox = voxels.data();
 
   // defaults - should be inputs
@@ -65,7 +65,7 @@ bool CCPi::tv_regularization(const instrument *device, pixel_type *b,
 
   // Todo - do we want to preserve the original voxels?
   //voxel_type *x = new voxel_type[n_vox];
-  //for (long i = 0; i < n_vox; i++)
+  //for (sl_int i = 0; i < n_vox; i++)
   //x[i] = vox[i];
   real fxkp1 = 0.0;
   real hxkp1 = 0.0;
@@ -97,9 +97,9 @@ bool CCPi::tv_regularization(const instrument *device, pixel_type *b,
   if (constraint == 2) {
     c = new real[n_vox];
     d = new real[n_vox];
-    for (long i = 0; i < n_vox; i++)
+    for (sl_int i = 0; i < n_vox; i++)
       c[i] = 0.0;
-    for (long i = 0; i < n_vox; i++)
+    for (sl_int i = 0; i < n_vox; i++)
       d[i] = 1.0;
   }
 

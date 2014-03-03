@@ -91,7 +91,7 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
 					   const int im_size_x,
 					   const int im_size_y,
 					   const int im_size_z,
-					   const long z_offset,
+					   const sl_int z_offset,
 					   projection_map &map)
 {
 
@@ -100,16 +100,16 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
     real p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
 
     int x_defined, y_defined, z_defined;
-    long i=0,j=0,k=0;
+    sl_int i=0,j=0,k=0;
 
     real alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max,
 	alpha_z_max, alpha_min, alpha_max, alpha_x, alpha_y, alpha_z, alpha_c;
     real alpha_x_u = 0.0, alpha_y_u = 0.0, alpha_z_u = 0.0;
     real l_ij;
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
-    long i_step, j_step, k_step;
+    sl_int i_step, j_step, k_step;
 
-    long ray_index;
+    sl_int ray_index;
 
     p1_x = start[0];
     p1_y = start[1];
@@ -443,7 +443,7 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 					  const int ny_voxels,
 					  const int nz_voxels)
 {
-  long curr_angle, curr_ray_y;
+  sl_int curr_angle, curr_ray_y;
   real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
 
@@ -462,7 +462,7 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   int **forward_y = new int *[n_rays_y * n_angles];
   int *forward_sizes = new int[n_rays_y * n_angles];
 
-  long total = 0;
+  sl_int total = 0;
   // Todo parallelize?
   int offset = 0;
   for (curr_angle = 0; curr_angle < n_angles; curr_angle++) {
@@ -514,11 +514,11 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   // even though we only want a 2D subset (its because of z in angles,z,y)
   matrix_size = total;
   forward_matrix = new real[total];
-  forward_cols = new long[total];
-  forward_rows = new long[total];
-  long column = 0;
-  long row = 0;
-  long index = 0;
+  forward_cols = new sl_int[total];
+  forward_rows = new sl_int[total];
+  sl_int column = 0;
+  sl_int row = 0;
+  sl_int index = 0;
   offset = 0;
   for (curr_angle = 0; curr_angle < n_angles; curr_angle++) {
     for (curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
@@ -540,11 +540,11 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   // produce backward projections from forward data - since we have packed
   // y,x memory order we can use CSR format
   backward_matrix = new real[total];
-  backward_cols = new long[total];
-  backward_rowb = new long[nx_voxels * ny_voxels];
-  backward_rowe = new long[nx_voxels * ny_voxels];
+  backward_cols = new sl_int[total];
+  backward_rowb = new sl_int[nx_voxels * ny_voxels];
+  backward_rowe = new sl_int[nx_voxels * ny_voxels];
 
-  long count = 0;
+  sl_int count = 0;
   column = 0;
   row = 0;
   index = 0;
@@ -553,7 +553,7 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   std::vector<int> position(n_angles * n_rays_y);
   for (int i = 0; i < n_angles * n_rays_y; i++)
     position[i] = 0;
-  for (long y = 0; y < ny_voxels; y++) {
+  for (sl_int y = 0; y < ny_voxels; y++) {
     std::vector<projection_map> mapping(nx_voxels);
     int p = 0;
     map_index m;
@@ -574,15 +574,15 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
       }
     }
 
-    for (long x = 0; x < nx_voxels; x++) {
+    for (sl_int x = 0; x < nx_voxels; x++) {
       int sz = (int)mapping[x].size();
       backward_rowb[offset] = index;
       if (sz > 0) {
 	count += sz;
 	for (projection_map::const_iterator ptr = mapping[x].begin();
 	     ptr != mapping[x].end(); ++ptr) {
-	  column = long(ptr->first.x) * long(n_rays_y) * long(n_rays_z)
-	    + long(ptr->first.y);
+	  column = sl_int(ptr->first.x) * sl_int(n_rays_y) * sl_int(n_rays_z)
+	    + sl_int(ptr->first.y);
 	  backward_matrix[index] = ptr->second;
 	  backward_cols[index] = column;
 	  index++;

@@ -288,9 +288,9 @@ bool CCPi::Nikon_XTek::build_phantom()
   image_offset[2] = -image_vol[2] / 2;
 
   // set up phantom volume
-  long n_vox = nx * ny * nz;
+  sl_int n_vox = nx * ny * nz;
   voxel_type *x = new voxel_type[n_vox];
-  for (long i = 0; i < n_vox; i++)
+  for (sl_int i = 0; i < n_vox; i++)
     x[i] = 0.0;
 
   // add cubes - column major
@@ -331,21 +331,21 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
 {
   bool ok = true;
   pixel_type *pixels = create_pixel_data();
-  long n_rays = get_data_size();
+  sl_int n_rays = get_data_size();
   std::string pathbase;
   combine_path_and_name(path, basename, pathbase);
   char index[8];
   for (int i = 0; (i < get_num_angles() and ok); i++) {
     snprintf(index, 8, "%04d", i + 1);
     std::string name = pathbase + index + ".tif";
-    long angle_offset = i * get_num_h_pixels() * get_num_v_pixels();
+    sl_int angle_offset = i * get_num_h_pixels() * get_num_v_pixels();
     ok = read_tiff(name, &pixels[angle_offset], get_num_h_pixels(),
 		   get_num_v_pixels());
   }
   if (ok) {
     /*
     real max_v = 0.0;
-    for (long j = 0; j < n_rays; j++)
+    for (sl_int j = 0; j < n_rays; j++)
       if (max_v < pixel_data[j])
 	max_v = pixel_data[j];
     if (max_v > white_level + 0.01)
@@ -355,7 +355,7 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     */
     real max_v = 65535.0;
     // scale and take -ve log, due to exponential extinction in sample.
-    for (long j = 0; j < n_rays; j++) {
+    for (sl_int j = 0; j < n_rays; j++) {
       if (pixels[j] < real(1.0))
 	pixels[j] = - std::log(real(0.00001) / max_v);
       else
@@ -554,8 +554,8 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 void CCPi::Nikon_XTek::apply_beam_hardening()
 {
   // Todo - does this belong in the base class?
-  long n_rays = get_data_size();
+  sl_int n_rays = get_data_size();
   pixel_type *pixels = get_pixel_data();
-  for (long i = 0; i < n_rays; i++)
+  for (sl_int i = 0; i < n_rays; i++)
     pixels[i] = pixels[i] * pixels[i];
 }
