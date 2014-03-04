@@ -10,7 +10,7 @@ namespace CCPi {
 			  const real b_x, const real b_y, const real b_z,
 			  const real d_x, const real d_y, const real d_z,
 			  const int im_size_x, const int im_size_y,
-			  const int im_size_z, const long z_offset);
+			  const int im_size_z, const sl_int z_offset);
 
 }
 
@@ -42,7 +42,7 @@ $Date: 2008/09/08 13:20:38 $
 
 /* 09/09/2011 this version operates on single precision ray and volume data, but performs internal calculations in double precision */
 
-#define PRECISION 0.00000001 /* for calculating rays intersecting voxels*/
+#define PRECISION real(0.00000001) /* for calculating rays intersecting voxels*/
 
 static inline real alpha_fn(const int n, const real p1, const real p2,
 			    const real b, const real d)
@@ -93,7 +93,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 			      const real b_x, const real b_y, const real b_z,
 			      const real d_x, const real d_y, const real d_z,
 			      const int im_size_x, const int im_size_y,
-			      const int im_size_z, const long z_offset)
+			      const int im_size_z, const sl_int z_offset)
 {
     
   int N_x, N_y, N_z, N_p/*, im_size_x, im_size_y, im_size_z*/;
@@ -101,16 +101,16 @@ void CCPi::project_singledata(const real start[], const real end[],
     real p1_x, p1_y, p1_z, p2_x, p2_y, p2_z;
     
     int x_defined, y_defined, z_defined;
-    long i=0,j=0,k=0;
+    sl_int i=0,j=0,k=0;
     
     recon_type alpha_x_min, alpha_y_min, alpha_z_min, alpha_x_max, alpha_y_max, 
 	alpha_z_max, alpha_min, alpha_max, alpha_x, alpha_y, alpha_z, alpha_c;
     recon_type alpha_x_u = 0.0, alpha_y_u = 0.0, alpha_z_u = 0.0;
     recon_type l_ij;
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
-    long i_step, j_step, k_step;
+    sl_int i_step, j_step, k_step;
     
-    long ray_index;
+    sl_int ray_index;
 	
     p1_x = start[0];
     p1_y = start[1];
@@ -158,7 +158,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     else {
 	alpha_x_min=-2;
 	alpha_x_max=2;
-	i=(int) floor_j( phi(0.0, p1_x, p2_x, b_x, d_x));
+	i=(int) floor_j( phi(real(0.0), p1_x, p2_x, b_x, d_x));
 	if ( i < 0 || i >= im_size_x)
 	    return;
 	alpha_x=2;
@@ -173,7 +173,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     else {
 	alpha_y_min=-2;
 	alpha_y_max=2;
-	j=(int) floor_j( phi(0.0, p1_y, p2_y, b_y, d_y));
+	j=(int) floor_j( phi(real(0.0), p1_y, p2_y, b_y, d_y));
 	if ( j < 0 || j >= im_size_y)
 	    return;
 	alpha_y=2;
@@ -189,7 +189,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     else {
 	alpha_z_min=-2;
 	alpha_z_max=2;
-	k=(int) floor_j( phi(0.0, p1_z, p2_z, b_z, d_z));
+	k=(int) floor_j( phi(real(0.0), p1_z, p2_z, b_z, d_z));
 	if ( k < 0 || k >= im_size_z)
 	    return;
 	alpha_z=2;
@@ -197,8 +197,10 @@ void CCPi::project_singledata(const real start[], const real end[],
 	k_max = 0;
     }
 		
-    alpha_min=std::max(0.0, max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
-    alpha_max=std::min(1.0, min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
+    alpha_min=std::max(real(0.0),
+		       max3_dbl(alpha_x_min, alpha_y_min, alpha_z_min));
+    alpha_max=std::min(real(1.0),
+		       min3_dbl(alpha_x_max, alpha_y_max, alpha_z_max));
 
     /* if ray intersects voxel grid */
     if (alpha_min < alpha_max) {
@@ -302,15 +304,27 @@ void CCPi::project_singledata(const real start[], const real end[],
 	if (x_defined) {
 	    i=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_x, p2_x, b_x, d_x) );
 	alpha_x_u = d_x/std::abs(p2_x-p1_x);
+	  if (i < 0)
+	    i = 0;
+	  else if (i >= im_size_x)
+	    i = im_size_x - 1;
 	}
 
 	if (y_defined) {
 	    j=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_y, p2_y, b_y, d_y) );
 	alpha_y_u = d_y/std::abs(p2_y-p1_y);
+	  if (j < 0)
+	    j = 0;
+	  else if (j >= im_size_y)
+	    j = im_size_y - 1;
 	}
 	if (z_defined) {
 	    k=(int) floor_j( phi( (min3_dbl(alpha_x, alpha_y, alpha_z) + alpha_min)/2, p1_z, p2_z, b_z, d_z) );
 	alpha_z_u = d_z/std::abs(p2_z-p1_z);
+	  if (k < 0)
+	    k = 0;
+	  else if (k >= im_size_z)
+	    k = im_size_z - 1;
 	}
 
 	if (p1_x < p2_x)
@@ -410,7 +424,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 	    /* did we loop too far? */
 	    if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z)
 		/* artificially end loop  */
-		N_p = n_count - 1;
+	      break;
 	    
 
 
@@ -418,6 +432,13 @@ void CCPi::project_singledata(const real start[], const real end[],
                 
 	/* in case we're ending inside grid, finish off last voxel */
 	if( (alpha_max - alpha_c) > PRECISION) {
+	  // Trap for issues with large umber of threads
+	  if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z) {
+#ifdef DEBUG
+	    if (alpha_max - alpha_c > recon_type(0.005))
+	      std::cerr << "Data left on voxel boundary " << alpha_max - alpha_c << '\n';
+#endif //DEBUG
+	  } else {
 	    /* this is the last step so don't need to worry about incrementing i or j*/
 	    l_ij=(alpha_max-alpha_c)*d_conv;
 
@@ -425,6 +446,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 	    vol_data[ray_index] += (voxel_t)(l_ij * rdata);
 	    else
 	    data += l_ij * vol_data[ray_index];
+	  }
 	}
 	if (!backward)
 	  ray_data += (pixel_t)data;
