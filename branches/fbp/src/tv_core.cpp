@@ -8,6 +8,7 @@
 #  include "base_types.hpp"
 #endif // types
 #include "blas.hpp"
+#include "fbp.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
 

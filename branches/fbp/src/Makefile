@@ -8,10 +8,10 @@ NXLIB = -L/usr/local/nexus/lib -lNeXusCPP
 CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(MKLINC)
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
-MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_intel_ilp64.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_sequential.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a
+MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_gf_ilp64.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a
 LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB) 
 
-OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o \
+OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o fbp.o \
 	tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o timer.o utils.o mpi.o
 
 recon: $(OBJECTS)
@@ -23,24 +23,27 @@ clean:
 $(OBJECTS): base_types.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
-recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp mpi.hpp
+recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
+	mpi.hpp fbp.hpp
 
-cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp
+cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp fbp.hpp
 
 instruments.o: instruments.cpp instruments.hpp cone_b.hpp cone_f.hpp \
-	parallel_f.hpp parallel_b.hpp project_line.hpp timer.hpp
+	parallel_f.hpp parallel_b.hpp project_line.hpp timer.hpp fbp.hpp
 
-diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
+diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp fbp.hpp
 
-xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp
+xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp fbp.hpp
 
 results.o: results.cpp results.hpp tiff.hpp mpi.hpp
 
-tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp
+tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp fbp.hpp
 
-tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp
+tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp fbp.hpp
 
-matrix2D.o: matrix2D.cpp instruments.hpp
+fbp.o: fbp.cpp fft.hpp instruments.hpp algorithms.hpp fbp.hpp timer.hpp
+
+matrix2D.o: matrix2D.cpp instruments.hpp fbp.hpp
 
 tiff.o: tiff.cpp tiff.hpp timer.hpp
 

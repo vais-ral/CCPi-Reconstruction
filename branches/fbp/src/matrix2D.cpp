@@ -9,6 +9,7 @@
 #else
 #  include "base_types.hpp"
 #endif // mex
+#include "fbp.hpp"
 #include "instruments.hpp"
 
 /* jacobs_ray_3d

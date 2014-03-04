@@ -8,6 +8,11 @@ namespace CCPi {
 
   enum algorithms { alg_FDK, alg_CGLS, alg_TVreg };
 
+  bool fbp_reconstruction(const instrument *device, voxel_data &voxels,
+			  const real origin[3], const real voxel_size[3],
+			  const filter_name_t name,
+			  const filter_window_t window,
+			  const filter_norm_t norm, const real bandwidth);
   bool cgls_reconstruction(const class instrument *device, voxel_data &voxels,
 			   const real origin[3], const real voxel_size[3],
 			   const int iterations);

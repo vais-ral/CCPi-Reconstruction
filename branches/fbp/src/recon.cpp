@@ -4,6 +4,7 @@
 #include "base_types.hpp"
 #include "mpi.hpp"
 #include "utils.hpp"
+#include "fbp.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
 #include "results.hpp"
@@ -21,13 +22,14 @@ int main()
     - ?
   */
   // Todo - usage messages if started up wrong?
-  bool phantom = false;
+  bool phantom = true;
   bool beam_harden = false;
   bool fast_projection = false;
-  int niterations = 5;
-  CCPi::devices device = CCPi::dev_Nikon_XTek;
-  //CCPi::devices device = CCPi::dev_Diamond_I12;
-  CCPi::algorithms algorithm = CCPi::alg_CGLS;
+  int niterations = 10;
+  //CCPi::devices device = CCPi::dev_Nikon_XTek;
+  CCPi::devices device = CCPi::dev_Diamond_I12;
+  //CCPi::algorithms algorithm = CCPi::alg_CGLS;
+  CCPi::algorithms algorithm = CCPi::alg_FDK;
   CCPi::instrument *instrument = 0;
   CCPi::output_format write_format = CCPi::bgs_float_dump;
   bool clamp_output = true;
@@ -45,6 +47,10 @@ int main()
   const real l = 6930;
   const real mu = 0.5;
   const real tv_reg_constraint = 3;
+  const filter_name_t fbp_filter = Ram_Lak_filter;
+  const filter_window_t fbp_window = No_window;
+  const filter_norm_t fbp_norm = PC_norm;
+  const real bandwidth = 0.8;
   // distributed memory
   machine::initialise();
   int num_processors = machine::get_number_of_processors();
@@ -146,7 +152,9 @@ int main()
 						    nz_voxels);
 	      switch (algorithm) {
 	      case CCPi::alg_FDK:
-		std::cerr << "ERROR: FDK not implmented - Todo\n";
+		ok = CCPi::fbp_reconstruction(instrument, voxels, voxel_origin,
+					      voxel_size, fbp_filter,
+					      fbp_window, fbp_norm, bandwidth);
 		break;
 	      case CCPi::alg_CGLS:
 		ok = CCPi::cgls_reconstruction(instrument, voxels, voxel_origin,
