@@ -135,7 +135,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 	input.closeData();
 	// get the angles
 	bool angles_ok = true;
-	long n_ang = 0;
+	sl_int n_ang = 0;
 	std::vector<double> angle_data;
 	input.openData("rotation_angle");
 	info = input.getInfo();
@@ -204,22 +204,22 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 	      std::vector<long> index(3);
 	      std::vector<long> sizes(3);
 	      index[0] = 0;
-	      index[1] = start_idx;
+	      index[1] = info.dims[1] - (start_idx + block_size);
 	      index[2] = 0;
 	      sizes[0] = 1;
 	      sizes[1] = block_size;
-	      sizes[2] = (long)info.dims[2];
+	      sizes[2] = (sl_int)info.dims[2];
 	      nh_pixels = sizes[2];
 	      if (read_data)
                 nv_pixels = sizes[1];
               else
                 nv_pixels = info.dims[1];
-	      long offset = sizes[1] * sizes[2];
+	      sl_int offset = sizes[1] * sizes[2];
 	      uint16_t *ptr = 0;
 	      if (read_data)
 		ptr = new uint16_t[sizes[1] * sizes[2]];
 	      int n_angles = 0;
-	      for (long i = 0; i < n_ang; i++) {
+	      for (sl_int i = 0; i < n_ang; i++) {
 		index[0] = i;
 		if (read_data)
 		  input.getSlab(ptr, index, sizes);
@@ -231,7 +231,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		if (keys[i] == 0) {
 		  // sample
 		  if (read_data) {
-		    long j = 0;
+		    sl_int j = 0;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
 			pixels[j + n_angles * offset] =
@@ -240,7 +240,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		      }
 		    }
 		  }
-		  angles[n_angles] = M_PI * angle_data[i] / 180.0;
+		  angles[n_angles] = real(M_PI) * angle_data[i] / real(180.0);
 		  n_angles++;
 		} else if (keys[i] == 1) {
 		  if (read_data) {
@@ -252,7 +252,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		      n_fbright++;
 		    } else
 		      n_ibright++;
-		    long j = 0;
+		    sl_int j = 0;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
 			bptr[j] += pixel_type(ptr[v * sizes[2] * h]);
@@ -269,7 +269,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		      n_fdark++;
 		    } else
 		      n_idark++;
-		    long j = 0;
+		    sl_int j = 0;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
 			dptr[j] += pixel_type(ptr[v * sizes[2] * h]);

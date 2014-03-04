@@ -2,7 +2,7 @@
 #ifndef CCPI_CONE_BACKWARD
 #define CCPI_CONE_BACKWARD
 
-static inline real cb_r_i(const long i, const real r_0, const real step)
+static inline real cb_r_i(const sl_int i, const real r_0, const real step)
 {
   // coord at grid index i
   return r_0 + i * step;
@@ -23,8 +23,8 @@ void CCPi::instrument::backward_project(const real source_x,
 					const int ny_voxels,
 					const int nz_voxels)
 {
-  long curr_angle, curr_ray_y, curr_ray_z;
-  long ray_offset;
+  sl_int curr_angle, curr_ray_y, curr_ray_z;
+  sl_int ray_offset;
   real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
 #pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset, cos_curr_angle, sin_curr_angle)
@@ -73,7 +73,7 @@ void CCPi::instrument::backward_project(const real source_x,
 	end[2] = det_z[curr_ray_z];
 
 	delta_z = end[2] - start[2];
-	if (std::abs(delta_z) > 0.00000001) {
+	if (std::abs(delta_z) > real(0.00000001)) {
 	  alpha_z_0 = (cb_r_i(0, b_z, voxel_size[2])
 		       - start[2]) / delta_z;
 	  alpha_z_N = (cb_r_i(nz_step, b_z, voxel_size[2])
@@ -84,8 +84,8 @@ void CCPi::instrument::backward_project(const real source_x,
 	  alpha_z_min = -2.0;
 	  alpha_z_max = 2.0;
 	}
-	alpha_min = std::max(0.0, alpha_z_min);
-	alpha_max = std::min(1.0, alpha_z_max);
+	alpha_min = std::max(real(0.0), alpha_z_min);
+	alpha_max = std::min(real(1.0), alpha_z_max);
 
 	if (alpha_min < alpha_max) {
 	  for(curr_angle = 0; curr_angle < n_angles; curr_angle++) {
@@ -96,7 +96,7 @@ void CCPi::instrument::backward_project(const real source_x,
 	    start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
 	    start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
 
-	    ray_offset = curr_angle * long(n_rays_y) * long(n_rays_z)
+	    ray_offset = curr_angle * sl_int(n_rays_y) * sl_int(n_rays_z)
 	      + curr_ray_z;
 
 	    /* loop over y values on detector */
@@ -108,7 +108,7 @@ void CCPi::instrument::backward_project(const real source_x,
 
 	      /* loop over z values on detector */
 	      project_singledata<pixel_t, voxel_t, true>(start, end,
-			    ray_data[ray_offset + curr_ray_y * long(n_rays_z)],
+			   ray_data[ray_offset + curr_ray_y * sl_int(n_rays_z)],
 				 vol_data, grid_offset[0], grid_offset[1],
 				 b_z, voxel_size[0], voxel_size[1],
 				 voxel_size[2], nx_voxels, ny_voxels,

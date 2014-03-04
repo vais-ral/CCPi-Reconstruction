@@ -26,7 +26,7 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 			      const int nx, const int ny, const int nz,
 			      pixel_type pixels[], voxel_type *const voxels)
 {
-  long nyz = long(ny) * long(nz);
+  sl_int nyz = sl_int(ny) * sl_int(nz);
   const int pixels_per_voxel = nv_pixels / nz;
   std::vector<real> cangles(n_angles);
   for (int i = 0; i < n_angles; i++)
@@ -62,7 +62,7 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
     real L = vox_lengths[a];
     bool steep = std::abs(sphi) > std::abs(cphi);
     for (int h = 0; h < nh_pixels; h++) {
-      long pix_av = (long(a) * long(nh_pixels) + long(h)) * long(nv_pixels);
+      sl_int pix_av = (sl_int(a) * sl_int(nh_pixels) + sl_int(h)) * sl_int(nv_pixels);
       //find end points of line (x0,y0), (x1,y1), scaled from 0 to n, step 1.0
       // x = -sphi * hp[h] + r cphi, y = cphi * hp[h] + r * sphi
       real x0;
@@ -263,8 +263,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	  real len = xgap * L;
 	  if (steep) {
 	    //use(y, xpxl1, L * xgap);
-	    long k_range = pix_av;
-	    long vox_y = long(y) * nyz + long(xpxl1) * long(nz);
+	    sl_int k_range = pix_av;
+	    sl_int vox_y = sl_int(y) * nyz + sl_int(xpxl1) * sl_int(nz);
 	    for (int k = 0; k < nz; k++) {
 	      for (int v = 0; v < pixels_per_voxel; v++)
 		pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -278,8 +278,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 #endif // TESTBP
 	  } else {
 	    //use(xpxl1, y, L * xgap);
-	    long k_range = pix_av;
-	    long vox_y = long(xpxl1) * nyz + long(y) * long(nz);
+	    sl_int k_range = pix_av;
+	    sl_int vox_y = sl_int(xpxl1) * nyz + sl_int(y) * sl_int(nz);
 	    for (int k = 0; k < nz; k++) {
 	      for (int v = 0; v < pixels_per_voxel; v++)
 		pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -328,8 +328,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	      if (steep) {
 		//use(y, x, Lscale * under);
 		real len = Lscale * under;
-		long k_range = pix_av;
-		long vox_y = long(y) * nyz + long(x) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(y) * nyz + sl_int(x) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -360,8 +360,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	      } else {
 		//use(x, y, Lscale * under);
 		real len = Lscale * under;
-		long k_range = pix_av;
-		long vox_y = long(x) * nyz + long(y) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -377,7 +377,7 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 		//use(x, y + 1, Lscale * over);
 		len = Lscale * over;
 		k_range = pix_av;
-		vox_y -= long(nz);
+		vox_y -= sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -395,8 +395,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	      real len = L;
 	      if (steep) {
 		//use(y, x, L);
-		long k_range = pix_av;
-		long vox_y = long(y) * nyz + long(x) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(y) * nyz + sl_int(x) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -410,8 +410,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 #endif // TESTBP
 	      } else {
 		//use(x, y, L);
-		long k_range = pix_av;
-		long vox_y = long(x) * nyz + long(y) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -437,8 +437,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	      if (steep) {
 		//use(y, x, Lscale * under);
 		real len = Lscale * under;
-		long k_range = pix_av;
-		long vox_y = long(y) * nyz + long(x) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(y) * nyz + sl_int(x) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -469,8 +469,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	      } else {
 		//use(x, y, Lscale * under);
 		real len = Lscale * under;
-		long k_range = pix_av;
-		long vox_y = long(x) * nyz + long(y) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -486,7 +486,7 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 		//use(x, y + 1, Lscale * over);
 		len = Lscale * over;
 		k_range = pix_av;
-		vox_y += long(nz);
+		vox_y += sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -504,8 +504,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	      real len = L;
 	      if (steep) {
 		//use(y, x, L);
-		long k_range = pix_av;
-		long vox_y = long(y) * nyz + long(x) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(y) * nyz + sl_int(x) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -519,8 +519,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 #endif // TESTBP
 	      } else {
 		//use(x, y, L);
-		long k_range = pix_av;
-		long vox_y = long(x) * nyz + long(y) * long(nz);
+		sl_int k_range = pix_av;
+		sl_int vox_y = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
 		    pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -544,8 +544,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 	  real len = L * xgap;
 	  if (steep) {
 	    //use(y, xpxl2, L * xgap);
-	    long k_range = pix_av;
-	    long vox_y = long(y) * nyz + long(xpxl2) * long(nz);
+	    sl_int k_range = pix_av;
+	    sl_int vox_y = sl_int(y) * nyz + sl_int(xpxl2) * sl_int(nz);
 	    for (int k = 0; k < nz; k++) {
 	      for (int v = 0; v < pixels_per_voxel; v++)
 		pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -559,8 +559,8 @@ void CCPi::parallel_beam::f2D(const real h_pixels[], const real v_pixels[],
 #endif // TESTBP
 	  } else {
 	    //use(xpxl2, y, L * xgap);
-	    long k_range = pix_av;
-	    long vox_y = long(xpxl2) * nyz + long(y) * long(nz);
+	    sl_int k_range = pix_av;
+	    sl_int vox_y = sl_int(xpxl2) * nyz + sl_int(y) * sl_int(nz);
 	    for (int k = 0; k < nz; k++) {
 	      for (int v = 0; v < pixels_per_voxel; v++)
 		pixels[k_range + v] += voxels[vox_y + k] * len;
@@ -646,7 +646,7 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
 			      const int nz)
 {
   //const real tol = 1e-13;
-  long nyz = long(ny) * long(nz);
+  sl_int nyz = sl_int(ny) * sl_int(nz);
   const int pixels_per_voxel = nv_pixels / nz;
   std::vector<real> cangles(n_angles);
   for (int i = 0; i < n_angles; i++)
@@ -683,11 +683,11 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
 #ifdef TESTBP
     std::vector<real> lengths(nh_pixels);
 #endif // TESTBP
-    long vox_xy = i * nyz;
+    sl_int vox_xy = i * nyz;
     for (int j = 0; j < ny; j++) {
-      long vox_y = vox_xy + j * long(nz);
+      sl_int vox_y = vox_xy + j * sl_int(nz);
       for (int a = 0; a < n_angles; a++) {
-	long pix_av = a * long(nv_pixels) * long(nh_pixels);
+	sl_int pix_av = a * sl_int(nv_pixels) * sl_int(nh_pixels);
 	real cphi = cangles[a];
 	real sphi = sangles[a];
 	real L = vox_lengths[a];
@@ -769,7 +769,7 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
 #ifdef TESTBP
 	      lengths[cnt] = len;
 #endif // TESTBP
-	      long k_range = pix_av + q * long(nv_pixels);
+	      sl_int k_range = pix_av + q * sl_int(nv_pixels);
 	      for (int k = 0; k < nz; k++) {
 		for (int v = 0; v < pixels_per_voxel; v++)
 		  voxels[vox_y + k] += pixels[k_range + v] * len;
@@ -858,7 +858,7 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
 #ifdef TESTBP
 	      lengths[cnt] = len;
 #endif // TESTBP
-	      long k_range = pix_av + q * long(nv_pixels);
+	      sl_int k_range = pix_av + q * sl_int(nv_pixels);
 	      for (int k = 0; k < nz; k++) {
 		for (int v = 0; v < pixels_per_voxel; v++)
 		  voxels[vox_y + k] += pixels[k_range + v] * len;
