@@ -21,7 +21,7 @@ namespace CCPi {
 		  const real *b, const real alpha, real tau,
 		  real bL, real bmu, real epsb_rel,int k_max, const int Ddim,
 		  const int Dm, const int Dn, const int Dl,
-		  const long prodDims, int ctype, real *d, real *c,
+		  const sl_int prodDims, int ctype, real *d, real *c,
 		  const bool ghxl, const bool xl, real *hxkp1l,
 		  real *gxkp1l, real *xlist, const bool verbose,
 		  real *numGrad, real* numBack, real *numFunc,
