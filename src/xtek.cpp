@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cctype>
 #include "base_types.hpp"
+#include "fbp.hpp"
 #include "utils.hpp"
 #include "instruments.hpp"
 #include "tiff.hpp"

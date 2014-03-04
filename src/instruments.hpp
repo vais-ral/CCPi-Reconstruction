@@ -34,6 +34,12 @@ namespace CCPi {
 				       const int nx, const int ny,
 				       const int nz) const = 0;
     virtual void apply_beam_hardening() = 0;
+    virtual bool filtered_back_project(voxel_data &voxels, const real origin[3],
+				       const real voxel_size[3],
+				       const filter_name_t name,
+				       const filter_window_t window,
+				       const filter_norm_t norm,
+				       const real bandwidth) const = 0;
     virtual void forward_project(pixel_type *pixels, voxel_type *const voxels,
 				 const real origin[3], const real width[3],
 				 const int nx, const int ny,
@@ -128,6 +134,12 @@ namespace CCPi {
 
   class cone_beam : public instrument {
   public:
+    bool filtered_back_project(voxel_data &voxels, const real origin[3],
+			       const real voxel_size[3],
+			       const filter_name_t name,
+			       const filter_window_t window,
+			       const filter_norm_t norm,
+			       const real bandwidth) const;
     void forward_project(pixel_type *pixels, voxel_type *const voxels,
 			 const real origin[3], const real width[3],
 			 const int nx, const int ny, const int nz) const;
@@ -171,6 +183,12 @@ namespace CCPi {
   public:
     parallel_beam();
 
+    bool filtered_back_project(voxel_data &voxels, const real origin[3],
+			       const real voxel_size[3],
+			       const filter_name_t name,
+			       const filter_window_t window,
+			       const filter_norm_t norm,
+			       const real bandwidth) const;
     void forward_project(pixel_type *pixels, voxel_type *const voxels,
 			 const real origin[3], const real width[3],
 			 const int nx, const int ny, const int nz) const;

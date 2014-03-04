@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include "base_types.hpp"
+#include "fbp.hpp"
 #include "instruments.hpp"
 #include "nexus.hpp"
 #include "utils.hpp"
@@ -25,7 +26,7 @@ bool CCPi::Diamond::create_phantom()
   int i;
   for (i = 0; i < 1000; i++) {
     //real p = -100.0 + i * 0.250;
-    real p = -99.8 + i * 0.400;
+    real p = -99.6 + i * 0.800;
     if (p <= 100.0 + 0.001)
       h_pixels[i] = p;
     else
@@ -35,7 +36,7 @@ bool CCPi::Diamond::create_phantom()
   real *v_pixels = new real[1000];
   for (i = 0; i < 1000; i++) {
     //real p = -100.0 + i * 0.250;
-    real p = -99.8 + i * 0.400;
+    real p = -99.6 + i * 0.800;
     if (p <= 100.0 + 0.001)
       v_pixels[i] = p;
     else
@@ -46,11 +47,11 @@ bool CCPi::Diamond::create_phantom()
   //geom.angles = linspace(0,2*pi,501);
   // lose the 2pi which is a duplicate of 0
   //geom.angles = geom.angles(1:500);
-  real *pangles = new real[500];
-  real step = 2.0 * M_PI / 250;
-  for (i = 0; i < 250; i++)
+  real *pangles = new real[1000];
+  real step = 2.0 * M_PI / 1000;
+  for (i = 0; i < 1000; i++)
     pangles[i] = i * step;
-  set_phi(pangles, 250);
+  set_phi(pangles, 1000);
   return true;
 }
 

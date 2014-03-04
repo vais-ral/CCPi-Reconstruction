@@ -7,6 +7,7 @@
 #else
 #  include "base_types.hpp"
 #endif // mex
+#include "fbp.hpp"
 #include "instruments.hpp"
 #include "project_line.hpp"
 #include "parallel_b.hpp"

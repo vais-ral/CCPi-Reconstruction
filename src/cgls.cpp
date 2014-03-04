@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include "base_types.hpp"
+#include "fbp.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
 #include "timer.hpp"
