@@ -15,10 +15,10 @@
 struct Dtype {
         int dim;
         int m,n,l;
-        long prodDims;
+        sl_int prodDims;
 };
 
-static void dcopyf(const long n, const float x[], const int incx, real y[],
+static void dcopyf(const sl_int n, const float x[], const int incx, real y[],
 		   const int incy);
 
 // dummy cone-beam device
@@ -29,9 +29,11 @@ namespace CCPi {
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
 				     const bool phantom = false);
-    bool read_scans(const std::string path, const bool phantom = false);
+    bool read_scans(const std::string path, const int offset,
+		    const int block_size, const bool first, const bool phantom);
+    bool read_data_size(const std::string path, const bool phantom);
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
-			       const voxel_data &voxels) const;
+			       const int nx, const int ny, const int nz) const;
     void apply_beam_hardening();
   };
 }
@@ -44,7 +46,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   register float *x, *xkp1;
   mxArray *M,*S,*Mdims;
   int i,j,k_max,dim,ctype,ghxl,xl,verbose,temp, n_rays_y, n_rays_z, n_angles;
-  long prodDims;
+  sl_int prodDims;
   Dtype D;
 
   if(nrhs != 24){
@@ -194,7 +196,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     delete dev;
     *k = (double)ki;
     /*write the dynamical allocated restart list to a vector with the correct dimensions*/			
-    long rql = (long)rp.size();
+    sl_int rql = (sl_int)rp.size();
 
     plhs[15] = mxCreateDoubleMatrix( rql-1, 1, mxREAL);
     rklist = mxGetPr(plhs[15]);
@@ -208,10 +210,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 }
 
-void dcopyf(const long n, const float x[], const int incx, real y[],
+void dcopyf(const sl_int n, const float x[], const int incx, real y[],
 	   const int incy)
 {
-  for (long i = 0; i < n; i++)
+  for (sl_int i = 0; i < n; i++)
     y[i] = real(x[i]);
 }
 
@@ -222,14 +224,22 @@ bool CCPi::dummy_cone::setup_experimental_geometry(const std::string path,
   return false;
 }
 
-bool CCPi::dummy_cone::read_scans(const std::string path, const bool phantom)
+bool CCPi::dummy_cone::read_scans(const std::string path, const int offset,
+				  const int block_size, const bool first,
+				  const bool phantom)
+{
+  return false;
+}
+
+bool CCPi::dummy_cone::read_data_size(const std::string path,
+				      const bool phantom)
 {
   return false;
 }
 
 bool CCPi::dummy_cone::finish_voxel_geometry(real voxel_origin[3],
-					     real voxel_size[3],
-					     const voxel_data &voxels) const
+					     real voxel_size[3], const int nx,
+					     const int ny, const int nz) const
 {
   return false;
 }
