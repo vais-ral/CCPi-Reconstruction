@@ -9,8 +9,8 @@ namespace CCPi {
   template <class pixel_t, class voxel_t, bool backward>
   void generate_line(double L, double x, double y, double z,
 		     const double L_x_inc, const double L_y_inc,
-		     const double L_z_inc, const long i_step,
-		     const long j_step, const long k_step, long ray_index,
+		     const double L_z_inc, const sl_int i_step,
+		     const sl_int j_step, const sl_int k_step, sl_int ray_index,
 		     pixel_t &pixel, voxel_t *const vol_data, const double tol1,
 		     const double tol2);
   template <class pixel_t, class voxel_t, bool backward>
@@ -19,7 +19,7 @@ namespace CCPi {
 			  const real b_x, const real b_y, const real b_z,
 			  const real d_x, const real d_y, const real d_z,
 			  const int im_size_x, const int im_size_y,
-			  const int im_size_z, const long z_offset);
+			  const int im_size_z, const sl_int z_offset);
 
 }
 
@@ -28,10 +28,11 @@ namespace CCPi {
 template <class pixel_t, class voxel_t, bool backward>
 void CCPi::generate_line(double L, double x, double y, double z,
 			 const double L_x_inc, const double L_y_inc,
-			 const double L_z_inc, const long i_step,
-			 const long j_step, const long k_step, long ray_index,
-			 pixel_t &pixel, voxel_t *const vol_data,
-			 const double tol1, const double tol2)
+			 const double L_z_inc, const sl_int i_step,
+			 const sl_int j_step, const sl_int k_step,
+			 sl_int ray_index, pixel_t &pixel,
+			 voxel_t *const vol_data, const double tol1,
+			 const double tol2)
 {
   double sum = 0.0;
   while (L > tol2) {
@@ -155,7 +156,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 			      const real b_x, const real b_y, const real b_z,
 			      const real d_x, const real d_y, const real d_z,
 			      const int im_size_x, const int im_size_y,
-			      const int im_size_z, const long z_offset)
+			      const int im_size_z, const sl_int z_offset)
 {
   const double source_x = start[0];
   const double source_y = start[1];
@@ -163,9 +164,9 @@ void CCPi::project_singledata(const real start[], const real end[],
   const double detect_x = end[0];
   const double detect_y = end[1];
   const double detect_z = end[2];
-  const long nvoxels_x = im_size_x;
-  const long nvoxels_y = im_size_y;
-  const long nvoxels_z = im_size_z;
+  const sl_int nvoxels_x = im_size_x;
+  const sl_int nvoxels_y = im_size_y;
+  const sl_int nvoxels_z = im_size_z;
   const double voxel_size_x = d_x;
   const double voxel_size_y = d_y;
   const double voxel_size_z = d_z;
@@ -275,7 +276,7 @@ void CCPi::project_singledata(const real start[], const real end[],
     const double tol1 = distance * 5.0 * DBL_EPSILON;
 
     double x_min;
-    long i_inc;
+    sl_int i_inc;
     double x;
     if (delta_x_abs < tol1) {
       x = distance;
@@ -296,10 +297,10 @@ void CCPi::project_singledata(const real start[], const real end[],
       else
 	x = (1.0 - (x_start_idx - x_min)) * L_x_inc;
     }
-    const long i_min = (long)x_min;
-    long i = i_min;
+    const sl_int i_min = (sl_int)x_min;
+    sl_int i = i_min;
     double y_min;
-    long j_inc;
+    sl_int j_inc;
     double y;
     if (delta_y_abs < tol1) {
       y = distance;
@@ -320,10 +321,10 @@ void CCPi::project_singledata(const real start[], const real end[],
       else
 	y = (1.0 - (y_start_idx - y_min)) * L_y_inc;
     }
-    const long j_min = (long)y_min;
-    long j = j_min;
+    const sl_int j_min = (sl_int)y_min;
+    sl_int j = j_min;
     double z_min;
-    long k_inc;
+    sl_int k_inc;
     double z;
     if (delta_z_abs < tol1) {
       z = distance;
@@ -344,14 +345,14 @@ void CCPi::project_singledata(const real start[], const real end[],
       else
 	z = (1.0 - (z_start_idx - z_min)) * L_z_inc;
     }
-    const long k_min = (long)z_min;
-    long k = k_min;
+    const sl_int k_min = (sl_int)z_min;
+    sl_int k = k_min;
 
     double L = length;
-    long ray_index = (k+z_offset)*nvoxels_y*nvoxels_x + j*nvoxels_x + i;
-    long i_step = i_inc;
-    long j_step = j_inc * nvoxels_x;
-    long k_step = k_inc * nvoxels_y * nvoxels_x;
+    sl_int ray_index = (k+z_offset)*nvoxels_y*nvoxels_x + j*nvoxels_x + i;
+    sl_int i_step = i_inc;
+    sl_int j_step = j_inc * nvoxels_x;
+    sl_int k_step = k_inc * nvoxels_y * nvoxels_x;
     // This needs to be big enough to allow for the accumulated rounding errors
     // of subtracting lengths from L, whilst not overrunning the edge of the
     // voxels. Otherwise we would also need to test i/j/k >=0 < nvoxels.
