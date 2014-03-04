@@ -3,6 +3,13 @@
 #define CCPI_MEX_TYPES
 
 #include <string>
+#include <climits>
+
+#if LONG_MAX == 2147483647L
+typedef long long sl_int;
+#else
+typedef long sl_int;
+#endif // LONG_MAX
 
 typedef double real;
 

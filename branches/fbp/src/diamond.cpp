@@ -81,12 +81,12 @@ bool CCPi::Diamond::read_data_size(const std::string path,
 		    false, false, 0, 10000);
     // store data in class
     real *h_pixels = new real[nh_pixels];
-    h_pixels[0] = - ((nh_pixels - 1) * hsize) / 2.0;
+    h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0);
     for (int i = 1; i < nh_pixels; i++)
       h_pixels[i] = h_pixels[0] + real(i) * hsize;
     set_h_pixels(h_pixels, nh_pixels);
     real *v_pixels = new real[nv_pixels];
-    v_pixels[0] = - ((nv_pixels - 1) * vsize) / 2.0;
+    v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
     for (int i = 1; i < nv_pixels; i++)
       v_pixels[i] = v_pixels[0] + real(i) * vsize;
     set_v_pixels(v_pixels, nv_pixels);
@@ -124,7 +124,7 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   real vlim = std::max(vmax, vmin);
   real lim = std::max(hlim, vlim);
   real voxel_size[3];
-  voxel_size[0] = 2.0 * lim / real(nx);
+  voxel_size[0] = real(2.0) * lim / real(nx);
   voxel_size[1] = voxel_size[0];
   voxel_size[2] = voxel_size[0];
   real image_vol[3];
@@ -137,9 +137,9 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   image_offset[2] = -image_vol[2] / 2;
 
   // set up phantom volume
-  long n_vox = nx * ny * nz;
+  sl_int n_vox = nx * ny * nz;
   voxel_type *x = new voxel_type[n_vox];
-  for (long i = 0; i < n_vox; i++)
+  for (sl_int i = 0; i < n_vox; i++)
     x[i] = 0.0;
 
   // add cubes - column major
@@ -186,7 +186,7 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   int nangles = 0;
   real hsize = 0.0;
   real vsize = 0.0;
-  long sz = get_num_v_pixels() * get_num_h_pixels();
+  sl_int sz = get_num_v_pixels() * get_num_h_pixels();
   if (first)
     pixels = new pixel_type[get_num_angles() * sz];
   else
@@ -195,7 +195,7 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   pixel_type *f_dark = new pixel_type[sz];
   pixel_type *i_bright = new pixel_type[sz];
   pixel_type *f_bright = new pixel_type[sz];
-  for (long i = 0; i < sz; i++) {
+  for (sl_int i = 0; i < sz; i++) {
     i_dark[i] = 0.0;
     f_dark[i] = 0.0;
     i_bright[i] = 0.0;
@@ -222,44 +222,44 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   set_v_offset(offset);
   delete [] angles;
   if (ok) {
-    long n_rays = long(nangles) * sz;
+    sl_int n_rays = sl_int(nangles) * sz;
     if (first)
       set_pixel_data(pixels, n_rays);
     angles = get_phi();
     // linear interpolate bright/dark frames. Todo - something else?
     // Todo, also use initial final bright/dark angles? rather than assuming
     // initial/final sample angles?
-    long n = sz;
+    sl_int n = sz;
     pixel_type *dark = new pixel_type[n];
     pixel_type *bright = new pixel_type[n];
     for (int i = 0; i < nangles; i++) {
       // Based on fbp code, interpolate bright/dark
       // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
       real w = angles[i] / angles[nangles - 1];
-      for (long j = 0; j < n; j++)
-	dark[j] = i_dark[j] * (1.0 - w) + f_dark[j] * w;
-      for (long j = 0; j < n; j++)
-	bright[j] = i_bright[j] * (1.0 - w) + f_bright[j] * w;
+      for (sl_int j = 0; j < n; j++)
+	dark[j] = i_dark[j] * (real(1.0) - w) + f_dark[j] * w;
+      for (sl_int j = 0; j < n; j++)
+	bright[j] = i_bright[j] * (real(1.0) - w) + f_bright[j] * w;
       // subtract dark from data/bright
       // and clamp min data/bright value to 0.1
-      for (long j = 0; j < n; j++) {
+      for (sl_int j = 0; j < n; j++) {
 	bright[j] -= dark[j];
-	if (bright[j] < 0.1)
+	if (bright[j] < real(0.1))
 	  bright[j] = 0.1;
       }
-      for (long j = 0; j < n; j++) {
+      for (sl_int j = 0; j < n; j++) {
 	pixels[j + i * n] -= dark[j];
-	if (pixels[j + i * n] < 0.1)
+	if (pixels[j + i * n] < real(0.1))
 	  pixels[j + i * n] = 0.1;
       }
       // scale each data pixel by bright pixel
-      for (long j = 0; j < n; j++)
+      for (sl_int j = 0; j < n; j++)
 	pixels[j + i * n] /= bright[j];
     }
     delete [] bright;
     delete [] dark;
     // take -ve log, due to exponential extinction in sample.
-    for (long j = 0; j < n_rays; j++)
+    for (sl_int j = 0; j < n_rays; j++)
       pixels[j] = - std::log(pixels[j]);
     //find_centre(get_num_v_pixels() / 2 + 1);
   }
@@ -288,17 +288,17 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
   voxel_size[0] = hsize;
   voxel_size[1] = hsize;
   voxel_size[2] = vsize;
-  voxel_origin[0] = -voxel_size[0] * real(nx) / 2.0; // + offset[0];
-  voxel_origin[1] = -voxel_size[1] * real(ny) / 2.0; // + offset[1];
-  voxel_origin[2] = -voxel_size[2] * real(nz) / 2.0; // + offset[2];
+  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0); // + offset[0];
+  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0); // + offset[1];
+  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0); // + offset[2];
   return true;
 }
 
 void CCPi::Diamond::apply_beam_hardening()
 {
   // Todo - does this belong in the base class?
-  long n_rays = get_data_size();
+  sl_int n_rays = get_data_size();
   pixel_type *pixels = get_pixel_data();
-  for (long i = 0; i < n_rays; i++)
+  for (sl_int i = 0; i < n_rays; i++)
     pixels[i] = pixels[i] * pixels[i];
 }

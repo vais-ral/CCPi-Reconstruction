@@ -102,12 +102,12 @@ namespace CCPi {
 				 const int ny_voxels, const int nz_voxels);
 
     // Todo - protect these? CGLS uses them
-    long get_data_size() const;
+    sl_int get_data_size() const;
     pixel_type *const get_pixel_data() const;
 
   protected:
     pixel_type *create_pixel_data();
-    void set_pixel_data(pixel_type *p, const long n);
+    void set_pixel_data(pixel_type *p, const sl_int n);
 
     real *get_phi() const;
     real *get_h_pixels() const;
@@ -208,21 +208,21 @@ namespace CCPi {
 
   private:
     bool has_projection_matrix;
-    long matrix_size;
+    sl_int matrix_size;
     real *forward_matrix;
-    long *forward_cols;
-    long *forward_rows;
+    sl_int *forward_cols;
+    sl_int *forward_rows;
     real *backward_matrix;
-    long *backward_cols;
-    long *backward_rowb;
-    long *backward_rowe;
+    sl_int *backward_cols;
+    sl_int *backward_rowb;
+    sl_int *backward_rowe;
 
     static void map_2Dprojection(const real start[], const real end[],
 				 const real b_x, const real b_y,
 				 const real b_z, const real d_x,
 				 const real d_y, const real d_z,
 				 const int im_size_x, const int im_size_y,
-				 const int im_size_z, const long z_offset,
+				 const int im_size_z, const sl_int z_offset,
 				 projection_map &map);
     void setup_2D_matrix(const real det_y[], const real phi[],
 			 const int n_angles, const int n_rays_z,

@@ -644,10 +644,10 @@ bool CCPi::parallel_beam::filtered_back_project(voxel_data &voxels,
   // Todo?
   real alpha = 1.0; // pixelParam
   const voxel_data::size_type *sz = voxels.shape();
-  //long n_vox = long(sz[0]) * long(sz[1]) * long(sz[2]);
+  //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
   //voxel_type *const data = voxels.data();
   pixel_type *const pixels = get_pixel_data();
-  //long n_rays = get_data_size();
+  //sl_int n_rays = get_data_size();
 
   int nv = get_num_v_pixels();
   int npixels_per_voxel = nv / sz[2];

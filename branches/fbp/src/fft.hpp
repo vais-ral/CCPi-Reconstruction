@@ -3,13 +3,13 @@
 #define FFT_WRAPPERS
 
 template <class real_type> void fft_1d_forward(std::complex<real_type> data[],
-					       const long n, const int ntr)
+					       const sl_int n, const int ntr)
 {
   std::cerr << "Forward 1D FFT not available\n";
 }
 
 template <class real_type> void fft_1d_inverse(std::complex<real_type> data[],
-					       const long n, const int ntr)
+					       const sl_int n, const int ntr)
 {
   std::cerr << "Inverse 1D FFT not available\n";
 }
@@ -17,8 +17,8 @@ template <class real_type> void fft_1d_inverse(std::complex<real_type> data[],
 #  if defined(MKL_ILP64)
 #    include <mkl_dfti.h>
 
-template <> inline void fft_1d_forward(std::complex<float> data[], const long n,
-				       const int ntr)
+template <> inline void fft_1d_forward(std::complex<float> data[],
+				       const sl_int n, const int ntr)
 {
   DFTI_DESCRIPTOR_HANDLE desc;
   (void) DftiCreateDescriptor(&desc, DFTI_SINGLE, DFTI_COMPLEX, 1, n);
@@ -31,7 +31,7 @@ template <> inline void fft_1d_forward(std::complex<float> data[], const long n,
 }
 
 template <> inline void fft_1d_forward(std::complex<double> data[],
-				       const long n, const int ntr)
+				       const sl_int n, const int ntr)
 {
   DFTI_DESCRIPTOR_HANDLE desc;
   (void) DftiCreateDescriptor(&desc, DFTI_DOUBLE, DFTI_COMPLEX, 1, n);
@@ -43,8 +43,8 @@ template <> inline void fft_1d_forward(std::complex<double> data[],
   DftiFreeDescriptor(&desc);
 }
 
-template <> inline void fft_1d_inverse(std::complex<float> data[], const long n,
-				       const int ntr)
+template <> inline void fft_1d_inverse(std::complex<float> data[],
+				       const sl_int n, const int ntr)
 {
   DFTI_DESCRIPTOR_HANDLE desc;
   (void) DftiCreateDescriptor(&desc, DFTI_SINGLE, DFTI_COMPLEX, 1, n);
@@ -57,7 +57,7 @@ template <> inline void fft_1d_inverse(std::complex<float> data[], const long n,
 }
 
 template <> inline void fft_1d_inverse(std::complex<double> data[],
-				       const long n, const int ntr)
+				       const sl_int n, const int ntr)
 {
   DFTI_DESCRIPTOR_HANDLE desc;
   (void) DftiCreateDescriptor(&desc, DFTI_DOUBLE, DFTI_COMPLEX, 1, n);
