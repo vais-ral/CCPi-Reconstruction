@@ -91,12 +91,12 @@ namespace CCPi {
 				 const int ny_voxels, const int nz_voxels);
 
     // Todo - protect these? CGLS uses them
-    long get_data_size() const;
+    sl_int get_data_size() const;
     pixel_type *const get_pixel_data() const;
 
   protected:
     pixel_type *create_pixel_data();
-    void set_pixel_data(pixel_type *p, const long n);
+    void set_pixel_data(pixel_type *p, const sl_int n);
 
     real *get_phi() const;
     real *get_h_pixels() const;

@@ -165,7 +165,7 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
     std::cerr << " Failed to open output file - " << name << '\n';
   else {
     float *x = new float[n];
-    long l = 0;
+    sl_int l = 0;
     for (std::size_t k = 0; k < s[2]; k++) {
       for (std::size_t j = 0; j < s[1]; j++) {
 	for (std::size_t i = 0; i < s[0]; i++) {

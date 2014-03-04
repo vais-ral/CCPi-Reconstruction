@@ -16,8 +16,8 @@ void CCPi::instrument::forward_project(const real source_x, const real source_y,
 				       const int ny_voxels,
 				       const int nz_voxels)
 {
-  long curr_angle, curr_ray_y, curr_ray_z;
-  long ray_offset;
+  sl_int curr_angle, curr_ray_y, curr_ray_z;
+  sl_int ray_offset;
   real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
 #pragma omp parallel for shared(det_y, det_z, ray_data, phi) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset, cos_curr_angle, sin_curr_angle) schedule(dynamic)
@@ -34,7 +34,7 @@ void CCPi::instrument::forward_project(const real source_x, const real source_y,
       start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
       start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
 
-      ray_offset = curr_angle * long(n_rays_y) * long(n_rays_z)
+      ray_offset = curr_angle * sl_int(n_rays_y) * sl_int(n_rays_z)
 	+ curr_ray_z;
 
       /* loop over y values on detector */
@@ -45,7 +45,7 @@ void CCPi::instrument::forward_project(const real source_x, const real source_y,
 	/* loop over z values on detector */
 
 	project_singledata<pixel_t, voxel_t, false>(start, end,
-			   ray_data[ray_offset + curr_ray_y * long(n_rays_z)],
+			   ray_data[ray_offset + curr_ray_y * sl_int(n_rays_z)],
 			   vol_data, grid_offset[0], grid_offset[1],
 			   grid_offset[2], voxel_size[0], voxel_size[1],
 			   voxel_size[2], nx_voxels, ny_voxels, nz_voxels,

@@ -30,9 +30,10 @@
    current Matlab structures.
 */
 
-long CCPi::instrument::get_data_size() const
+sl_int CCPi::instrument::get_data_size() const
 {
-  return long(n_angles) * long(n_vertical_pixels) * long(n_horizontal_pixels);
+  return sl_int(n_angles) * sl_int(n_vertical_pixels)
+    * sl_int(n_horizontal_pixels);
 }
 
 pixel_type *const CCPi::instrument::get_pixel_data() const
@@ -42,16 +43,16 @@ pixel_type *const CCPi::instrument::get_pixel_data() const
 
 pixel_type *CCPi::instrument::create_pixel_data()
 {
-  long n_rays = long(n_angles) * long(n_vertical_pixels)
-    * long(n_horizontal_pixels);
+  sl_int n_rays = sl_int(n_angles) * sl_int(n_vertical_pixels)
+    * sl_int(n_horizontal_pixels);
   pixel_data = new pixel_type[n_rays];
   return pixel_data;
 }
 
-void CCPi::instrument::set_pixel_data(pixel_type *p, const long n)
+void CCPi::instrument::set_pixel_data(pixel_type *p, const sl_int n)
 {
-  long n_rays = long(n_angles) * long(n_vertical_pixels)
-    * long(n_horizontal_pixels);
+  sl_int n_rays = sl_int(n_angles) * sl_int(n_vertical_pixels)
+    * sl_int(n_horizontal_pixels);
   if (n != n_rays)
     std::cerr << "Size mismatch setting pixel data\n";
   pixel_data = p;

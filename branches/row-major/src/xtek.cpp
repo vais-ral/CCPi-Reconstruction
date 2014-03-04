@@ -153,11 +153,11 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	} else if (n_h_pixels > 0 and n_v_pixels > 0 and n_phi > 0) {
 	  real *h_pixels = new real[n_h_pixels];
 	  real *v_pixels = new real[n_v_pixels];
-	  real pixel_base = -((n_h_pixels - 1) * xpixel_size / 2.0);
+	  real pixel_base = -((n_h_pixels - 1) * xpixel_size / real(2.0));
 	  for (int i = 0; i < n_h_pixels; i++)
 	    h_pixels[i] = pixel_base + i * xpixel_size;
 	  set_h_pixels(h_pixels, n_h_pixels);
-	  pixel_base = -((n_v_pixels - 1) * ypixel_size / 2.0);
+	  pixel_base = -((n_v_pixels - 1) * ypixel_size / real(2.0));
 	  for (int i = 0; i < n_v_pixels; i++)
 	    v_pixels[i] = pixel_base + i * ypixel_size;
 	  set_v_pixels(v_pixels, n_v_pixels);
@@ -211,7 +211,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
       data >> tmp;
       data >> tmp;
       // everything else is radians
-      p[i] = M_PI * tmp / 180.0;
+      p[i] = real(M_PI) * tmp / real(180.0);
       data >> tmp;
     }
     data.close();
@@ -228,13 +228,13 @@ bool CCPi::Nikon_XTek::finish_voxel_geometry(real voxel_origin[3],
 					     const int ny, const int nz) const
 {
   //const voxel_data::size_type *s = voxels.shape();
-  real size = 2.0 * mask_radius / real(nx);
+  real size = real(2.0) * mask_radius / real(nx);
   voxel_size[0] = size;
   voxel_size[1] = size;
   voxel_size[2] = size;
-  voxel_origin[0] = -voxel_size[0] * real(nx) / 2.0 + offset[0];
-  voxel_origin[1] = -voxel_size[1] * real(ny) / 2.0 + offset[1];
-  voxel_origin[2] = -voxel_size[2] * real(nz) / 2.0 + offset[2];
+  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0) + offset[0];
+  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0) + offset[1];
+  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0) + offset[2];
   return true;
 }
 
@@ -288,9 +288,9 @@ bool CCPi::Nikon_XTek::build_phantom()
   image_offset[2] = -image_vol[2] / 2;
 
   // set up phantom volume
-  long n_vox = nx * ny * nz;
+  sl_int n_vox = nx * ny * nz;
   voxel_type *x = new voxel_type[n_vox];
-  for (long i = 0; i < n_vox; i++)
+  for (sl_int i = 0; i < n_vox; i++)
     x[i] = 0.0;
 
   // add cubes - column major
@@ -331,21 +331,21 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
 {
   bool ok = true;
   pixel_type *pixels = create_pixel_data();
-  long n_rays = get_data_size();
+  sl_int n_rays = get_data_size();
   std::string pathbase;
   combine_path_and_name(path, basename, pathbase);
   char index[8];
   for (int i = 0; (i < get_num_angles() and ok); i++) {
     snprintf(index, 8, "%04d", i + 1);
     std::string name = pathbase + index + ".tif";
-    long angle_offset = i * get_num_h_pixels() * get_num_v_pixels();
+    sl_int angle_offset = i * get_num_h_pixels() * get_num_v_pixels();
     ok = read_tiff(name, &pixels[angle_offset], get_num_h_pixels(),
 		   get_num_v_pixels());
   }
   if (ok) {
     /*
     real max_v = 0.0;
-    for (long j = 0; j < n_rays; j++)
+    for (sl_int j = 0; j < n_rays; j++)
       if (max_v < pixel_data[j])
 	max_v = pixel_data[j];
     if (max_v > white_level + 0.01)
@@ -355,9 +355,9 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     */
     real max_v = 65535.0;
     // scale and take -ve log, due to exponential extinction in sample.
-    for (long j = 0; j < n_rays; j++) {
-      if (pixels[j] < 1.0)
-	pixels[j] = - std::log(0.00001 / max_v);
+    for (sl_int j = 0; j < n_rays; j++) {
+      if (pixels[j] < real(1.0))
+	pixels[j] = - std::log(real(0.00001) / max_v);
       else
 	pixels[j] = - std::log(pixels[j] / max_v);
     }
@@ -397,7 +397,7 @@ pixel_type angles_linear(const int ph1, const real h[], const int v_slice,
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
-      return linear(angles[pa1], angles[0] + 2 * M_PI,
+      return linear(angles[pa1], angles[0] + real(2 * M_PI),
 		    data[ph1 + v_slice * nh + pa1 * nh * nv],
 		    data[ph1 + v_slice * nh + 0 * nh * nv],
 		    new_angle);
@@ -426,7 +426,8 @@ pixel_type angles_bilinear(const int ph1, const real h[], const int v_slice,
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
-      return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[0] + 2 * M_PI,
+      return bilinear(h[ph1], h[ph1 + 1], angles[pa1],
+		      angles[0] + real(2 * M_PI),
 		      data[ph1 * nv + v_slice + pa1 * nh * nv],
 		      data[ph1 * nv + v_slice + 0 * nh * nv],
 		      data[(ph1 + 1) * nv + v_slice + pa1 * nh * nv],
@@ -482,7 +483,7 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
   real *beta = new real[nh];
   real *s2 = new real[nh];
   for (int i = 0; i < n_precs; i++) {
-    real scor = midpoint - 10.0 * precision[i];
+    real scor = midpoint - real(10.0) * precision[i];
     real M[21];
     for (int j = 0; j < 21; j++) {
       // angle of each ray relative to theoretical central ray
@@ -494,10 +495,10 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
       real gamma_c = std::atan((midpoint + (j - 10) * precision[i]) / distance);
       // eqn (1) - Matlab differs from paper in + not -, why?
       for (int k = 0; k < nh; k++)
-	beta[k] = M_PI + 2.0 * (gamma_i[k] - gamma_c);
+	beta[k] = real(M_PI) + real(2.0) * (gamma_i[k] - gamma_c);
       // eqn (2)
       for (int k = 0; k < nh; k++)
-        s2[k] = distance * std::tan(2.0 * gamma_c - gamma_i[k]);
+        s2[k] = distance * std::tan(real(2.0) * gamma_c - gamma_i[k]);
       // do summation on M in eqn (4), only include horizontal values within
       // the data set so normalise each by the count
       int count = 0;
@@ -507,10 +508,10 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 	  if (s2[k] >= h_pixels[0] and s2[k] <= h_pixels[nh - 1]) {
 	    real alpha_beta = ph[a] + beta[k];
 	    // can it be < -2pi or > 4pi?
-	    if (alpha_beta < 0.0)
-	      alpha_beta += 2.0 * M_PI;
-	    else if (alpha_beta > 2.0 * M_PI)
-	      alpha_beta -= 2.0 * M_PI;
+	    if (alpha_beta < real(0.0))
+	      alpha_beta += real(2.0 * M_PI);
+	    else if (alpha_beta > real(2.0 * M_PI))
+	      alpha_beta -= real(2.0 * M_PI);
 	    pixel_type p = interpolate2D(h_pixels, v_slice, ph, px,
 					 s2[k], alpha_beta, nh, na, nv);
 	    // if (p > 0.0) { ?
@@ -553,8 +554,8 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 void CCPi::Nikon_XTek::apply_beam_hardening()
 {
   // Todo - does this belong in the base class?
-  long n_rays = get_data_size();
+  sl_int n_rays = get_data_size();
   pixel_type *pixels = get_pixel_data();
-  for (long i = 0; i < n_rays; i++)
+  for (sl_int i = 0; i < n_rays; i++)
     pixels[i] = pixels[i] * pixels[i];
 }

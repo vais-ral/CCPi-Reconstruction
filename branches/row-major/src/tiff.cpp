@@ -82,7 +82,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
 		// storage order is [vert][horiz][angles] fortran order
 		// for compatibility with Matlab.
 		uint16 *b = (uint16 *)buf;
-		long angle_offset = 0;
+		sl_int angle_offset = 0;
 		for (int h = 0; h < n_h_pixels; h++) {
 		  for (int v = 0; v < n_v_pixels; v++) {
 		    pixel_data[angle_offset] =

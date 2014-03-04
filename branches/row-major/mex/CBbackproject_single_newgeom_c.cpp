@@ -13,6 +13,7 @@
 #include <matrix.h>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <omp.h>
 #include "mex_types.hpp"
 #include "instruments.hpp"
@@ -21,8 +22,8 @@
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-	int i, curr_angle, im_size, curr_ray_y, curr_ray_z, n_angles;
-	long n_rays_y, n_rays_z, ray_offset;
+  int i, curr_angle, im_size, curr_ray_y, curr_ray_z;
+  sl_int n_rays_y, n_rays_z, n_angles, ray_offset;
 	mwSize im_size_matlab[3];
 	double *source_x, *source_y, *source_z, *det_x, *det_y, *det_z;
     double cos_curr_angle, sin_curr_angle;
