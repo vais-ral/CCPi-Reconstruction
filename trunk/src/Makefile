@@ -11,8 +11,9 @@ LDFLAGS = $(CXXFLAGS)
 MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_intel_ilp64.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_sequential.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a
 LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB) 
 
-OBJECTS = recon.o results.o instruments.o diamond.o xtek.o cgls.o \
-	tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o timer.o utils.o mpi.o
+OBJECTS = recon.o results.o instruments.o parallel.o cone.o diamond.o xtek.o\
+	cgls.o tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o \
+	timer.o utils.o mpi.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -27,8 +28,13 @@ recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp mpi.hpp
 
 cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp
 
-instruments.o: instruments.cpp instruments.hpp cone_b.hpp cone_f.hpp \
-	parallel_f.hpp parallel_b.hpp project_line.hpp timer.hpp
+instruments.o: instruments.cpp instruments.hpp
+
+parallel.o: parallel.cpp instruments.hpp parallel_f.hpp parallel_b.hpp \
+	project_line.hpp timer.hpp
+
+cone.o: cone.cpp instruments.hpp cone_b.hpp cone_f.hpp \
+	project_line.hpp timer.hpp
 
 diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
 
