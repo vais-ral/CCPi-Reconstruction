@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <cmath>
+#include <iostream>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
