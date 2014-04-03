@@ -6,6 +6,11 @@
 #include <string>
 #include <boost/multi_array.hpp>
 
+#ifdef WIN32
+#  include <ciso646>
+#  define snprintf _snprintf
+#endif // WIN32
+
 #if LONG_MAX == 2147483647L
 typedef long long sl_int;
 #else
