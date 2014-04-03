@@ -1,8 +1,8 @@
 
 #include <iostream>
-#ifndef WINDOWS
+#ifndef WIN32
 #  include <unistd.h>
-#endif // WINDOWS
+#endif // WIN32
 #include "timer.hpp"
 
 static std::clock_t get_current_cpu_time();
@@ -13,7 +13,7 @@ static void get_current_wall_time(time_data &current);
 static void get_elapsed_wall_time(time_data &elapsed, time_data &start,
 				  const bool reset_start = false);
 
-#ifdef WINDOWS
+#ifdef WIN32
 
 inline std::clock_t get_current_cpu_time()
 {
@@ -50,13 +50,13 @@ void get_elapsed_cpu_time(time_data &elapsed,
 			  std::clock_t &start_time,
 			  const bool reset_start)
 {
-#ifdef WINDOWS
+#ifdef WIN32
   static long ticks = 1000;
 #else
   static long ticks = 0;
   if (ticks == 0)
     ticks = sysconf(_SC_CLK_TCK);
-#endif // WINDOWS
+#endif // WIN32
   std::clock_t current = get_current_cpu_time();
   std::clock_t diff = current - start_time;
   if (diff < 0) {
