@@ -141,7 +141,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 
     /* use total lengh=alpha_max-alpha_min instead, to get everage, not sum. */
     /* moving back to original d_conv*/
-    d_conv=sqrt( (p1_x-p2_x)*(p1_x-p2_x) + (p1_y-p2_y)*(p1_y-p2_y) + (p1_z-p2_z)*(p1_z-p2_z));
+    d_conv=std::sqrt( (p1_x-p2_x)*(p1_x-p2_x) + (p1_y-p2_y)*(p1_y-p2_y) + (p1_z-p2_z)*(p1_z-p2_z));
 
 
     x_defined =  !(equal_to_precision(p1_x,p2_x,PRECISION));

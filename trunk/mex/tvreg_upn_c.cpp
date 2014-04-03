@@ -187,11 +187,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		    angles, n_rays_y, n_rays_z, n_angles);
 
     int ki = 0;
-    CCPi::tvreg_core(xkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,voxel_size, b,alpha,
-		     tau,bL,bmu,epsb_rel,k_max,D.dim, D.m, D.n, D.l, D.prodDims,
-		     ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,gxkp1l,xlist,
-		     (bool)verbose,numGrad,numBack,numFunc,numRest,Lklist,
-		     muklist,rp,grid_offset, dev);
+    CCPi::tv_regularization::tvreg_core(xkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,
+					voxel_size, b,alpha,tau,bL,bmu,epsb_rel,
+					k_max,D.dim, D.m, D.n, D.l, D.prodDims,
+					ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,
+					gxkp1l,xlist,(bool)verbose,numGrad,
+					numBack,numFunc,numRest,Lklist,
+					muklist,rp,grid_offset, dev);
 
     delete dev;
     *k = (double)ki;
