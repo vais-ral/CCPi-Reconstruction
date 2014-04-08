@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <algorithm>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
