@@ -2,6 +2,7 @@
 #include <iostream>
 #include <omp.h>
 #include <cmath>
+#include <algorithm>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else

@@ -1,6 +1,7 @@
 
 #include <mex.h>
 #include <list>
+#include <algorithm>
 #include "mex_types.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"

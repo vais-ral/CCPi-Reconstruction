@@ -3,7 +3,7 @@ CXX = g++
 MKLINC = -I/opt/intel/composer_xe_2011_sp1.6.233/mkl/include -DMKL_ILP64
 TIFFINC =
 TIFFLIB = -ltiff
-NXINC = -I/usr/local/nexus/include/nexus
+NXINC = -I/usr/local/nexus/include/nexus -DHAS_NEXUS
 NXLIB = -L/usr/local/nexus/lib -lNeXusCPP
 CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(MKLINC)
 LD = $(CXX)

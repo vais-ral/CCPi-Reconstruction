@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 #include <omp.h>
 #include "mex_types.hpp"
 #include "instruments.hpp"
