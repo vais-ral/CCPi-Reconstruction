@@ -13,7 +13,7 @@ LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB)
 
 OBJECTS = recon.o results.o instruments.o parallel.o cone.o diamond.o xtek.o\
 	cgls.o tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o \
-	timer.o utils.o mpi.o
+	timer.o utils.o ui_calls.o mpi.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -26,34 +26,36 @@ $(OBJECTS): base_types.hpp
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp mpi.hpp
 
-cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp
+cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp
 
-instruments.o: instruments.cpp instruments.hpp
+instruments.o: instruments.cpp instruments.hpp ui_calls.hpp
 
 parallel.o: parallel.cpp instruments.hpp parallel_f.hpp parallel_b.hpp \
 	project_line.hpp timer.hpp
 
 cone.o: cone.cpp instruments.hpp cone_b.hpp cone_f.hpp \
-	project_line.hpp timer.hpp
+	project_line.hpp timer.hpp ui_calls.hpp
 
 diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
 
-xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp
+xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp ui_calls.hpp
 
-results.o: results.cpp results.hpp tiff.hpp mpi.hpp
+results.o: results.cpp results.hpp tiff.hpp mpi.hpp ui_calls.hpp
 
-tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp
+tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp
 
-tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp
+tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
 
-matrix2D.o: matrix2D.cpp instruments.hpp
+matrix2D.o: matrix2D.cpp instruments.hpp ui_calls.hpp
 
-tiff.o: tiff.cpp tiff.hpp timer.hpp
+tiff.o: tiff.cpp tiff.hpp timer.hpp ui_calls.hpp
 
-nexus.o: nexus.cpp nexus.hpp timer.hpp
+nexus.o: nexus.cpp nexus.hpp timer.hpp ui_calls.hpp
 
-timer.o: timer.cpp timer.hpp
+timer.o: timer.cpp timer.hpp ui_calls.hpp
 
 utils.o: utils.cpp utils.hpp
+
+ui_calls.o: ui_calls.cpp ui_calls.hpp
 
 mpi.o: mpi.cpp mpi.hpp
