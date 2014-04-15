@@ -5,6 +5,7 @@
 #include "results.hpp"
 #include "tiff.hpp"
 #include "mpi.hpp"
+#include "ui_calls.hpp"
 
 namespace CCPi {
 
@@ -33,7 +34,7 @@ void CCPi::write_results(const std::string basename, const voxel_data &voxels,
     break;
   case native_dump:
     if (machine::get_number_of_processors() > 1)
-      std::cerr << "Format does not support distributed memory\n";
+      report_error("Format does not support distributed memory");
     else
       write_real(basename, voxels, offset);
     break;
@@ -42,12 +43,12 @@ void CCPi::write_results(const std::string basename, const voxel_data &voxels,
     break;
   case bgs_float_dump:
     if (machine::get_number_of_processors() > 1)
-      std::cerr << "Format does not support distributed memory\n";
+      report_error("Format does not support distributed memory");
     else
       write_bgs(basename, voxels, voxel_origin, voxel_size, offset, nz_voxels);
     break;
   default:
-    std::cerr << "Unknown output format\n";
+    report_error("Unknown output format");
     break;
   }
 }
@@ -58,7 +59,7 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
 {
   std::cerr << "Tiff data range issue with blocks - Todo\n";
   if (width != 8 and width != 16)
-    std::cerr << "Width not supported for tiff writing\n";
+    report_error("Width not supported for tiff writing");
   else {
     const voxel_data::size_type *s = voxels.shape();
     std::size_t n = s[0] * s[1];
@@ -129,20 +130,20 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
 void CCPi::write_real(const std::string basename, const voxel_data &voxels,
 		      const int offset)
 {
-  std::cout << "start dump\n";
+  //std::cout << "start dump\n";
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
   std::FILE *file = fopen(name.c_str(), "a");
   if (file == 0)
-    std::cerr << " Failed to open output file - " << name << '\n';
+	report_error(" Failed to open output file - ", name);
   else {
     std::size_t o = s[0] * s[1] * std::size_t(offset);
     fseek(file, o, SEEK_SET);
     fwrite(voxels.data(), sizeof(voxel_type), n, file);
     fclose(file);
   }
-  std::cout << "end dump\n";
+  //std::cout << "end dump\n";
 }
 
 void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
@@ -150,7 +151,7 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
 		     const int offset, const int nz_voxels)
 {
   // Assumes linear update of offset so each new block goes at end - Todo?
-  std::cout << "start dump\n";
+  //std::cout << "start dump\n";
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
@@ -162,7 +163,7 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
     mode[0] = 'a';
   std::FILE *file = fopen(name.c_str(), mode);
   if (file == 0)
-    std::cerr << " Failed to open output file - " << name << '\n';
+	report_error(" Failed to open output file - ", name);
   else {
     float *x = new float[n];
     for (std::size_t i = 0; i < n; i++)
@@ -190,5 +191,5 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
     delete [] x;
     fclose(file);
   }
-  std::cout << "end dump\n";
+  //std::cout << "end dump\n";
 }

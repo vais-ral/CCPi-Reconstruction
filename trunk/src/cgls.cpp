@@ -4,6 +4,7 @@
 #include "instruments.hpp"
 #include "algorithms.hpp"
 #include "timer.hpp"
+#include "ui_calls.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -19,10 +20,10 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
   pixel_type *const b = device->get_pixel_data();
 
   // Prepare for CG iteration.
-  std::cout << "Preparing for CG iteration...\n";
   voxel_type *d = new voxel_type[n_vox];
   for (sl_int i = 0; i < n_vox; i++)
     d[i] = 0.0;
+  initialise_progress(2 * iterations + 1, "CGLS iterating...");
   device->backward_project(d, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
   sl_int n_rays = device->get_data_size();
@@ -30,11 +31,14 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
   real normr2 = 0.0;
   for (sl_int i = 0; i < n_vox; i++)
     normr2 += d[i] * d[i];
+  update_progress(1);
 
   // Iterate.
   timer iter_time(USE_TIMER);
   for (int j = 0; j < iterations; j++) {
-    std::cout << "iter " << j + 1 << '\n';
+	//add_output("iter ");
+	//add_output(j + 1);
+	//send_output();
     iter_time.reset();
     // Update x and r vectors.
     pixel_type *Ad = new pixel_type[n_rays];
@@ -51,6 +55,7 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
     for (sl_int i = 0; i < n_rays; i++)
       b[i] -= alpha * Ad[i];
     delete [] Ad;
+	update_progress(2 * j + 2);
     voxel_type *s = new voxel_type[n_vox];
     for (sl_int i = 0; i < n_vox; i++)
       s[i] = 0.0;
@@ -66,6 +71,7 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
     for (sl_int i = 0; i < n_vox; i++)
       d[i] = s[i] + beta * d[i];
     delete [] s;
+	update_progress(2 * j + 3);
     iter_time.accumulate();
     iter_time.output("Iteration ");
   }

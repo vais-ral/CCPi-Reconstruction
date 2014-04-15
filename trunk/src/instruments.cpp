@@ -7,6 +7,7 @@
 #  include "base_types.hpp"
 #endif // mex
 #include "instruments.hpp"
+#include "ui_calls.hpp"
 
 /*
    Todo - should improve structure of pixel_data and not require the rest
@@ -38,7 +39,7 @@ void CCPi::instrument::set_pixel_data(pixel_type *p, const sl_int n)
   sl_int n_rays = sl_int(n_angles) * sl_int(n_vertical_pixels)
     * sl_int(n_horizontal_pixels);
   if (n != n_rays)
-    std::cerr << "Size mismatch setting pixel data\n";
+    report_error("Size mismatch setting pixel data");
   pixel_data = p;
 }
 

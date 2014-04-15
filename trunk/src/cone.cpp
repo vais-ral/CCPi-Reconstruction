@@ -13,6 +13,7 @@
 #include "cone_b.hpp"
 #include "cone_f.hpp"
 #include "timer.hpp"
+#include "ui_calls.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -92,5 +93,5 @@ void CCPi::cone_beam::setup_projection_matrix(const real origin[3],
 					      const int nx, const int ny,
 					      const int nz)
 {
-  std::cerr << "Projection matrix not implemented\n";
+  report_error("Projection matrix not implemented");
 }
