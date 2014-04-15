@@ -36,9 +36,9 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
   // Iterate.
   timer iter_time(USE_TIMER);
   for (int j = 0; j < iterations; j++) {
-	//add_output("iter ");
-	//add_output(j + 1);
-	//send_output();
+    //add_output("iter ");
+    //add_output(j + 1);
+    //send_output();
     iter_time.reset();
     // Update x and r vectors.
     pixel_type *Ad = new pixel_type[n_rays];

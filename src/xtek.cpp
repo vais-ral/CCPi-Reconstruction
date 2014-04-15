@@ -233,9 +233,9 @@ bool CCPi::Nikon_XTek::finish_voxel_geometry(real voxel_origin[3],
   voxel_size[0] = size;
   voxel_size[1] = size;
   voxel_size[2] = size;
-  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0) +offset[0];
-  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0) +offset[1];
-  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0) +offset[2];
+  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0) + offset[0];
+  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0) + offset[1];
+  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0) + offset[2];
   return true;
 }
 

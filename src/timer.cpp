@@ -2,7 +2,7 @@
 #ifndef WIN32
 #  include <unistd.h>
 #endif // WIN32
-#include "src/base_types.hpp"
+#include "base_types.hpp"
 #include "timer.hpp"
 #include "ui_calls.hpp"
 
@@ -32,10 +32,10 @@ inline std::clock_t get_current_cpu_time()
 
 inline void get_current_wall_time(time_data &current)
 {
-	long ticks = CLOCKS_PER_SEC;
-	long timer = clock();
-	current.seconds = timer / ticks;
-	current.microsecs = (timer % ticks) * (1000000 / ticks);
+  long ticks = CLOCKS_PER_SEC;
+  long timer = clock();
+  current.seconds = timer / ticks;
+  current.microsecs = (timer % ticks) * (1000000 / ticks);
 }
 
 #else
@@ -159,17 +159,17 @@ void timer::accumulate()
 void timer::output(const char message[])
 {
   if (use) {
-	std::string m = message;
-	add_output(m);
-	add_output(": ");
-	add_output((int)cpu.seconds);
-	add_output('.');
-	add_output(cpu.microsecs, 6, true);
-	add_output(" cpu time, ");
+    std::string m = message;
+    add_output(m);
+    add_output(": ");
+    add_output((int)cpu.seconds);
+    add_output('.');
+    add_output(cpu.microsecs, 6, true);
+    add_output(" cpu time, ");
     add_output((int)wall.seconds);
-	add_output('.');
-	add_output(wall.microsecs, 6, true);
-	add_output(" wall time");
-	send_output();
+    add_output('.');
+    add_output(wall.microsecs, 6, true);
+    add_output(" wall time");
+    send_output();
   }
 }
