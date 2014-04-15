@@ -11,6 +11,7 @@
 #include "blas.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
+#include "ui_calls.hpp"
 
 /* Settings which makes the user do a CTRL-C break out of the loop*/
 #if defined(_WIN32) || defined(__WIN32__)
@@ -606,7 +607,7 @@ real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[], const real tau,
       }
     }
   } else
-    printf("Incorrect dim variable, only dim=2 or dim=3 supported.\n");
+    report_error("Incorrect dim variable, only dim=2 or dim=3 supported.");
 
   return tv_tau_x;
 }

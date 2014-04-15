@@ -29,7 +29,8 @@ void CCPi::combine_path_and_name(const std::string path, const std::string name,
 				 std::string &fullname)
 {
   fullname = path;
-  if (path[path.length() - 1] != DIR_SEPARATOR)
-    fullname += DIR_SEPARATOR;
+  if (path.length() > 0)
+	if (path[path.length() - 1] != DIR_SEPARATOR)
+		fullname += DIR_SEPARATOR;
   fullname += name;
 }

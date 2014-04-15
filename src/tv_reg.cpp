@@ -1,8 +1,8 @@
 
-#include <iostream>
 #include "base_types.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
+#include "ui_calls.hpp"
 
 // driver routine designed to initialise from CGLS
 bool CCPi::tv_regularization::reconstruct(const instrument *device,
@@ -122,6 +122,6 @@ bool CCPi::tv_regularization::reconstruct(const instrument *device,
 
   // If the iteration counter reaches the k_max, the algorithm did not converge
   if (k == k_max)
-    std::cerr << "Did not find a epsb_rel solution in k_max iterations.\n";
+    report_error("Did not find a epsb_rel solution in k_max iterations.");
   return true;
 }
