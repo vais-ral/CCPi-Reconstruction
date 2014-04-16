@@ -36,7 +36,7 @@ namespace CCPi {
 
     static void tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1,
 			   real *gxkp1, real *fxkp1l, int *kend,
-			   const real voxel_size[], const real *b,
+			   const real voxel_size[], const pixel_type *b,
 			   const real alpha, real tau, real bL, real bmu,
 			   real epsb_rel,int k_max, const int Ddim,
 			   const int Dm, const int Dn, const int Dl,
