@@ -136,7 +136,7 @@ void CCPi::write_real(const std::string basename, const voxel_data &voxels,
   std::size_t n = s[0] * s[1] * s[2];
   std::FILE *file = fopen(name.c_str(), "a");
   if (file == 0)
-	report_error(" Failed to open output file - ", name);
+    report_error(" Failed to open output file - ", name);
   else {
     std::size_t o = s[0] * s[1] * std::size_t(offset);
     fseek(file, o, SEEK_SET);
@@ -163,11 +163,8 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
     mode[0] = 'a';
   std::FILE *file = fopen(name.c_str(), mode);
   if (file == 0)
-	report_error(" Failed to open output file - ", name);
+    report_error(" Failed to open output file - ", name);
   else {
-    float *x = new float[n];
-    for (std::size_t i = 0; i < n; i++)
-      x[i] = (float)((voxels.data())[i]);
     if (offset == 0) {
       fprintf(file, "%d %d %d\n", int(s[0]), int(s[1]), nz_voxels);
       // centre value in voxel rather than on edge, since not writing n+1
@@ -183,12 +180,19 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
       fprintf(file, "0.0 0.0 %12.6f\n", voxel_size[2]);
       fprintf(file, "Image\n");
     }
-    // would need use to store an offset for end of header block to work
-    //std::size_t o = s[0] * s[1] * std::size_t(offset);
-    //fseek(file, o, SEEK_CUR);
-    //fseek(file, 0, SEEK_END); achieved by fopen("a")
-    fwrite(x, sizeof(float), n, file);
-    delete [] x;
+    if (sizeof(voxel_type) == sizeof(float)) {
+      fwrite(voxels.data(), sizeof(voxel_type), n, file);
+    } else {
+      float *x = new float[n];
+      for (std::size_t i = 0; i < n; i++)
+	x[i] = (float)((voxels.data())[i]);
+      // would need use to store an offset for end of header block to work
+      //std::size_t o = s[0] * s[1] * std::size_t(offset);
+      //fseek(file, o, SEEK_CUR);
+      //fseek(file, 0, SEEK_END); achieved by fopen("a")
+      fwrite(x, sizeof(float), n, file);
+      delete [] x;
+    }
     fclose(file);
   }
   //std::cout << "end dump\n";
