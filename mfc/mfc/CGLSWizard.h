@@ -6,8 +6,6 @@
 #include "src/instruments.hpp"
 #include "src/results.hpp"
 
-#define WM_THREADFINISHED (WM_APP + 1)
-
 // CGLSWizard
 
 class CGLSWizard : public CPropertySheet
@@ -24,7 +22,6 @@ public:
 	void update_progress(const int value);
 	void add_progress();
 	void send_output(const std::string str);
-	afx_msg LRESULT OnThreadFinished(WPARAM, LPARAM);
 
 protected:
 	DECLARE_MESSAGE_MAP()

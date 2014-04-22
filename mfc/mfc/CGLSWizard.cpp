@@ -51,7 +51,6 @@ CGLSWizard::~CGLSWizard()
 
 
 BEGIN_MESSAGE_MAP(CGLSWizard, CPropertySheet)
-	//ON_MESSAGE(WM_THREADFINISHED, &CGLSWizard::OnThreadFinished)
 END_MESSAGE_MAP()
 
 
@@ -162,16 +161,6 @@ void CGLSWizard::initialise_progress(const int length, const char label[])
 void CGLSWizard::update_progress(const int value)
 {
 	progress->update_progress(value);
-}
-
-afx_msg LRESULT CGLSWizard::OnThreadFinished(WPARAM, LPARAM)
-{
-	//DWORD exit_code;
-	//GetExitCodeThread(compute_thread->m_hThread, &exit_code);
-	//delete compute_thread;
-	//if (exit_code == 0)
-		//my_sheet->SetWizardButtons(PSWIZB_NEXT);
-	return 0;
 }
 
 void CGLSWizard::send_output(const std::string str)
