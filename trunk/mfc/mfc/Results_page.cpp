@@ -49,8 +49,8 @@ void Results_page::OnBnClickedTiff16Out()
 
 void Results_page::OnBnClickedFloatOut()
 {
-	my_sheet->set_output(CCPi::bgs_float_dump);
-	//my_sheet->set_output(CCPi::native_dump);
+	//my_sheet->set_output(CCPi::bgs_float_dump);
+	my_sheet->set_output(CCPi::native_dump);
 }
 
 
