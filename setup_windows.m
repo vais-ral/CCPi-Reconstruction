@@ -25,4 +25,4 @@ mex mex/CBbackproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDi
 mex mex/CBproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /Za /openmp"
 mex mex/PBbackproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /Za /openmp"
 mex mex/PBproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /Za /openmp"
-mex mex/tvreg_upn_c.cpp src/tv_core.cpp src/cone.cpp src/instruments.cpp src/matrix2D.cpp src/timer.cpp -Isrc -Imex -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /Za /openmp /DWIN32"
+mex mex/tvreg_upn_c.cpp src/tv_core.cpp src/cone.cpp src/instruments.cpp src/matrix2D.cpp src/timer.cpp src/ui_calls.cpp -Isrc -Imex -outdir mex -largeArrayDims COMPFLAGS="$COMPFLAGS /Za /openmp /DWIN32"

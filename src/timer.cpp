@@ -2,7 +2,11 @@
 #ifndef WIN32
 #  include <unistd.h>
 #endif // WIN32
-#include "base_types.hpp"
+#ifdef MATLAB_MEX_FILE
+#  include "mex_types.hpp"
+#else
+#  include "base_types.hpp"
+#endif // types
 #include "timer.hpp"
 #include "ui_calls.hpp"
 
@@ -15,6 +19,21 @@ static void get_elapsed_wall_time(time_data &elapsed, time_data &start,
 				  const bool reset_start = false);
 
 #ifdef WIN32
+
+#  ifdef MATLAB_MEX_FILE
+
+inline std::clock_t get_current_cpu_time()
+{
+	return 0;
+}
+
+inline void get_current_wall_time(time_data &current)
+{
+	current.seconds = 0;
+	current.microsecs = 0;
+}
+
+#  else
 
 #include <Windows.h>
 #include <time.h>
@@ -37,6 +56,8 @@ inline void get_current_wall_time(time_data &current)
   current.seconds = timer / ticks;
   current.microsecs = (timer % ticks) * (1000000 / ticks);
 }
+
+#  endif // MEX_FILE
 
 #else
 
