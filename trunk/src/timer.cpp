@@ -24,13 +24,13 @@ static void get_elapsed_wall_time(time_data &elapsed, time_data &start,
 
 inline std::clock_t get_current_cpu_time()
 {
-	return 0;
+  return 0;
 }
 
 inline void get_current_wall_time(time_data &current)
 {
-	current.seconds = 0;
-	current.microsecs = 0;
+  current.seconds = 0;
+  current.microsecs = 0;
 }
 
 #  else

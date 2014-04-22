@@ -25,4 +25,4 @@ mex mex/CBbackproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDi
 mex mex/CBproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
 mex mex/PBbackproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
 mex mex/PBproject_single_newgeom_c.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
-mex mex/tvreg_upn_c.cpp src/tv_core.cpp src/instruments.cpp src/cone.cpp src/matrix2D.cpp src/timer.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
+mex mex/tvreg_upn_c.cpp src/tv_core.cpp src/instruments.cpp src/cone.cpp src/matrix2D.cpp src/timer.cpp src/ui_calls.cpp -Isrc -Imex -outdir mex -largeArrayDims CXXFLAGS="\$CXXFLAGS -fopenmp" LDFLAGS="\$LDFLAGS -fopenmp"
