@@ -1,7 +1,14 @@
 
 #include <iostream>
 #include <cstdio>
-#include "base_types.hpp"
+#ifdef MATLAB_MEX_FILE
+#  ifdef WIN32
+#    define snprintf _snprintf
+#  endif // WIN32
+#  include "mex_types.hpp"
+#else
+#  include "base_types.hpp"
+#endif // MEX_FILE
 #include "ui_calls.hpp"
 
 static std::string buffer;
