@@ -18,9 +18,9 @@ typedef long sl_int;
 #endif // LONG_MAX
 
 typedef double real;
-typedef double voxel_type;
-typedef double pixel_type;
-typedef double recon_type;
+typedef float voxel_type;
+typedef float pixel_type;
+typedef float recon_type;
 
 typedef boost::multi_array<voxel_type, 3> voxel_data;
 
