@@ -337,10 +337,10 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
   combine_path_and_name(path, basename, pathbase);
   char index[8];
   initialise_progress(get_num_angles(), "Loading data...");
-  for (int i = 0; (i < get_num_angles() and ok); i++) {
+  for (sl_int i = 0; (i < get_num_angles() and ok); i++) {
     snprintf(index, 8, "%04d", i + 1);
     std::string name = pathbase + index + ".tif";
-    sl_int angle_offset = i * get_num_h_pixels() * get_num_v_pixels();
+    sl_int angle_offset = i * ((sl_int) get_num_h_pixels()) * ((sl_int) get_num_v_pixels());
     ok = read_tiff(name, &pixels[angle_offset], get_num_h_pixels(),
 		   get_num_v_pixels());
 	update_progress(i + 1);
