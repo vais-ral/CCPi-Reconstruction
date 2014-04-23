@@ -99,6 +99,7 @@ BOOL CmfcApp::InitInstance()
 		WS_OVERLAPPEDWINDOW | FWS_ADDTOTITLE, NULL,
 		NULL);
 
+	pFrame->SetWindowPos(pFrame, 0, 0, 768, 512, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
 	// The one and only window has been initialized, so show and update it
 	pFrame->ShowWindow(SW_SHOW);
 	pFrame->UpdateWindow();
