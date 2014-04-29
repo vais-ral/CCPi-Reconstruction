@@ -134,12 +134,16 @@ void CCPi::write_real(const std::string basename, const voxel_data &voxels,
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
-  std::FILE *file = fopen(name.c_str(), "a");
+  std::FILE *file = fopen(name.c_str(), "a+b");
   if (file == 0)
     report_error(" Failed to open output file - ", name);
   else {
-    std::size_t o = s[0] * s[1] * std::size_t(offset);
+    std::size_t o = s[0] * s[1] * std::size_t(offset) * sizeof(voxel_type);
+#ifdef WIN32
+    _fseeki64(file, o, SEEK_SET);
+#else
     fseek(file, o, SEEK_SET);
+#endif // WIN32
     fwrite(voxels.data(), sizeof(voxel_type), n, file);
     fclose(file);
   }
@@ -155,12 +159,17 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
-  char mode[2];
-  mode[1] = '\0';
-  if (offset == 0)
+  char mode[4];
+  mode[3] = '\0';
+  if (offset == 0) {
     mode[0] = 'w';
-  else
+    mode[1] = 'b';
+    mode[2] = '\0';
+  } else {
     mode[0] = 'a';
+    mode[1] = '+';
+    mode[2] = 'b';
+  }
   std::FILE *file = fopen(name.c_str(), mode);
   if (file == 0)
     report_error(" Failed to open output file - ", name);
