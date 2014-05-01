@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
@@ -11,6 +12,7 @@
 #endif // mex
 #include "fbp.hpp"
 #include "instruments.hpp"
+#include "ui_calls.hpp"
 
 /* jacobs_ray_3d
    % void jacobs_ray_3d(int im_size, real *start, real *end, int *ray_index, real *ray_data, int *n_entries)
@@ -605,6 +607,10 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   delete [] forward_x;
   delete [] forward_data;
 #ifdef USE_TIMER
-  std::cout << "Total matrix data is " << total << ' ' << count << '\n';
+  add_output("Total matrix data is ");
+  add_output(total);
+  add_output(" ");
+  add_output(count);
+  send_output();
 #endif // USE_TIMER
 }

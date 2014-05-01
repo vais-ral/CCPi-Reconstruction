@@ -8,6 +8,7 @@
 #include "utils.hpp"
 #include "instruments.hpp"
 #include "tiff.hpp"
+#include "ui_calls.hpp"
 
 // Nikon XTek instrument
 // 360 degree clockwise sample rotations about vertical axis, cone beam
@@ -167,17 +168,17 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	  ok = read_angles(ctfile, init_angle, n_phi);
 	} else {
 	  ok = false;
-	  std::cerr << "Negative pixel values\n";
+	  report_error("Negative pixel values");
 	}
       } else {
 	ok = false;
-	std::cerr << "Failed to locate all geometry data in xtekct file\n";
+	report_error("Failed to locate all geometry data in xtekct file");
       }
     } else
-      std::cerr << "Incorrect header on xtekct file\n";
+      report_error("Incorrect header on xtekct file");
     input.close();
   } else
-    std::cerr << "Open " << file << " failed\n";
+    report_error("Open ", file, " failed");
   if (ok) {
     if (sep != '\0')
       basename += sep;
@@ -219,7 +220,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
     set_phi(p, n);
     return true;
   } else {
-    std::cerr << "Error opening ctdata file\n";
+    report_error("Error opening ctdata file");
     return false;
   }
 }
@@ -336,12 +337,14 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
   std::string pathbase;
   combine_path_and_name(path, basename, pathbase);
   char index[8];
-  for (int i = 0; (i < get_num_angles() and ok); i++) {
-    snprintf(index, 8, "%04d", i + 1);
+  initialise_progress(get_num_angles(), "Loading data...");
+  for (sl_int i = 0; (i < get_num_angles() and ok); i++) {
+    snprintf(index, 8, "%04d", int(i + 1));
     std::string name = pathbase + index + ".tif";
-    sl_int angle_offset = i * get_num_h_pixels() * get_num_v_pixels();
+    sl_int angle_offset = i * ((sl_int) get_num_h_pixels()) * ((sl_int) get_num_v_pixels());
     ok = read_tiff(name, &pixels[angle_offset], get_num_h_pixels(),
 		   get_num_v_pixels());
+	update_progress(i + 1);
   }
   if (ok) {
     /*
@@ -535,11 +538,15 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
       }
     }
     if (ind_m < 0)
-      std::cerr << "Failure in XTek find centre\n";
+      report_error("Failure in XTek find centre");
     real scor_m = scor + ind_m * precision[i];
-    std::cout << "Precision " << precision[i] << ": COR = "
-	      << scor_m * get_source_x() / distance << ", M = "
-	      << min_m << '\n';
+	add_output("Precision ");
+	add_output(precision[i]);
+	add_output(": COR = ");
+	add_output(scor_m * get_source_x() / distance);
+	add_output(", M = ");
+	add_output(min_m);
+	send_output();
     midpoint = scor_m;
   }
   delete [] s2;

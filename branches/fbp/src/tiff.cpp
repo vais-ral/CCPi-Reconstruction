@@ -1,10 +1,10 @@
 
-#include <iostream>
 #include "tiffio.h"
 
 #include "base_types.hpp"
 #include "tiff.hpp"
 #include "timer.hpp"
+#include "ui_calls.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -17,41 +17,41 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
   TIFF *tif = TIFFOpen(filename.c_str(), "r");
   if (tif == 0) {
     ok = false;
-    std::cerr << "Error opening " << filename << '\n';
+    report_error("Error opening ", filename);
   } else {
-    timer ldtime(USE_TIMER);
+    //timer ldtime(USE_TIMER);
     if (TIFFIsTiled(tif)) {
       ok = false;
-      std::cerr << "tiled image not supported in XTek reader\n";
+      report_error("tiled image not supported in XTek reader");
     } else {
       uint16 bps;
       if (TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bps) == 0) {
-	std::cerr << "TIFF error reading bits per sample\n";
+	report_error("TIFF error reading bits per sample");
 	ok = false;
       } else if (bps != 16) {
-	std::cerr << "TIFF is not 16bit data\n";
+	report_error("TIFF is not 16bit data");
 	ok = false;
       } else {
 	uint16 photo;
 	if (TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photo) == 0) {
-	  std::cerr << "Error getting TIFF photometric info\n";
+	  report_error("Error getting TIFF photometric info");
 	  ok = false;
 	} else if (photo != PHOTOMETRIC_MINISBLACK) {
-	  std::cerr << "TIFF photometric type not supported by XTek reader\n";
+	  report_error("TIFF photometric type not supported by XTek reader");
 	  ok = false;
 	} else {
 	  if (TIFFIsMSB2LSB(tif) == 0) {
-	    std::cerr << "TIFF is not MSB to LSB\n";
+	    report_error("TIFF is not MSB to LSB");
 	    ok = false;
 	  } else {
 	    // I'm assuming orientation would be 1, (0,0) in top left corner
 	    // but XTek tiffs don't usually work with TIFFTAG_ORIENTATION
 	    uint32 w;
 	    if (TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w) == 0) {
-	      std::cerr << "Error getting TIFF width\n";
+	      report_error("Error getting TIFF width");
 	      ok = false;
 	    } else if ((int)w != n_h_pixels) {
-	      std::cerr << "Image width mismatch\n";
+	      report_error("Image width mismatch");
 	      ok = false;
 	    } else {
 	      tsize_t strip_size = TIFFStripSize(tif);
@@ -62,7 +62,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
 	      for (int count = 0; (count < nstrips and ok); count++) {
 		if ((result = TIFFReadEncodedStrip(tif, count, buf + offset,
 						   strip_size)) == -1) {
-		  std::cerr << "Read error in " << filename << '\n';
+		  report_error("Read error in ", filename);
 		  ok = false;
 		} else
 		  offset += result;
@@ -70,10 +70,10 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
 	      int extra = offset % 2;
 	      offset /= 2;
 	      if (extra == 1) {
-		std::cerr << "Odd number of bytes for 16 bit image\n";
+		report_error("Odd number of bytes for 16 bit image");
 		ok = false;
 	      } else if (offset != n_h_pixels * n_v_pixels) {
-		std::cerr << "Image size mismatch\n";
+		report_error("Image size mismatch");
 		ok = false;
 	      } else {
 		// (0,0) at top left means vertical order needs to be reversed
@@ -98,8 +98,8 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
       }
     }
     TIFFClose(tif);
-    ldtime.accumulate();
-    ldtime.output("Tiff load");
+    //ldtime.accumulate();
+    //ldtime.output("Tiff load");
   }
   return ok;
 }
@@ -112,37 +112,37 @@ bool CCPi::write_tiff(const std::string filename, unsigned short sdata[],
   TIFF *tif = TIFFOpen(filename.c_str(), "w");
   if (tif == 0) {
     ok = false;
-    std::cerr << "Error opening " << filename << '\n';
+    report_error("Error opening ", filename);
   } else {
     int strip_size = nx * width / 8; 
     char *buf = (char *)_TIFFmalloc(strip_size);
     uint16 config = PLANARCONFIG_CONTIG;
     if (TIFFSetField(tif, TIFFTAG_PLANARCONFIG, config) == 0) {
       ok = false;
-      std::cerr << "Error setting strip image in tiff\n";
+      report_error("Error setting strip image in tiff");
     } else {
       uint16 bps = width;
       uint16 spp = 1;
       if (TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bps) == 0 or
 	  TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, spp) == 0) {
-	std::cerr << "TIFF error writing bits per sample\n";
+	report_error("TIFF error writing bits per sample");
 	ok = false;
       } else {
 	uint16 photo = PHOTOMETRIC_MINISBLACK;
 	if (TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, photo) == 0) {
-	  std::cerr << "Error setting TIFF photometric info\n";
+	  report_error("Error setting TIFF photometric info");
 	  ok = false;
 	} else {
 	  uint32 w = nx;
 	  uint32 l = ny;
 	  if (TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, w) == 0 or
 	      TIFFSetField(tif, TIFFTAG_IMAGELENGTH, l) == 0) {
-	    std::cerr << "Error setting TIFF size\n";
+	    report_error("Error setting TIFF size");
 	    ok = false;
 	  } else {
 	    uint32 rows_strip = 1;
 	    if (TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, rows_strip) == 0) {
-	      std::cerr << "Error setting TIFF rows per strip\n";
+	      report_error("Error setting TIFF rows per strip");
 	      ok = false;
 	    } else {
 	      int result;
@@ -152,7 +152,7 @@ bool CCPi::write_tiff(const std::string filename, unsigned short sdata[],
 		  buf[i] = cdata[(ny - count - 1) * strip_size + i];
 		if ((result = TIFFWriteEncodedStrip(tif, count, buf,
 						    strip_size)) == -1) {
-		  std::cerr << "Write error in " << filename << '\n';
+		  report_error("Write error in ", filename);
 		  ok = false;
 		}
 	      }

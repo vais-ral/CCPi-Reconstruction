@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
+#include <algorithm>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
@@ -11,6 +12,7 @@
 #include "fbp.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
+#include "ui_calls.hpp"
 
 /* Settings which makes the user do a CTRL-C break out of the loop*/
 #if defined(_WIN32) || defined(__WIN32__)
@@ -41,18 +43,24 @@ static real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[],
 		const real tau, const int Ddim, const int Dm, const int Dn,
 		const int Dl, const sl_int prodDims);
 
-void CCPi::tvreg_core(voxel_type *xkp1, real *fxkp1, real *hxkp1, real *gxkp1,
-		      real *fxkp1l, int *kend, const real voxel_size[],
-		      const real *b, const real alpha, real tau, real bL,
-		      real bmu, real epsb_rel, int k_max, const int Ddim,
-		      const int Dm, const int Dn, const int Dl,
-		      const sl_int prodDims, int ctype, real *d, real *c,
-		      const bool ghxl, const bool xl, real *hxkp1l,
-		      real *gxkp1l, real *xlist, const bool verbose,
-		      real *numGrad, real *numBack, real *numFunc,
-		      real *numRest, real *Lklist, real *muklist,
-		      std::list<int> &rp, const real grid_offset[],
-		      const instrument *device)
+void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
+					 real *hxkp1, real *gxkp1, real *fxkp1l,
+					 int *kend, const real voxel_size[],
+					 const pixel_type *b, const real alpha,
+					 real tau, real bL, real bmu,
+					 real epsb_rel, int k_max,
+					 const int Ddim, const int Dm,
+					 const int Dn, const int Dl,
+					 const sl_int prodDims, int ctype,
+					 real *d, real *c, const bool ghxl,
+					 const bool xl, real *hxkp1l,
+					 real *gxkp1l, real *xlist,
+					 const bool verbose, real *numGrad,
+					 real *numBack, real *numFunc,
+					 real *numRest, real *Lklist,
+					 real *muklist, std::list<int> &rp,
+					 const real grid_offset[],
+					 const instrument *device)
 {
   real q;
   real thetakp1;
@@ -600,7 +608,7 @@ real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[], const real tau,
       }
     }
   } else
-    printf("Incorrect dim variable, only dim=2 or dim=3 supported.\n");
+    report_error("Incorrect dim variable, only dim=2 or dim=3 supported.");
 
   return tv_tau_x;
 }

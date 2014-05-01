@@ -5,6 +5,7 @@
 #include "results.hpp"
 #include "tiff.hpp"
 #include "mpi.hpp"
+#include "ui_calls.hpp"
 
 namespace CCPi {
 
@@ -33,7 +34,7 @@ void CCPi::write_results(const std::string basename, const voxel_data &voxels,
     break;
   case native_dump:
     if (machine::get_number_of_processors() > 1)
-      std::cerr << "Format does not support distributed memory\n";
+      report_error("Format does not support distributed memory");
     else
       write_real(basename, voxels, offset);
     break;
@@ -42,12 +43,12 @@ void CCPi::write_results(const std::string basename, const voxel_data &voxels,
     break;
   case bgs_float_dump:
     if (machine::get_number_of_processors() > 1)
-      std::cerr << "Format does not support distributed memory\n";
+      report_error("Format does not support distributed memory");
     else
       write_bgs(basename, voxels, voxel_origin, voxel_size, offset, nz_voxels);
     break;
   default:
-    std::cerr << "Unknown output format\n";
+    report_error("Unknown output format");
     break;
   }
 }
@@ -58,7 +59,7 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
 {
   std::cerr << "Tiff data range issue with blocks - Todo\n";
   if (width != 8 and width != 16)
-    std::cerr << "Width not supported for tiff writing\n";
+    report_error("Width not supported for tiff writing");
   else {
     const voxel_data::size_type *s = voxels.shape();
     std::size_t n = s[0] * s[1];
@@ -129,20 +130,24 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
 void CCPi::write_real(const std::string basename, const voxel_data &voxels,
 		      const int offset)
 {
-  std::cout << "start dump\n";
+  //std::cout << "start dump\n";
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
-  std::FILE *file = fopen(name.c_str(), "a");
+  std::FILE *file = fopen(name.c_str(), "a+b");
   if (file == 0)
-    std::cerr << " Failed to open output file - " << name << '\n';
+    report_error(" Failed to open output file - ", name);
   else {
-    std::size_t o = s[0] * s[1] * std::size_t(offset);
+    std::size_t o = s[0] * s[1] * std::size_t(offset) * sizeof(voxel_type);
+#ifdef WIN32
+    _fseeki64(file, o, SEEK_SET);
+#else
     fseek(file, o, SEEK_SET);
+#endif // WIN32
     fwrite(voxels.data(), sizeof(voxel_type), n, file);
     fclose(file);
   }
-  std::cout << "end dump\n";
+  //std::cout << "end dump\n";
 }
 
 void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
@@ -150,23 +155,25 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
 		     const int offset, const int nz_voxels)
 {
   // Assumes linear update of offset so each new block goes at end - Todo?
-  std::cout << "start dump\n";
+  //std::cout << "start dump\n";
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
-  char mode[2];
-  mode[1] = '\0';
-  if (offset == 0)
+  char mode[4];
+  mode[3] = '\0';
+  if (offset == 0) {
     mode[0] = 'w';
-  else
+    mode[1] = 'b';
+    mode[2] = '\0';
+  } else {
     mode[0] = 'a';
+    mode[1] = '+';
+    mode[2] = 'b';
+  }
   std::FILE *file = fopen(name.c_str(), mode);
   if (file == 0)
-    std::cerr << " Failed to open output file - " << name << '\n';
+    report_error(" Failed to open output file - ", name);
   else {
-    float *x = new float[n];
-    for (std::size_t i = 0; i < n; i++)
-      x[i] = (float)((voxels.data())[i]);
     if (offset == 0) {
       fprintf(file, "%d %d %d\n", int(s[0]), int(s[1]), nz_voxels);
       // centre value in voxel rather than on edge, since not writing n+1
@@ -182,13 +189,20 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
       fprintf(file, "0.0 0.0 %12.6f\n", voxel_size[2]);
       fprintf(file, "Image\n");
     }
-    // would need use to store an offset for end of header block to work
-    //std::size_t o = s[0] * s[1] * std::size_t(offset);
-    //fseek(file, o, SEEK_CUR);
-    //fseek(file, 0, SEEK_END); achieved by fopen("a")
-    fwrite(x, sizeof(float), n, file);
-    delete [] x;
+    if (sizeof(voxel_type) == sizeof(float)) {
+      fwrite(voxels.data(), sizeof(voxel_type), n, file);
+    } else {
+      float *x = new float[n];
+      for (std::size_t i = 0; i < n; i++)
+	x[i] = (float)((voxels.data())[i]);
+      // would need use to store an offset for end of header block to work
+      //std::size_t o = s[0] * s[1] * std::size_t(offset);
+      //fseek(file, o, SEEK_CUR);
+      //fseek(file, 0, SEEK_END); achieved by fopen("a")
+      fwrite(x, sizeof(float), n, file);
+      delete [] x;
+    }
     fclose(file);
   }
-  std::cout << "end dump\n";
+  //std::cout << "end dump\n";
 }

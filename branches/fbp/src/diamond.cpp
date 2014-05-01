@@ -62,7 +62,7 @@ bool CCPi::Diamond::read_data_size(const std::string path,
   if (phantom)
     return true;
   else {
-    bool ok = true;
+    bool ok = false;
     std::string fullname;
     combine_path_and_name(path, name,fullname);
     pixel_type *pixels = 0;
@@ -76,9 +76,11 @@ bool CCPi::Diamond::read_data_size(const std::string path,
     pixel_type *f_dark = 0;
     pixel_type *i_bright = 0;
     pixel_type *f_bright = 0;
+#ifdef HAS_NEXUS
     ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
 		    nv_pixels, angles, nangles, hsize, vsize, fullname,
 		    false, false, 0, 10000);
+#endif // HAS_NEXUS
     // store data in class
     real *h_pixels = new real[nh_pixels];
     h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0);
@@ -176,7 +178,7 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
 bool CCPi::Diamond::read_data(const std::string path, const int offset,
 			      const int block_size, const bool first)
 {
-  bool ok = true;
+  bool ok = false;
   std::string fullname;
   combine_path_and_name(path, name,fullname);
   pixel_type *pixels = 0;
@@ -201,9 +203,11 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
     i_bright[i] = 0.0;
     f_bright[i] = 0.0;
   }
+#ifdef HAS_NEXUS
   ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
 		  nv_pixels, angles, nangles, hsize, vsize, fullname,
 		  false, true, offset, block_size);
+#endif // HAS_NEXUS
   nangles = get_num_angles();
   // store data in class - now done by read_data_sizes
   /*

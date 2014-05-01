@@ -1,26 +1,15 @@
 
-#include <iostream>
 #include "base_types.hpp"
 #include "fbp.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
-
-namespace CCPi {
-
-  bool tv_regularization(const instrument *device, pixel_type *b,
-			 voxel_data &voxels, const real origin[3],
-			 const real voxel_size[3], const real alpha,
-			 const real tau, const real init_L,
-			 const real init_mu, const int constraint);
-
-}
+#include "ui_calls.hpp"
 
 // driver routine designed to initialise from CGLS
-bool CCPi::tv_regularization(const instrument *device, voxel_data &voxels,
-			     const real origin[3], const real voxel_size[3],
-			     const real alpha, const real tau,
-			     const real init_L, const real init_mu,
-			     const int constraint)
+bool CCPi::tv_regularization::reconstruct(const instrument *device,
+					  voxel_data &voxels,
+					  const real origin[3],
+					  const real voxel_size[3])
 {
   // Need copy of pixels before initial CGLS guess overwrites them
   sl_int n_pixels = device->get_data_size();
@@ -28,21 +17,20 @@ bool CCPi::tv_regularization(const instrument *device, voxel_data &voxels,
   pixel_type *b = new pixel_type[n_pixels];
   for (sl_int i = 0; i < n_pixels; i++)
     b[i] = p[i];
-  bool ok = cgls_reconstruction(device, voxels, origin, voxel_size, 5);
+  cgls_base cgls(5);
+  bool ok = cgls.reconstruct(device, voxels, origin, voxel_size);
   if (ok)
-    ok = tv_regularization(device, b, voxels, origin, voxel_size,
-			   alpha, tau, init_L, init_mu, constraint);
+    ok = reconstruct(device, b, voxels, origin, voxel_size);
   delete [] p;
   return ok;
 }
 
 // should be passed an initial guess in voxels, either from CGLS or
 // some other method
-bool CCPi::tv_regularization(const instrument *device, pixel_type *b,
-			     voxel_data &voxels, const real origin[3],
-			     const real voxel_size[3], const real alpha,
-			     const real tau, const real init_L,
-			     const real init_mu, const int constraint)
+bool CCPi::tv_regularization::reconstruct(const instrument *device,
+					  pixel_type *b, voxel_data &voxels,
+					  const real origin[3],
+					  const real voxel_size[3])
 {
   const voxel_data::size_type *sz = voxels.shape();
   sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
@@ -135,6 +123,6 @@ bool CCPi::tv_regularization(const instrument *device, pixel_type *b,
 
   // If the iteration counter reaches the k_max, the algorithm did not converge
   if (k == k_max)
-    std::cerr << "Did not find a epsb_rel solution in k_max iterations.\n";
+    report_error("Did not find a epsb_rel solution in k_max iterations.");
   return true;
 }
