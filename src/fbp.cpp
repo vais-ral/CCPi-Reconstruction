@@ -6,6 +6,7 @@
 #include "algorithms.hpp"
 #include "fft.hpp"
 #include "timer.hpp"
+#include "ui_calls.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -46,7 +47,7 @@ static void transform_sinogram_sol(const int nx, const int ny,
 				   const int required_width, int &ta_nx,
 				   int &ta_ny, int &tb_nx, int &tb_ny, int &nz,
 				   const real alpha);
-static void transform_sinogram(real_3d &mapping, const real *pixels,
+static void transform_sinogram(pixel_3d &mapping, const pixel_type *pixels,
 			       const int z, const int nangles, const int nv,
 			       const int nh, const real_2d &mapx,
 			       const real_2d &mapy, int &ta_nx, int &ta_ny,
@@ -128,13 +129,13 @@ void create_filter(real_1d &filter, const filter_name_t name,
   real_1d v4(n);
   /*
   if (v1 == 0 or v2 == 0 or v3 == 0 or v4 == 0 or filter == 0) {
-    std::cerr << "can not allocate memory (filter)\n";
+    report_error("can not allocate memory (filter)");
     return 0;
   }
   */
   real omega = bandwidth;
   if (omega > 1.0 or omega < 0.00001) {
-    std::cerr << "Bandwidth wrong (should be in (0, 1])\n";
+    report_error("Bandwidth wrong (should be in (0, 1])");
     return;
   }
   for (int i = 0; i < n; i++)
@@ -180,7 +181,7 @@ void create_filter(real_1d &filter, const filter_name_t name,
       v1[i] = v2[i] * v4[i];
     break;
   default:
-    std::cerr << "Unknown filter - abort\n";
+    report_error("Unknown filter - abort");
     return;
     break;
   }
@@ -224,7 +225,7 @@ void create_filter(real_1d &filter, const filter_name_t name,
       v3[i] += v1[i] * real(0.5);
     break;
   default:
-    std::cerr << "Unknown window - abort\n";
+    report_error("Unknown window - abort");
     return;
     break;
   }
@@ -302,7 +303,7 @@ void create_filter(real_1d &filter, const filter_name_t name,
       vecti[i] *= real(0.5) * pif;
     break;
   default:
-    std::cerr << "Unknown sample for normalisation - abort\n";
+    report_error("Unknown sample for normalisation - abort");
     return;
     break;
   }
@@ -426,7 +427,7 @@ void transform_sinogram_sol(const int nx, const int ny, const int nangles,
 			    int &tb_nx, int &tb_ny, int &nz, const real alpha)
 {
   if (alpha < 1e-6)
-    std::cerr << "PixelParam too small\n";
+    report_error("PixelParam too small");
   // basic check_roi values
   //real xmin = 0.0;
   //real xmax = real(nx - 1);
@@ -510,10 +511,10 @@ void transform_sinogram_sol(const int nx, const int ny, const int nangles,
   }
 }
 
-void transform_sinogram(real_3d &mapping, const real *pixels, const int z,
-			const int nangles, const int nv, const int nh,
-			const real_2d &mapx, const real_2d &mapy, int &ta_nx,
-			int &ta_ny, int &tb_nx, int &tb_ny, int &nz)
+void transform_sinogram(pixel_3d &mapping, const pixel_type *pixels,
+			const int z, const int nangles, const int nv,
+			const int nh, const real_2d &mapx, const real_2d &mapy,
+			int &ta_nx, int &ta_ny, int &tb_nx, int &tb_ny, int &nz)
 {
   // mapping is vta
   pixel_2d vtb(boost::extents[tb_nx][tb_ny], boost::fortran_storage_order());
@@ -622,14 +623,11 @@ void transform_sinogram(real_3d &mapping, const real *pixels, const int z,
   }
 }
 
-bool CCPi::fbp_reconstruction(const instrument *device, voxel_data &voxels,
-			      const real origin[3], const real voxel_size[3],
-			      const filter_name_t name,
-			      const filter_window_t window,
-			      const filter_norm_t norm, const real bandwidth)
+bool CCPi::fbp_alg::reconstruct(const instrument *device, voxel_data &voxels,
+				const real origin[3], const real voxel_size[3])
 {
   bool ok = device->filtered_back_project(voxels, origin, voxel_size,
-					  name, window, norm, bandwidth);
+					  filter_name, window, norm, bandwidth);
   return ok;
 }
 
@@ -652,7 +650,7 @@ bool CCPi::parallel_beam::filtered_back_project(voxel_data &voxels,
   int nv = get_num_v_pixels();
   int npixels_per_voxel = nv / sz[2];
   if (npixels_per_voxel != 1) {
-    std::cerr << "FBP error\n";
+    report_error("FBP error");
     return false;
   }
   // scan z slices separately
@@ -798,6 +796,6 @@ bool CCPi::cone_beam::filtered_back_project(voxel_data &voxels,
 					    const filter_norm_t norm,
 					    const real bandwidth) const
 {
-  std::cerr << "FBP not implemented for cone beam\n";
+  report_error("FBP not implemented for cone beam");
   return false;
 }
