@@ -1,9 +1,14 @@
 
-#include <iostream>
-#ifndef WINDOWS
+#ifndef WIN32
 #  include <unistd.h>
-#endif // WINDOWS
+#endif // WIN32
+#ifdef MATLAB_MEX_FILE
+#  include "mex_types.hpp"
+#else
+#  include "base_types.hpp"
+#endif // types
 #include "timer.hpp"
+#include "ui_calls.hpp"
 
 static std::clock_t get_current_cpu_time();
 static void get_elapsed_cpu_time(time_data &elapsed, std::clock_t &start_time,
@@ -13,19 +18,46 @@ static void get_current_wall_time(time_data &current);
 static void get_elapsed_wall_time(time_data &elapsed, time_data &start,
 				  const bool reset_start = false);
 
-#ifdef WINDOWS
+#ifdef WIN32
+
+#  ifdef MATLAB_MEX_FILE
 
 inline std::clock_t get_current_cpu_time()
 {
-  return clock();
+  return 0;
 }
 
 inline void get_current_wall_time(time_data &current)
 {
-	// Todo
-	current.seconds = 0;
-	current.microsecs = 0;
+  current.seconds = 0;
+  current.microsecs = 0;
 }
+
+#  else
+
+#include <Windows.h>
+#include <time.h>
+
+inline std::clock_t get_current_cpu_time()
+{
+  FILETIME a, b, kernel, user;
+  GetProcessTimes(GetCurrentProcess(), &a, &b, &kernel, &user);
+  __int64 t1 = (((__int64)kernel.dwHighDateTime) << 32) + kernel.dwLowDateTime;
+  __int64 t2 = (((__int64)user.dwHighDateTime) << 32) + user.dwLowDateTime;
+  // 100 ns units
+  __int64 t = (t1 + t2) / (10000000LL / CLOCKS_PER_SEC);
+  return t;
+}
+
+inline void get_current_wall_time(time_data &current)
+{
+  long ticks = CLOCKS_PER_SEC;
+  long timer = clock();
+  current.seconds = timer / ticks;
+  current.microsecs = (timer % ticks) * (1000000 / ticks);
+}
+
+#  endif // MEX_FILE
 
 #else
 
@@ -50,13 +82,13 @@ void get_elapsed_cpu_time(time_data &elapsed,
 			  std::clock_t &start_time,
 			  const bool reset_start)
 {
-#ifdef WINDOWS
-  static long ticks = 1000;
+#ifdef WIN32
+  static long ticks = CLOCKS_PER_SEC;
 #else
   static long ticks = 0;
   if (ticks == 0)
     ticks = sysconf(_SC_CLK_TCK);
-#endif // WINDOWS
+#endif // WIN32
   std::clock_t current = get_current_cpu_time();
   std::clock_t diff = current - start_time;
   if (diff < 0) {
@@ -148,14 +180,17 @@ void timer::accumulate()
 void timer::output(const char message[])
 {
   if (use) {
-    std::cout << message << ": ";
-    std::cout << cpu.seconds << '.';
-    std::cout.width(6);
-    std::cout.fill('0');
-    std::cout << cpu.microsecs << " cpu time, ";
-    std::cout << wall.seconds << '.';
-    std::cout.width(6);
-    std::cout.fill('0');
-    std::cout << wall.microsecs << " wall time\n";
+    std::string m = message;
+    add_output(m);
+    add_output(": ");
+    add_output((int)cpu.seconds);
+    add_output('.');
+    add_output(cpu.microsecs, 6, true);
+    add_output(" cpu time, ");
+    add_output((int)wall.seconds);
+    add_output('.');
+    add_output(wall.microsecs, 6, true);
+    add_output(" wall time");
+    send_output();
   }
 }

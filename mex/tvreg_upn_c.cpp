@@ -1,6 +1,7 @@
 
 #include <mex.h>
 #include <list>
+#include <algorithm>
 #include "mex_types.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
@@ -40,10 +41,10 @@ namespace CCPi {
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-  register double *b,*d,*c,*dims,alpha,tau,bL,bmu,epsb_rel,*hxkp1l,*gxkp1l,*xlist, *voxel_size;
+  register double *d,*c,*dims,alpha,tau,bL,bmu,epsb_rel,*hxkp1l,*gxkp1l,*xlist, *voxel_size;
   register double *source_x, *source_y, *source_z, *det_x, *det_y, *det_z, *angles, *grid_offset; 
   register double *fxkp1,*hxkp1,*gxkp1,*fxkp1l,*k,*numGrad,*numBack,*numFunc,*numRest,*Lklist,*muklist,*rklist;
-  register float *x, *xkp1;
+  register float *b, *x, *xkp1;
   mxArray *M,*S,*Mdims;
   int i,j,k_max,dim,ctype,ghxl,xl,verbose,temp, n_rays_y, n_rays_z, n_angles;
   sl_int prodDims;
@@ -59,7 +60,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     voxel_size = mxGetPr(Mdims);
 	
     M = (mxArray*)prhs[1];
-    b = mxGetPr(M);
+    b = (float *) mxGetPr(M);
 
     S = (mxArray*)prhs[2];
     alpha = (double)(mxGetScalar(S));
@@ -187,11 +188,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		    angles, n_rays_y, n_rays_z, n_angles);
 
     int ki = 0;
-    CCPi::tvreg_core(xkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,voxel_size, b,alpha,
-		     tau,bL,bmu,epsb_rel,k_max,D.dim, D.m, D.n, D.l, D.prodDims,
-		     ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,gxkp1l,xlist,
-		     (bool)verbose,numGrad,numBack,numFunc,numRest,Lklist,
-		     muklist,rp,grid_offset, dev);
+    CCPi::tv_regularization::tvreg_core(xkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,
+					voxel_size, b,alpha,tau,bL,bmu,epsb_rel,
+					k_max,D.dim, D.m, D.n, D.l, D.prodDims,
+					ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,
+					gxkp1l,xlist,(bool)verbose,numGrad,
+					numBack,numFunc,numRest,Lklist,
+					muklist,rp,grid_offset, dev);
 
     delete dev;
     *k = (double)ki;

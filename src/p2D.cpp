@@ -10,6 +10,7 @@
 #  include "base_types.hpp"
 #endif // mex
 #include "instruments.hpp"
+#include "ui_calls.hpp"
 
 extern void test_voxel(const int i, const int j, const int k,
 		       const int a, const int v, const int h, const double d,
@@ -677,7 +678,7 @@ void CCPi::parallel_beam::b2D(const real h_pixels[],
     v_coords[i] = v_pixels[i];
   v_coords[nv_pixels] = z_coords[nz] + 1.0;
   if (v_pixels[0] < z_coords[0] or v_pixels[pixels_per_voxel] < z_coords[1])
-    std::cerr << "Oops - bad back projection\n";
+    report_error("Oops - bad back projection");
 #pragma omp parallel for shared(h_pixels, pixels, x0_coords, y0_coords, cangles, sangles, vox_lengths) firstprivate(pixels_per_voxel, nx, ny, nz, nh_pixels, inv_pixel_step) schedule(dynamic)
   for (int i = 0; i < nx; i++) {
 #ifdef TESTBP
