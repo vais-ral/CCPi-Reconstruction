@@ -33,7 +33,7 @@ bool CCPi::tv_regularization::reconstruct(const instrument *device,
 {
   const voxel_data::size_type *sz = voxels.shape();
   sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
-  voxel_type *const vox = voxels.data();
+  //voxel_type *const vox = voxels.data();
 
   // defaults - should be inputs
   real epsb_rel = 1e-4;
@@ -93,7 +93,7 @@ bool CCPi::tv_regularization::reconstruct(const instrument *device,
 
   std::list<int> rp;
 
-  tvreg_core(vox, &fxkp1, &hxkp1, &gxkp1, fxkp1l, &k, voxel_size, b, alpha,
+  tvreg_core(voxels, &fxkp1, &hxkp1, &gxkp1, fxkp1l, &k, voxel_size, b, alpha,
 	     tau, bL, bmu, epsb_rel, k_max, 3, sz[0], sz[1], sz[2], n_vox,
 	     constraint, d, c, ghxl, xl, hxkp1l, gxkp1l, xlist, verbose,
 	     &numGrad, &numBack, &numFunc, &numRest, Lklist, muklist, rp,

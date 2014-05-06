@@ -42,7 +42,7 @@ void CCPi::cone_beam::set_params(const real sx, const real sy, const real sz,
 }
 
 void CCPi::cone_beam::forward_project(pixel_type *pixels,
-				      voxel_type *const voxels,
+				      voxel_data &voxels,
 				      const real origin[3],
 				      const real width[3], const int nx,
 				      const int ny, const int nz) const
@@ -58,7 +58,7 @@ void CCPi::cone_beam::forward_project(pixel_type *pixels,
 }
 
 void CCPi::cone_beam::backward_project(pixel_type *pixels,
-				       voxel_type *const voxels,
+				       voxel_data &voxels,
 				       const real origin[3],
 				       const real width[3], const int nx,
 				       const int ny, const int nz) const
@@ -73,7 +73,7 @@ void CCPi::cone_beam::backward_project(pixel_type *pixels,
   bptime.output("backward projection");
 }
 
-void CCPi::cone_beam::backward_project(voxel_type *const voxels,
+void CCPi::cone_beam::backward_project(voxel_data &voxels,
 				       const real origin[3],
 				       const real width[3], const int nx,
 				       const int ny, const int nz) const

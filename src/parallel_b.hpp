@@ -8,10 +8,10 @@ static inline real pb_r_i(const sl_int i, const real r_0, const real step)
   return r_0 + i * step;
 }
 
-template <class pixel_t, class voxel_t>
+template <class pixel_t>
 void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 					const real phi[], pixel_t ray_data[],
-					voxel_t *const vol_data,
+					voxel_data &vol_data,
 					const int n_angles, const int n_rays_y,
 					const int n_rays_z,
 					const real grid_offset[3],
@@ -77,7 +77,7 @@ void CCPi::instrument::backward_project(const real det_y[], const real det_z[],
 	      start[1] = end[1] - real(3.0) * sin_curr_angle * det_x;
 
 	      /* loop over z values on detector */
-	      project_singledata<pixel_t, voxel_t, true>(start, end,
+	      project_singledata<pixel_t, true>(start, end,
 				 ray_data[ray_offset + curr_ray_y],
 				 vol_data, grid_offset[0], grid_offset[1],
 				 b_z, voxel_size[0], voxel_size[1],

@@ -36,13 +36,13 @@ void ex_sigint(int sig) {
 }
 #endif
 
-static void P(voxel_type *y, const int ctype, const real d[],
-	      const real c[], const sl_int mnl);
-static real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[],
+static void P(voxel_data &y, const int ctype, const real d[], const real c[],
+	      const voxel_data::size_type sz[]);
+static real DTD(voxel_data &x, voxel_data &Nablafx, real uijl[],
 		const real tau, const int Ddim, const int Dm, const int Dn,
-		const int Dl, const sl_int prodDims);
+		const int Dl, const voxel_data::size_type sz[]);
 
-void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
+void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 					 real *hxkp1, real *gxkp1, real *fxkp1l,
 					 int *kend, const real voxel_size[],
 					 const pixel_type *b, const real alpha,
@@ -75,14 +75,22 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
 
   INITBREAK
 
-  voxel_type *Nablafyk = new voxel_type[prodDims];
-  voxel_type *Nablafxkp1 = new voxel_type[prodDims];
-  voxel_type *yk = new voxel_type[prodDims];
-  voxel_type *xk = new voxel_type[prodDims];
-  voxel_type *temp = new voxel_type[prodDims];
+  const voxel_data::size_type *sz = xkp1.shape();
+  //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
+  voxel_3d Nablafyk(boost::extents[sz[0]][sz[1]][sz[2]],
+		    boost::fortran_storage_order());
+  voxel_3d Nablafxkp1(boost::extents[sz[0]][sz[1]][sz[2]],
+		      boost::fortran_storage_order());
+  voxel_3d yk(boost::extents[sz[0]][sz[1]][sz[2]],
+	      boost::fortran_storage_order());
+  voxel_3d xk(boost::extents[sz[0]][sz[1]][sz[2]],
+	      boost::fortran_storage_order());
+  voxel_3d temp(boost::extents[sz[0]][sz[1]][sz[2]],
+		boost::fortran_storage_order());
 
   /*temp vectors */
-  voxel_type *tv = new voxel_type[prodDims];
+  voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
+	      boost::fortran_storage_order());
   pixel_type *tv2 = new pixel_type[n_rays];
   real *uijl = new real[Ddim];
 
@@ -96,7 +104,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
   real cumprod = 1.0;
 
   /* Project solution onto feasible space */
-  P(xkp1, ctype, d, c, prodDims);
+  P(xkp1, ctype, d, c, sz);
 
   real thetak = std::sqrt(bmu / bL);
 
@@ -108,11 +116,13 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
   (*numGrad)++;
 
   /* alpha*T_tau(y_k) (Nablafyk is returned as gradient) */
-  real fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, prodDims);
+  real fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /* For each voxel */
-  for (sl_int i = 0; i < prodDims; i++)
-    Nablafyk[i] *= alpha;
+  for (int i = 0; i < int(sz[2]); i++)
+    for (int j = 0; j < int(sz[1]); j++)
+      for (int k = 0; k < int(sz[0]); k++)
+	Nablafyk[k][j][i] *= alpha;
   /*-----------------Forward projection--------------------------------*/
   for (sl_int i = 0; i < n_rays; i++)
     tv2[i] = 0;
@@ -126,15 +136,21 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
   /* fyk + 0.5*||A*y_k - b||^2 */
   fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
-  for (sl_int i = 0; i < prodDims; i++)
-    tv[i] = 0;
+  for (int i = 0; i < int(sz[2]); i++)
+    for (int j = 0; j < int(sz[1]); j++)
+      for (int k = 0; k < int(sz[0]); k++)
+	tv[k][j][i] = 0.0;
   /*------------------Backward projection------------------------------*/
-  for (sl_int i = 0; i < prodDims; i++)
-    temp[i] = 0;
+  for (int i = 0; i < int(sz[2]); i++)
+    for (int j = 0; j < int(sz[1]); j++)
+      for (int k = 0; k < int(sz[0]); k++)
+	temp[k][j][i] = 0.0;
   device->backward_project(tv2, temp, grid_offset, voxel_size, Dm, Dn, Dl);
   /* For each voxel */
-  for (sl_int i = 0; i < prodDims; i++)
-    Nablafyk[i] += temp[i];
+  for (int i = 0; i < int(sz[2]); i++)
+    for (int j = 0; j < int(sz[1]); j++)
+      for (int k = 0; k < int(sz[0]); k++)
+	Nablafyk[k][j][i] += temp[k][j][i];
 
   /* Take the projected step from yk to xkp1 */
   /* bL is original setting of L_k */
@@ -143,15 +159,16 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
   /* x_k+1 = y_k - t*Nablaf(y_k) */
   daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
 
-  P(xkp1, ctype, d, c, prodDims);
+  P(xkp1, ctype, d, c, sz);
 
   /* Backtracking on Lipschitz parameter. */
-  for (sl_int i = 0; i < prodDims; i++)
-    tv[i] = xkp1[i]-yk[i];
+  for (int i = 0; i < int(sz[2]); i++)
+    for (int j = 0; j < int(sz[1]); j++)
+      for (int k = 0; k < int(sz[0]); k++)
+	tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
   /* alpha*T_tau(xkp1+1) (Nablafyk is returned as gradient) */
-  *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl,
-		       prodDims);
+  *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
   for (sl_int i = 0; i < n_rays; i++)
@@ -182,15 +199,16 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
     /* x_k+1 = x_k+1 - t*Nablafyk */
     daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
     /* project to within bounds (x_k+1) */
-    P(xkp1, ctype, d, c, prodDims);
+    P(xkp1, ctype, d, c, sz);
 
     /* Backtracking on Lipschitz parameter. */
-    for (sl_int i = 0; i < prodDims; i++)
-      tv[i] = xkp1[i] - yk[i];
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
     /* alpha*T_tau(x_k+1) */
-    *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl,
-			 prodDims);
+    *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
     for (sl_int i = 0; i < n_rays; i++)
@@ -217,10 +235,12 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
     t = - 1 / bL;
     dcopy(prodDims, xkp1, 1, tv, 1);
     daxpy(prodDims, t, Nablafxkp1, 1, tv, 1);
-    P(tv, ctype, d, c, prodDims);
+    P(tv, ctype, d, c, sz);
 
-    for (sl_int i = 0; i < prodDims; i++)
-      tv[i] = xkp1[i] - tv[i];
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  tv[k][j][i] = xkp1[k][j][i] - tv[k][j][i];
 
     nGt = bL * dnrm2(prodDims, tv, 1);
   }
@@ -235,7 +255,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
   bool stop = false; /*Flag for when to break the for-loop*/
 
   /*Calculate fxk */
-  real fxk = alpha*DTD(xkp1,Nablafxkp1,uijl,tau,Ddim,Dm,Dn,Dl, prodDims);
+  real fxk = alpha*DTD(xkp1,Nablafxkp1,uijl,tau,Ddim,Dm,Dn,Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
   for (sl_int i = 0; i < n_rays; i++)
@@ -256,10 +276,12 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
     muklist[kk] = bmu;
     /* Calculate the gradient in yk */
     (*numGrad)++;
-    fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, prodDims);
+    fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
-    for (sl_int i = 0; i < prodDims; i++)
-      Nablafyk[i] *= alpha;
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  Nablafyk[k][j][i] *= alpha;
 
     /*-----------------Forward projection--------------------------------*/
     for (sl_int i = 0; i < n_rays; i++)
@@ -271,22 +293,30 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
     (*numFunc)++;
     fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
-    for (sl_int i = 0; i < prodDims; i++)
-      tv[i] = 0;
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  tv[k][j][i] = 0.0;
 
     /*------------------Backward projection------------------------------*/
-    for (sl_int i = 0; i < prodDims; i++)
-      temp[i] = 0;
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  temp[k][j][i] = 0.0;
     device->backward_project(tv2, temp, grid_offset, voxel_size, Dm, Dn, Dl);
     /* For each voxel */
-    for (sl_int i = 0; i < prodDims; i++)
-      Nablafyk[i] += temp[i];
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  Nablafyk[k][j][i] += temp[k][j][i];
 
     /* Update estimate of the strong convexity parameter as minimum of current
        value and the computed value between xk and yk */
     if (k != 0) {
-      for (sl_int i = 0; i < prodDims; i++)
-	tv[i] = xk[i] - yk[i];
+      for (int i = 0; i < int(sz[2]); i++)
+	for (int j = 0; j < int(sz[1]); j++)
+	  for (int k = 0; k < int(sz[0]); k++)
+	    tv[k][j][i] = xk[k][j][i] - yk[k][j][i];
 
       bmu = std::max(std::min(real(2) * (fxk * (real(1) + real(1e-14))
 					 - (fyk + ddot(prodDims, Nablafyk,
@@ -300,14 +330,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
     dcopy(prodDims, yk, 1, xkp1, 1);
     daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
 
-    P(xkp1, ctype, d, c, prodDims);
+    P(xkp1, ctype, d, c, sz);
 
     /* Backtracking on Lipschitz parameter. */
-    for (sl_int i = 0; i < prodDims; i++)
-      tv[i] = xkp1[i] - yk[i];
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
-    *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl,
-			 prodDims);
+    *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
     for (sl_int i = 0; i < n_rays; i++)
@@ -331,14 +362,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
       t = - 1 / bL;
       dcopy(prodDims, yk, 1, xkp1, 1);
       daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
-      P(xkp1, ctype, d, c, prodDims);
+      P(xkp1, ctype, d, c, sz);
 
       /* Backtracking on Lipschitz parameter. */
-      for (sl_int i = 0; i < prodDims; i++)
-	tv[i] = xkp1[i] - yk[i];
+      for (int i = 0; i < int(sz[2]); i++)
+	for (int j = 0; j < int(sz[1]); j++)
+	  for (int k = 0; k < int(sz[0]); k++)
+	    tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
-      *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl,
-			   prodDims);
+      *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
       /*-----------------Forward projection--------------------------------*/
       for (sl_int i = 0; i < n_rays; i++)
@@ -362,8 +394,14 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
 
     /* store the iterate if requested */
     if (xl) {
-      for (sl_int i = 0; i < prodDims; i++) {
-	xlist[kk * prodDims + i] = xkp1[i];
+      sl_int l = 0;
+      for (int i = 0; i < int(sz[2]); i++) {
+	for (int j = 0; j < int(sz[1]); j++) {
+	  for (int k = 0; k < int(sz[0]); k++) {
+	    xlist[kk * prodDims + l] = xkp1[k][j][i];
+	    l++;
+	  }
+	}
       }
     }
 
@@ -373,15 +411,21 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
 
     /* calculate the gradient in xkp1 */
     (*numGrad)++;
-    for (sl_int i = 0; i < prodDims; i++)
-      Nablafxkp1[i] *= alpha;
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  Nablafxkp1[k][j][i] *= alpha;
 
     /*------------------Backward projection------------------------------*/
-    for (sl_int i = 0; i < prodDims; i++)
-      temp[i] = 0;
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  temp[k][j][i] = 0;
     device->backward_project(tv2, temp, grid_offset, voxel_size, Dm, Dn, Dl);
-    for (sl_int i = 0; i < prodDims; i++)
-      Nablafxkp1[i] += temp[i];
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  Nablafxkp1[k][j][i] += temp[k][j][i];
 
     /* Check stopping criteria xkp1*/
     if (ctype == 1) {
@@ -396,17 +440,19 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
       t = - 1 / bL;
       dcopy(prodDims, xkp1, 1, tv, 1);
       daxpy(prodDims, t, Nablafxkp1, 1, tv, 1);
-      P(tv, ctype, d, c, prodDims);
+      P(tv, ctype, d, c, sz);
 
-      for (sl_int i = 0; i < prodDims; i++)
-	tv[i] = xkp1[i] - tv[i];
+      for (int i = 0; i < int(sz[2]); i++)
+	for (int j = 0; j < int(sz[1]); j++)
+	  for (int k = 0; k < int(sz[0]); k++)
+	    tv[k][j][i] = xkp1[k][j][i] - tv[k][j][i];
 
       nGt = bL * dnrm2(prodDims, tv, 1);
       if (nGt <= epsb_rel * prodDims) {
 	stop = true;
 	/*overwrite xkp1 to return with*/
 	daxpy(prodDims, t, Nablafxkp1, 1, xkp1, 1);
-	P(xkp1, ctype, d, c, prodDims);
+	P(xkp1, ctype, d, c, sz);
       }
     }
 
@@ -420,8 +466,10 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
 	stop = true;
     } else {
       t = - 1 / bL;
-      for (sl_int i = 0; i < prodDims; i++)
-	tv[i] = yk[i] - xkp1[i];
+      for (int i = 0; i < int(sz[2]); i++)
+	for (int j = 0; j < int(sz[1]); j++)
+	  for (int k = 0; k < int(sz[0]); k++)
+	    tv[k][j][i] = yk[k][j][i] - xkp1[k][j][i];
       if (bL * dnrm2(prodDims, tv, 1) <= epsb_rel * prodDims)
 	stop = true;
     }
@@ -462,8 +510,10 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
 
     /* accelerated term*/
     /* yk = xkp1 + betak*(xkp1-xk) */
-    for (sl_int i = 0; i < prodDims; i++)
-      tv[i] = xkp1[i] - xk[i];
+    for (int i = 0; i < int(sz[2]); i++)
+      for (int j = 0; j < int(sz[1]); j++)
+	for (int k = 0; k < int(sz[0]); k++)
+	  tv[k][j][i] = xkp1[k][j][i] - xk[k][j][i];
 
     dcopy(prodDims, xkp1, 1, yk, 1);
     daxpy(prodDims, betak, tv, 1, yk, 1);
@@ -477,57 +527,64 @@ void CCPi::tv_regularization::tvreg_core(voxel_type *xkp1, real *fxkp1,
   }
 
  cleanup:
-  delete [] Nablafyk;
-  delete [] Nablafxkp1;
+  //delete [] Nablafyk;
+  //delete [] Nablafxkp1;
 
-  delete [] yk;
-  delete [] xk;
+  //delete [] yk;
+  //delete [] xk;
 
-  delete [] tv;
+  //delete [] tv;
   delete [] tv2;
   delete [] uijl;
-  delete [] temp;
+  //delete [] temp;
 
   *kend = kk;
 }
 
-/* Functions used for the inverse problems using Nesterov or BB method
-  Project onto the feasible (convex) set.
-   c==1: Unconstrained.
-   c==2: Lower and upper bounds (elementwise) on x. Inplace.
-   c==3: as 2 but single value bounds applied whole space. Inplace. */
-void P(voxel_type *y, const int ctype, const real d[], const real c[],
-       const sl_int mnl)
+void P(voxel_data &y, const int ctype, const real d[], const real c[],
+       const voxel_data::size_type sz[])
 {
   if (ctype == 2) { /* c <= x <= d (elementwise) */
-    for (sl_int i = 0; i < mnl; i++) {
-      if (y[i] < c[i])
-	y[i] = c[i];
-      else if (y[i] > d[i])
-	y[i] = d[i];
+    sl_int mnl = 0;
+    for (int i = 0; i < int(sz[2]); i++) {
+      for (int j = 0; j < int(sz[1]); j++) {
+	for (int k = 0; k < int(sz[0]); k++) {
+	  if (y[k][j][i] < c[mnl])
+	    y[k][j][i] = c[mnl];
+	  else if (y[k][j][i] > d[mnl])
+	    y[k][j][i] = d[mnl];
+	}
+	mnl++;
+      }
     }
   } else if (ctype == 3) { /* c <= x <= d (elementwise) */
-    for (sl_int i = 0; i < mnl; i++) {
-      if (y[i] < *c)
-	y[i] = *c;
-      else if (y[i] > *d)
-	y[i] = *d;
+    for (int i = 0; i < int(sz[2]); i++) {
+      for (int j = 0; j < int(sz[1]); j++) {
+	for (int k = 0; k < int(sz[0]); k++) {
+	  if (y[k][j][i] < *c)
+	    y[k][j][i] = *c;
+	  else if (y[k][j][i] > *d)
+	    y[k][j][i] = *d;
+	}
+      }
     }
   }
 }
 
 /* Function used to calculate operations involving D and D^T*/
-real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[], const real tau,
+real DTD(voxel_data &x, voxel_data &Nablafx, real uijl[], const real tau,
 	 const int Ddim, const int Dm, const int Dn, const int Dl,
-	 const sl_int prodDims)
+	 const voxel_data::size_type sz[])
 {
   real tv_tau_x=0;
   real taud2 = tau / 2;
   real tau2 = 1 / (tau * 2);
 
   /* Clear the current gradient */
-  for (sl_int i = 0; i < prodDims; i++)
-    Nablafx[i] = 0.0;
+  for (int i = 0; i < int(sz[2]); i++)
+    for (int j = 0; j < int(sz[1]); j++)
+      for (int k = 0; k < int(sz[0]); k++)
+	Nablafx[k][j][i] = 0.0;
 
   if (Ddim == 2) {
     for (sl_int u = 0; u <= Dm - 1; u++) {
@@ -536,8 +593,8 @@ real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[], const real tau,
 	sl_int i2 = u + ((v + 1) % Dn) * Dm;
 	sl_int i3= u + v * Dm;
 
-	uijl[0] = x[i1] - x[i3];
-	uijl[1] = x[i2] - x[i3];
+	uijl[0] = (x.data())[i1] - (x.data())[i3];
+	uijl[1] = (x.data())[i2] - (x.data())[i3];
 
 	real c1 = std::sqrt(uijl[0] * uijl[0] + uijl[1] * uijl[1]);
 	real c2;
@@ -552,10 +609,10 @@ real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[], const real tau,
 	uijl[0] /= c2;
 	uijl[1] /= c2;
 
-	Nablafx[i1] += uijl[0];
-	Nablafx[i3] -= uijl[0];
-	Nablafx[i2] += uijl[1];
-	Nablafx[i3] -= uijl[1];
+	(Nablafx.data())[i1] += uijl[0];
+	(Nablafx.data())[i3] -= uijl[0];
+	(Nablafx.data())[i2] += uijl[1];
+	(Nablafx.data())[i3] -= uijl[1];
       }
     }
 
@@ -579,9 +636,9 @@ real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[], const real tau,
 
 	  s4 += mn;
 
-	  uijl[0] = x[i1] - x[i4];
-	  uijl[1] = x[i2] - x[i4];
-	  uijl[2] = x[i3] - x[i4];
+	  uijl[0] = (x.data())[i1] - (x.data())[i4];
+	  uijl[1] = (x.data())[i2] - (x.data())[i4];
+	  uijl[2] = (x.data())[i3] - (x.data())[i4];
 
 	  real c1 = std::sqrt(uijl[0] * uijl[0] + uijl[1] * uijl[1]
 			      + uijl[2] * uijl[2]);
@@ -598,10 +655,10 @@ real DTD(voxel_type x[], voxel_type Nablafx[], real uijl[], const real tau,
 	  uijl[1] /= c2;
 	  uijl[2] /= c2;
 
-	  Nablafx[i1] += uijl[0];
-	  Nablafx[i4] -= uijl[0] + uijl[1] + uijl[2];
-	  Nablafx[i2] += uijl[1];
-	  Nablafx[i3] += uijl[2];
+	  (Nablafx.data())[i1] += uijl[0];
+	  (Nablafx.data())[i4] -= uijl[0] + uijl[1] + uijl[2];
+	  (Nablafx.data())[i2] += uijl[1];
+	  (Nablafx.data())[i3] += uijl[2];
 
 	}
       }

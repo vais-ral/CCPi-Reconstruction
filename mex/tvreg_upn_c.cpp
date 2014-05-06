@@ -165,6 +165,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     /* Get a pointer to the data space in our newly allocated memory */
     xkp1 = (float*)mxGetPr(plhs[0]);
+    voxel_data vxkp1(xkp1, boost::extents[D.m][D.n][D.l],
+		     boost::fortran_storage_order());
     fxkp1 = mxGetPr(plhs[1]);
     hxkp1 = mxGetPr(plhs[2]);
     gxkp1 = mxGetPr(plhs[3]);
@@ -188,7 +190,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		    angles, n_rays_y, n_rays_z, n_angles);
 
     int ki = 0;
-    CCPi::tv_regularization::tvreg_core(xkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,
+    CCPi::tv_regularization::tvreg_core(vxkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,
 					voxel_size, b,alpha,tau,bL,bmu,epsb_rel,
 					k_max,D.dim, D.m, D.n, D.l, D.prodDims,
 					ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,

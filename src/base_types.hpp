@@ -23,5 +23,6 @@ typedef float pixel_type;
 typedef float recon_type;
 
 typedef boost::multi_array<voxel_type, 3> voxel_data;
+typedef boost::multi_array<voxel_type, 3> voxel_3d;
 
 #endif // CCPI_RECON_TYPES

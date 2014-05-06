@@ -2,10 +2,10 @@
 #ifndef CCPI_PARALLEL_FORWARD
 #define CCPI_PARALLEL_FORWARD
 
-template <class pixel_t, class voxel_t>
+template <class pixel_t>
 void CCPi::instrument::forward_project(const real det_y[], const real det_z[],
 				       const real phi[], pixel_t ray_data[],
-				       voxel_t *const vol_data,
+				       voxel_data &vol_data,
 				       const int n_angles, const int n_rays_y,
 				       const int n_rays_z,
 				       const real grid_offset[3],
@@ -48,7 +48,7 @@ void CCPi::instrument::forward_project(const real det_y[], const real det_z[],
 
 	/* loop over z values on detector */
 
-	project_singledata<pixel_t, voxel_t, false>(start, end,
+	project_singledata<pixel_t, false>(start, end,
 			   ray_data[ray_offset + curr_ray_y],
 			   vol_data, grid_offset[0], grid_offset[1],
 			   grid_offset[2], voxel_size[0], voxel_size[1],
