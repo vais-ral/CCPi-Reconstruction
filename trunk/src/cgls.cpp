@@ -15,27 +15,33 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
 				  const real voxel_size[3])
 {
   const voxel_data::size_type *sz = voxels.shape();
-  sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
-  voxel_type *const x = voxels.data();
+  //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
+  //voxel_type *const x = voxels.data();
   pixel_type *const b = device->get_pixel_data();
 
   // Prepare for CG iteration.
-  voxel_type *d = new voxel_type[n_vox];
-  for (sl_int i = 0; i < n_vox; i++)
-    d[i] = 0.0;
+  voxel_data d(boost::extents[sz[0]][sz[1]][sz[2]],
+	       boost::fortran_storage_order());
+  //voxel_type *d = new voxel_type[n_vox];
+  for (sl_int i = 0; i < sl_int(sz[2]); i++)
+    for (sl_int j = 0; j < sl_int(sz[1]); j++)
+      for (sl_int k = 0; k < sl_int(sz[0]); k++)
+	d[i][j][k] = 0.0;
   initialise_progress(2 * iterations + 1, "CGLS iterating...");
   device->backward_project(d, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
   sl_int n_rays = device->get_data_size();
 
   real normr2 = 0.0;
-  for (sl_int i = 0; i < n_vox; i++)
-    normr2 += d[i] * d[i];
+  for (sl_int i = 0; i < sl_int(sz[2]); i++)
+    for (sl_int j = 0; j < sl_int(sz[1]); j++)
+      for (sl_int k = 0; k < sl_int(sz[0]); k++)
+	normr2 += d[i][j][k] * d[i][j][k];
   update_progress(1);
 
   // Iterate.
   timer iter_time(USE_TIMER);
-  for (int j = 0; j < iterations; j++) {
+  for (int iter = 0; iter < iterations; iter++) {
     //add_output("iter ");
     //add_output(j + 1);
     //send_output();
@@ -50,31 +56,41 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
     for (sl_int i = 0; i < n_rays; i++)
       alpha += Ad[i] * Ad[i];
     alpha = normr2 / alpha;
-    for (sl_int i = 0; i < n_vox; i++)
-      x[i] += alpha * d[i];
+    for (sl_int i = 0; i < sl_int(sz[2]); i++)
+      for (sl_int j = 0; j < sl_int(sz[1]); j++)
+	for (sl_int k = 0; k < sl_int(sz[0]); k++)
+	  voxels[i][j][k] += alpha * d[i][j][k];
     for (sl_int i = 0; i < n_rays; i++)
       b[i] -= alpha * Ad[i];
     delete [] Ad;
-	update_progress(2 * j + 2);
-    voxel_type *s = new voxel_type[n_vox];
-    for (sl_int i = 0; i < n_vox; i++)
-      s[i] = 0.0;
-    device->backward_project(b, s, origin, voxel_size,
-			     (int)sz[0], (int)sz[1], (int)sz[2]);
+    update_progress(2 * iter + 2);
+    {
+      voxel_data s(boost::extents[sz[0]][sz[1]][sz[2]],
+		   boost::fortran_storage_order());
+      for (sl_int i = 0; i < sl_int(sz[2]); i++)
+	for (sl_int j = 0; j < sl_int(sz[1]); j++)
+	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
+	    s[i][j][k] = 0.0;
+      device->backward_project(b, s, origin, voxel_size,
+			       (int)sz[0], (int)sz[1], (int)sz[2]);
 
-    // Update d vector.
-    real normr2_new = 0.0;
-    for (sl_int i = 0; i < n_vox; i++)
-      normr2_new += s[i] * s[i];
-    real beta = normr2_new / normr2;
-    normr2 = normr2_new;
-    for (sl_int i = 0; i < n_vox; i++)
-      d[i] = s[i] + beta * d[i];
-    delete [] s;
-	update_progress(2 * j + 3);
+      // Update d vector.
+      real normr2_new = 0.0;
+      for (sl_int i = 0; i < sl_int(sz[2]); i++)
+	for (sl_int j = 0; j < sl_int(sz[1]); j++)
+	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
+	    normr2_new += s[i][j][k] * s[i][j][k];
+      real beta = normr2_new / normr2;
+      normr2 = normr2_new;
+      for (sl_int i = 0; i < sl_int(sz[2]); i++)
+	for (sl_int j = 0; j < sl_int(sz[1]); j++)
+	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
+	    d[i][j][k] = s[i][j][k] + beta * d[i][j][k];
+    }
+    update_progress(2 * iter + 3);
     iter_time.accumulate();
     iter_time.output("Iteration ");
   }
-  delete [] d;
+  //delete [] d;
   return true;
 }

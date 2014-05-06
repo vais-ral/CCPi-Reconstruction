@@ -79,10 +79,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     plhs[0] = mxCreateNumericMatrix(im_size_matlab[0]*im_size_matlab[1]*im_size_matlab[2], 1, mxSINGLE_CLASS, mxREAL);
     vol_data = (float *) mxGetData(plhs[0]);
+    voxel_data
+      vx(vol_data, boost::extents[im_size_matlab[0]][im_size_matlab[1]][im_size_matlab[2]], boost::fortran_storage_order());
 
     CCPi::instrument::backward_project(*source_x, *source_y, *source_z, *det_x,
-				       det_y, det_z, angles, ray_data,
-				       (float *const) vol_data,
+				       det_y, det_z, angles, ray_data, vx,
 				       n_angles, n_rays_y, n_rays_z,
 				       grid_offset, voxel_size,
 				       im_size_matlab[0], im_size_matlab[1],

@@ -138,30 +138,32 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   image_offset[2] = -image_vol[2] / 2;
 
   // set up phantom volume
+  voxel_data x(boost::extents[nx][ny][nz], boost::fortran_storage_order());
   sl_int n_vox = nx * ny * nz;
-  voxel_type *x = new voxel_type[n_vox];
-  for (sl_int i = 0; i < n_vox; i++)
-    x[i] = 0.0;
+  for (sl_int i = 0; i < nz; i++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nx; k++)
+	x[k][j][i] = 0.0;
 
   // add cubes - column major
   for (int i = 108-1; i < 189; i++) {
     for (int j = 108-1; j < 189; j++) {
       for (int k = 58-1; k < 139; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i][j][k] = 1;
       }
     }
   }
   for (int i = 190-1; i < 271; i++) {
     for (int j = 190-1; j < 271; j++) {
       for (int k = 140-1; k < 221; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i][j][k] = 1;
       }
     }
   }
   for (int i = 272-1; i < 353; i++) {
     for (int j = 272-1; j < 353; j++) {
       for (int k = 222-1; k < 303; k++) {
-        x[k * nx * ny + j * nx + i] = 1;
+        x[i][j][k] = 1;
       }
     }
   }
@@ -170,7 +172,7 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   pixel_type *pixels = create_pixel_data();
   // perform projection step
   forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
-  delete [] x;
+  //delete [] x;
   return true;
 }
 
