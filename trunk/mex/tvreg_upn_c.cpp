@@ -190,7 +190,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		    angles, n_rays_y, n_rays_z, n_angles);
 
     int ki = 0;
-    CCPi::tv_regularization::tvreg_core(vxkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,
+    CCPi::tv_regularization::tvreg_core(vxkp1,fxkp1,hxkp1,gxkp1,fxkp1l,ki,
 					voxel_size, b,alpha,tau,bL,bmu,epsb_rel,
 					k_max,D.dim, D.m, D.n, D.l, D.prodDims,
 					ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,

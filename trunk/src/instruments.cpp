@@ -43,8 +43,10 @@ void CCPi::instrument::set_pixel_data(pixel_type *p, const sl_int n)
   pixel_data = p;
 }
 
+/*
 void CCPi::instrument::set_phi(real *p, const int n)
 {
   phi = p;
   n_angles = n;
 }
+*/

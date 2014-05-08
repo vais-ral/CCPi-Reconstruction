@@ -34,17 +34,20 @@ namespace CCPi {
     bool reconstruct(const instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
 
-    static void tvreg_core(voxel_data &xkp1, real *fxkp1, real *hxkp1,
-			   real *gxkp1, real *fxkp1l, int *kend,
+    static void tvreg_core(voxel_data &xkp1, real &fxkp1, real &hxkp1,
+			   real &gxkp1, std::vector<real> &fxkp1l, int &kend,
 			   const real voxel_size[], const pixel_type *b,
 			   const real alpha, real tau, real bL, real bmu,
 			   real epsb_rel,int k_max, const int Ddim,
 			   const int Dm, const int Dn, const int Dl,
-			   const sl_int prodDims, int ctype, real *d, real *c,
-			   const bool ghxl, const bool xl, real *hxkp1l,
-			   real *gxkp1l, real *xlist, const bool verbose,
-			   real *numGrad, real* numBack, real *numFunc,
-			   real *numRest, real *Lklist, real *muklist,
+			   const sl_int prodDims, const int ctype,
+			   std::vector<real> &d, std::vector<real> &c,
+			   const bool ghxl, const bool xl,
+			   std::vector<real> &hxkp1l, std::vector<real> &gxkp1l,
+			   std::vector<real> &xlist, const bool verbose,
+			   int &numGrad, int &numBack, int &numFunc,
+			   int &numRest, std::vector<real> &Lklist,
+			   std::vector<real> &muklist,
 			   std::list<int> &rp, const real grid_offset[],
 			   const class instrument *device);
 

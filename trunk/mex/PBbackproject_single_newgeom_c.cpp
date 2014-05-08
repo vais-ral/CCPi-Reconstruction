@@ -82,7 +82,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     voxel_data
       vx(vol_data, boost::extents[im_size_matlab[0]][im_size_matlab[1]][im_size_matlab[2]], boost::fortran_storage_order());
 
-    CCPi::instrument::backward_project(det_y, det_z, angles, ray_data, vx,
+    std::vector<real> y_pix(n_rays_y);
+    for (int i = 0; i < n_rays_y; i++)
+      y_pix[i] = det_y[i];
+    std::vector<real> z_pix(n_rays_z);
+    for (int i = 0; i < n_rays_z; i++)
+      z_pix[i] = det_z[i];
+    std::vector<real> v_angles(n_angles);
+    for (int i = 0; i < n_angles; i++)
+      v_angles[i] = angles[i];
+
+    CCPi::instrument::backward_project(y_pix, z_pix, v_angles, ray_data, vx,
 				       n_angles, n_rays_y, n_rays_z,
 				       grid_offset, voxel_size,
 				       im_size_matlab[0], im_size_matlab[1],

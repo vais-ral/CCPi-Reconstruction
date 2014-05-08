@@ -3,8 +3,9 @@
 #define CCPI_PARALLEL_FORWARD
 
 template <class pixel_t>
-void CCPi::instrument::forward_project(const real det_y[], const real det_z[],
-				       const real phi[], pixel_t ray_data[],
+void CCPi::instrument::forward_project(const real_1d &det_y,
+				       const real_1d &det_z,
+				       const real_1d &phi, pixel_t ray_data[],
 				       voxel_data &vol_data,
 				       const int n_angles, const int n_rays_y,
 				       const int n_rays_z,
