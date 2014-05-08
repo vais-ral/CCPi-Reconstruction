@@ -82,8 +82,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
   plhs[0] = mxCreateNumericMatrix(n_rays_y * n_rays_z * n_angles, 1, mxSINGLE_CLASS, mxREAL);
   ray_data = (float *) mxGetData(plhs[0]);
 
+    std::vector<real> y_pix(n_rays_y);
+    for (int i = 0; i < n_rays_y; i++)
+      y_pix[i] = det_y[i];
+    std::vector<real> z_pix(n_rays_z);
+    for (int i = 0; i < n_rays_z; i++)
+      z_pix[i] = det_z[i];
+    std::vector<real> v_angles(n_angles);
+    for (int i = 0; i < n_angles; i++)
+      v_angles[i] = angles[i];
+
   CCPi::instrument::forward_project(*source_x, *source_y, *source_z, *det_x,
-				    det_y, det_z, angles, ray_data, vx,
+				    y_pix, z_pix, v_angles, ray_data, vx,
 				    n_angles, n_rays_y, n_rays_z,
 				    grid_offset, voxel_size,
 				    im_size_matlab[0], im_size_matlab[1],

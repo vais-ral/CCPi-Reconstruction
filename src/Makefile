@@ -1,6 +1,6 @@
 
 CXX = g++
-MKLINC = -I/opt/intel/composer_xe_2011_sp1.6.233/mkl/include -DMKL_ILP64
+MKLINC = -I/opt/intel/composerxe/mkl/include -DMKL_ILP64
 TIFFINC =
 TIFFLIB = -ltiff
 NXINC = -I/usr/local/nexus/include/nexus -DHAS_NEXUS

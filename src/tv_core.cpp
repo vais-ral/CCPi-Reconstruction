@@ -36,28 +36,34 @@ void ex_sigint(int sig) {
 }
 #endif
 
-static void P(voxel_data &y, const int ctype, const real d[], const real c[],
-	      const voxel_data::size_type sz[]);
-static real DTD(voxel_data &x, voxel_data &Nablafx, real uijl[],
+static void P(voxel_data &y, const int ctype, const std::vector<real> &d,
+	      const std::vector<real> &c, const voxel_data::size_type sz[]);
+static real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 		const real tau, const int Ddim, const int Dm, const int Dn,
 		const int Dl, const voxel_data::size_type sz[]);
 
-void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
-					 real *hxkp1, real *gxkp1, real *fxkp1l,
-					 int *kend, const real voxel_size[],
+void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
+					 real &hxkp1, real &gxkp1,
+					 std::vector<real> &fxkp1l,
+					 int &kend, const real voxel_size[],
 					 const pixel_type *b, const real alpha,
 					 real tau, real bL, real bmu,
 					 real epsb_rel, int k_max,
 					 const int Ddim, const int Dm,
 					 const int Dn, const int Dl,
-					 const sl_int prodDims, int ctype,
-					 real *d, real *c, const bool ghxl,
-					 const bool xl, real *hxkp1l,
-					 real *gxkp1l, real *xlist,
-					 const bool verbose, real *numGrad,
-					 real *numBack, real *numFunc,
-					 real *numRest, real *Lklist,
-					 real *muklist, std::list<int> &rp,
+					 const sl_int prodDims, const int ctype,
+					 std::vector<real> &d,
+					 std::vector<real> &c, const bool ghxl,
+					 const bool xl,
+					 std::vector<real> &hxkp1l,
+					 std::vector<real> &gxkp1l,
+					 std::vector<real> &xlist,
+					 const bool verbose, int &numGrad,
+					 int &numBack, int &numFunc,
+					 int &numRest,
+					 std::vector<real> &Lklist,
+					 std::vector<real> &muklist,
+					 std::list<int> &rp,
 					 const real grid_offset[],
 					 const instrument *device)
 {
@@ -92,13 +98,13 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
   voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
 	      boost::fortran_storage_order());
   pixel_type *tv2 = new pixel_type[n_rays];
-  real *uijl = new real[Ddim];
+  std::vector<real> uijl(Ddim);
 
   /* INITIALIZE */
-  *numGrad = 0;
-  *numBack = 0;
-  *numFunc = 0;
-  *numRest = 0;
+  numGrad = 0;
+  numBack = 0;
+  numFunc = 0;
+  numRest = 0;
 
  restart:
   real cumprod = 1.0;
@@ -113,7 +119,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
   dcopy(prodDims, xkp1, 1, yk, 1);
 
   /* Calculate the gradient in yk=xk+1 */
-  (*numGrad)++;
+  numGrad++;
 
   /* alpha*T_tau(y_k) (Nablafyk is returned as gradient) */
   real fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, sz);
@@ -132,7 +138,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
   for (sl_int i = 0; i < n_rays; i++)
     tv2[i] = tv2[i] - b[i];
 
-  (*numFunc)++;
+  numFunc++;
   /* fyk + 0.5*||A*y_k - b||^2 */
   fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
@@ -168,7 +174,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 	tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
   /* alpha*T_tau(xkp1+1) (Nablafyk is returned as gradient) */
-  *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
+  hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
   for (sl_int i = 0; i < n_rays; i++)
@@ -180,15 +186,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
     tv2[i] -= b[i];
 
   /* 0.5*||A*x_k+1 - b||^2 */
-  *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+  gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
-  (*numFunc)++;
+  numFunc++;
   // f(x_k+1) = h(x_k+1) + g(x_k+1) = alpha*T_tau(x_k+1) + 0.5*||A*x_k+1 - b||^2
-  *fxkp1 = *hxkp1 + *gxkp1;
+  fxkp1 = hxkp1 + gxkp1;
 
-  while (*fxkp1 / (1+1e-14) > fyk + ddot(prodDims, Nablafyk, 1, tv, 1)
+  while (fxkp1 / (1+1e-14) > fyk + ddot(prodDims, Nablafyk, 1, tv, 1)
 	 + (bL / 2) * std::pow(dnrm2(prodDims, tv, 1), 2)) {
-    (*numBack)++;
+    numBack++;
     bL *= s_L;
 
     /* Take the projected step from yk to xkp1 */
@@ -208,7 +214,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 	  tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
     /* alpha*T_tau(x_k+1) */
-    *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
+    hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
     for (sl_int i = 0; i < n_rays; i++)
@@ -220,12 +226,12 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
       tv2[i] -= b[i];
 
     /* 0.5*||A*x_k+1 - b||^2 */
-    *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+    gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
-    (*numFunc)++;
+    numFunc++;
     /* f(x_k+1) = h(x_k+1) + g(x_k+1)
        = alpha*T_tau(x_k+1) + 0.5*||A*x_k+1 - b||^2 */
-    *fxkp1 = *hxkp1 + *gxkp1;
+    fxkp1 = hxkp1 + gxkp1;
   }
 
   /* Calculate initial gradient map */
@@ -264,7 +270,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
   for (sl_int i = 0; i < n_rays; i++)
     tv2[i] -= b[i];
 
-  (*numFunc)++;
+  numFunc++;
   fxk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
   // BGS - does this duplicate at lot of the previous code suggesting a common
@@ -275,7 +281,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
     Lklist[kk] = bL;
     muklist[kk] = bmu;
     /* Calculate the gradient in yk */
-    (*numGrad)++;
+    numGrad++;
     fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     for (int i = 0; i < int(sz[2]); i++)
@@ -290,7 +296,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
     for (sl_int i = 0; i < n_rays; i++)
       tv2[i] -= b[i];
 
-    (*numFunc)++;
+    numFunc++;
     fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
     for (int i = 0; i < int(sz[2]); i++)
@@ -338,7 +344,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 	for (int k = 0; k < int(sz[0]); k++)
 	  tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
-    *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
+    hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
     for (sl_int i = 0; i < n_rays; i++)
@@ -347,15 +353,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
     for (sl_int i = 0; i < n_rays; i++)
       tv2[i] -= b[i];
 
-    *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+    gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
-    (*numFunc)++;
-    *fxkp1 = *hxkp1 + *gxkp1;
+    numFunc++;
+    fxkp1 = hxkp1 + gxkp1;
 
-    while (*fxkp1 / (real(1) + real(1e-14)) > fyk
+    while (fxkp1 / (real(1) + real(1e-14)) > fyk
 	   + ddot(prodDims, Nablafyk, 1, tv, 1)
 	   + (bL / real(2)) * std::pow(dnrm2(prodDims, tv, 1), 2)) {
-      (*numBack)++;
+      numBack++;
       bL *= s_L;
 
       /* Take the projected step from yk to xkp1 */
@@ -370,7 +376,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 	  for (int k = 0; k < int(sz[0]); k++)
 	    tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
 
-      *hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
+      hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
       /*-----------------Forward projection--------------------------------*/
       for (sl_int i = 0; i < n_rays; i++)
@@ -379,17 +385,17 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
       for (sl_int i = 0; i < n_rays; i++)
 	tv2[i] -= b[i];
 
-      *gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+      gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
-      (*numFunc)++;
-      *fxkp1 = *hxkp1 + *gxkp1;
+      numFunc++;
+      fxkp1 = hxkp1 + gxkp1;
     }
 
-    fxkp1l[kk] = *fxkp1;
+    fxkp1l[kk] = fxkp1;
 
     if (ghxl) {
-      hxkp1l[kk] = *hxkp1;
-      gxkp1l[kk] = *gxkp1;
+      hxkp1l[kk] = hxkp1;
+      gxkp1l[kk] = gxkp1;
     }
 
     /* store the iterate if requested */
@@ -407,10 +413,10 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 
     if(verbose)
       printf("k=%6d  f(x^k+1)=%e  ||G_L(x^k+1)||=%e  L_k=%.2e  mu_k=%.2e\n",
-	     kk, *fxkp1, nGt, bL, bmu);
+	     kk, fxkp1, nGt, bL, bmu);
 
     /* calculate the gradient in xkp1 */
-    (*numGrad)++;
+    numGrad++;
     for (int i = 0; i < int(sz[2]); i++)
       for (int j = 0; j < int(sz[1]); j++)
 	for (int k = 0; k < int(sz[0]); k++)
@@ -492,7 +498,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 	/*list of restart positions */
 	rp.push_back(kk);
 	bmu *= s_mu;
-	(*numRest)++;
+	numRest++;
 	goto restart;
       }
     }
@@ -522,7 +528,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
     thetak = thetakp1;
     dcopy(prodDims, xkp1, 1, xk, 1);
 
-    fxk = *fxkp1;
+    fxk = fxkp1;
 
   }
 
@@ -535,14 +541,14 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real *fxkp1,
 
   //delete [] tv;
   delete [] tv2;
-  delete [] uijl;
+  //delete [] uijl;
   //delete [] temp;
 
-  *kend = kk;
+  kend = kk;
 }
 
-void P(voxel_data &y, const int ctype, const real d[], const real c[],
-       const voxel_data::size_type sz[])
+void P(voxel_data &y, const int ctype, const std::vector<real> &d,
+       const std::vector<real> &c, const voxel_data::size_type sz[])
 {
   if (ctype == 2) { /* c <= x <= d (elementwise) */
     sl_int mnl = 0;
@@ -561,10 +567,10 @@ void P(voxel_data &y, const int ctype, const real d[], const real c[],
     for (int i = 0; i < int(sz[2]); i++) {
       for (int j = 0; j < int(sz[1]); j++) {
 	for (int k = 0; k < int(sz[0]); k++) {
-	  if (y[k][j][i] < *c)
-	    y[k][j][i] = *c;
-	  else if (y[k][j][i] > *d)
-	    y[k][j][i] = *d;
+	  if (y[k][j][i] < c[0])
+	    y[k][j][i] = c[0];
+	  else if (y[k][j][i] > d[0])
+	    y[k][j][i] = d[0];
 	}
       }
     }
@@ -572,9 +578,9 @@ void P(voxel_data &y, const int ctype, const real d[], const real c[],
 }
 
 /* Function used to calculate operations involving D and D^T*/
-real DTD(voxel_data &x, voxel_data &Nablafx, real uijl[], const real tau,
-	 const int Ddim, const int Dm, const int Dn, const int Dl,
-	 const voxel_data::size_type sz[])
+real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
+	 const real tau, const int Ddim, const int Dm, const int Dn,
+	 const int Dl, const voxel_data::size_type sz[])
 {
   real tv_tau_x=0;
   real taud2 = tau / 2;

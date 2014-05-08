@@ -109,7 +109,7 @@ void CCPi::parallel_beam::setup_projection_matrix(const real origin[3],
   ptime.output("projection map");
 }
 
-void CCPi::parallel_beam::forward_project_matrix(const real det_z[],
+void CCPi::parallel_beam::forward_project_matrix(const real_1d &det_z,
 						 pixel_type ray_data[],
 						 voxel_data &vol_data,
 						 const int n_angles,
@@ -150,7 +150,7 @@ void CCPi::parallel_beam::forward_project_matrix(const real det_z[],
   }
 }
 
-void CCPi::parallel_beam::backward_project_matrix(const real det_z[],
+void CCPi::parallel_beam::backward_project_matrix(const real_1d &det_z,
 						  pixel_type ray_data[],
 						  voxel_data &vol_data,
 						  const int n_angles,

@@ -104,9 +104,8 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
   return ok;
 }
 
-bool CCPi::write_tiff(const std::string filename, unsigned short sdata[],
-		      unsigned char cdata[], const int nx, const int ny,
-		      const int width)
+bool CCPi::write_tiff(const std::string filename, unsigned char data[],
+		      const int nx, const int ny, const int width)
 {
   bool ok = true;
   TIFF *tif = TIFFOpen(filename.c_str(), "w");
@@ -149,7 +148,7 @@ bool CCPi::write_tiff(const std::string filename, unsigned short sdata[],
 	      for (int count = 0; (count < ny and ok); count++) {
 		// We keep the order to match the bottom up orientation
 		for (int i = 0; i < strip_size; i++)
-		  buf[i] = cdata[(ny - count - 1) * strip_size + i];
+		  buf[i] = data[(ny - count - 1) * strip_size + i];
 		if ((result = TIFFWriteEncodedStrip(tif, count, buf,
 						    strip_size)) == -1) {
 		  report_error("Write error in ", filename);

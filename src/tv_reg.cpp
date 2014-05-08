@@ -44,12 +44,12 @@ bool CCPi::tv_regularization::reconstruct(const instrument *device,
   real bL = init_L;
   real bmu = init_mu;
 
-  real numGrad = 0.0;
-  real numBack = 0.0;
-  real numFunc = 0.0;
-  real numRest = 0.0;
-  real *Lklist = new real[k_max + 1];
-  real *muklist = new real[k_max + 1];
+  int numGrad = 0;
+  int numBack = 0;
+  int numFunc = 0;
+  int numRest = 0;
+  std::vector<real> Lklist(k_max + 1);
+  std::vector<real> muklist(k_max + 1);
 
   // Todo - do we want to preserve the original voxels?
   //voxel_type *x = new voxel_type[n_vox];
@@ -58,65 +58,47 @@ bool CCPi::tv_regularization::reconstruct(const instrument *device,
   real fxkp1 = 0.0;
   real hxkp1 = 0.0;
   real gxkp1 = 0.0;
-  real *fxkp1l = new real[k_max + 1];
+  std::vector<real> fxkp1l(k_max + 1);
   int k = 0;
 			
   // Initialize vectors to hold tv and fidelity of the iterates
   // Todo - use this?
   bool ghxl = false;
-  real *hxkp1l = 0;
-  real *gxkp1l = 0;
-  if (ghxl) {
-    hxkp1l = new real[k_max + 1];
-    gxkp1l = new real[k_max + 1];
-  }
+  int tsize = 1;
+  if (ghxl)
+    tsize = k_max + 1;
+  std::vector<real> hxkp1l(tsize);
+  std::vector<real> gxkp1l(tsize);
 
   // Array to hold iterates in columns - Todo, use this?
   bool xl = false;
-  real *xlist = 0;
+  std::vector<real> xlist(1);
   if (xl and k_max * n_vox < 1e7)
-    xlist = new real[n_vox * (k_max + 1)];
+    xlist.resize(n_vox * (k_max + 1));
 
   // setp up constraints - these are correct if constraint == 3
-  real cbase = 0.0;
-  real dbase = 1.0;
-  real *c = &cbase;
-  real *d = &dbase;
+  std::vector<real> c(1);
+  std::vector<real> d(1);
   if (constraint == 2) {
-    c = new real[n_vox];
-    d = new real[n_vox];
+    // Todo - 3d voxel_data objects?
+    c.resize(n_vox);
+    d.resize(n_vox);
     for (sl_int i = 0; i < n_vox; i++)
       c[i] = 0.0;
     for (sl_int i = 0; i < n_vox; i++)
       d[i] = 1.0;
+  } else {
+    c[0] = 0.0;
+    d[0] = 1.0;
   }
 
   std::list<int> rp;
 
-  tvreg_core(voxels, &fxkp1, &hxkp1, &gxkp1, fxkp1l, &k, voxel_size, b, alpha,
+  tvreg_core(voxels, fxkp1, hxkp1, gxkp1, fxkp1l, k, voxel_size, b, alpha,
 	     tau, bL, bmu, epsb_rel, k_max, 3, sz[0], sz[1], sz[2], n_vox,
 	     constraint, d, c, ghxl, xl, hxkp1l, gxkp1l, xlist, verbose,
-	     &numGrad, &numBack, &numFunc, &numRest, Lklist, muklist, rp,
+	     numGrad, numBack, numFunc, numRest, Lklist, muklist, rp,
 	     origin, device);
-
-  if (constraint == 2) {
-    delete [] c;
-    delete [] d;
-  }
-
-  // Todo - use xlist etc and other values
-  // Truncate excess zeros in fxkp1l, xlist, gxkp1l and hxkp1l
-  if (ghxl) {
-    delete [] gxkp1l;
-    delete [] hxkp1l;
-  }
-  if (xlist != 0)
-    delete [] xlist;
-
-  delete [] fxkp1l;
-  //delete [] x;
-  delete [] muklist;
-  delete [] Lklist;
 
   // Todo - copy rp into rkList
 
