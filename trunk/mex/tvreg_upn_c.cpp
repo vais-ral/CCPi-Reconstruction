@@ -118,6 +118,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     n_rays_y = mxGetM(prhs[20]);
     n_rays_z = mxGetM(prhs[21]);
     n_angles = mxGetM(prhs[22]);
+    pixel_data px(b, boost::extents[n_angles][n_rays_z][n_rays_y]);
         
     /*obtain the dimensions */
     dim = std::max( mxGetM(Mdims), mxGetN(Mdims) );
@@ -191,7 +192,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     int ki = 0;
     CCPi::tv_regularization::tvreg_core(vxkp1,fxkp1,hxkp1,gxkp1,fxkp1l,ki,
-					voxel_size, b,alpha,tau,bL,bmu,epsb_rel,
+					voxel_size,px,alpha,tau,bL,bmu,epsb_rel,
 					k_max,D.dim, D.m, D.n, D.l, D.prodDims,
 					ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,
 					gxkp1l,xlist,(bool)verbose,numGrad,

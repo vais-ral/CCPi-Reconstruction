@@ -10,19 +10,21 @@
 #  define USE_TIMER false
 #endif // USE_TIMER
 
-bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
+bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
 				  const real origin[3],
 				  const real voxel_size[3])
 {
   const voxel_data::size_type *sz = voxels.shape();
   //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
   //voxel_type *const x = voxels.data();
-  pixel_type *const b = device->get_pixel_data();
+  pixel_data &b = device->get_pixel_data();
+  int n_angles = device->get_num_angles();
+  int n_h = device->get_num_h_pixels();
+  int n_v = device->get_num_v_pixels();
 
   // Prepare for CG iteration.
   voxel_data d(boost::extents[sz[0]][sz[1]][sz[2]],
 	       boost::fortran_storage_order());
-  //voxel_type *d = new voxel_type[n_vox];
   for (sl_int i = 0; i < sl_int(sz[2]); i++)
     for (sl_int j = 0; j < sl_int(sz[1]); j++)
       for (sl_int k = 0; k < sl_int(sz[0]); k++)
@@ -30,7 +32,6 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
   initialise_progress(2 * iterations + 1, "CGLS iterating...");
   device->backward_project(d, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
-  sl_int n_rays = device->get_data_size();
 
   real normr2 = 0.0;
   for (sl_int i = 0; i < sl_int(sz[2]); i++)
@@ -47,22 +48,29 @@ bool CCPi::cgls_base::reconstruct(const instrument *device, voxel_data &voxels,
     //send_output();
     iter_time.reset();
     // Update x and r vectors.
-    pixel_type *Ad = new pixel_type[n_rays];
-    for (sl_int i = 0; i < n_rays; i++)
-      Ad[i] = 0.0;
-    device->forward_project(Ad, d, origin, voxel_size,
-			    (int)sz[0], (int)sz[1], (int)sz[2]);
-    real alpha = 0.0;
-    for (sl_int i = 0; i < n_rays; i++)
-      alpha += Ad[i] * Ad[i];
-    alpha = normr2 / alpha;
-    for (sl_int i = 0; i < sl_int(sz[2]); i++)
-      for (sl_int j = 0; j < sl_int(sz[1]); j++)
-	for (sl_int k = 0; k < sl_int(sz[0]); k++)
-	  voxels[i][j][k] += alpha * d[i][j][k];
-    for (sl_int i = 0; i < n_rays; i++)
-      b[i] -= alpha * Ad[i];
-    delete [] Ad;
+    {
+      pixel_data Ad(boost::extents[n_angles][n_v][n_h]);
+      for (sl_int i = 0; i < n_angles; i++)
+	for (sl_int j = 0; j < n_v; j++)
+	  for (sl_int k = 0; k < n_h; k++)
+	    Ad[i][j][k] = 0.0;
+      device->forward_project(Ad, d, origin, voxel_size,
+			      (int)sz[0], (int)sz[1], (int)sz[2]);
+      real alpha = 0.0;
+      for (sl_int i = 0; i < n_angles; i++)
+	for (sl_int j = 0; j < n_v; j++)
+	  for (sl_int k = 0; k < n_h; k++)
+	    alpha += Ad[i][j][k] * Ad[i][j][k];
+      alpha = normr2 / alpha;
+      for (sl_int i = 0; i < sl_int(sz[2]); i++)
+	for (sl_int j = 0; j < sl_int(sz[1]); j++)
+	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
+	    voxels[i][j][k] += alpha * d[i][j][k];
+      for (sl_int i = 0; i < n_angles; i++)
+	for (sl_int j = 0; j < n_v; j++)
+	  for (sl_int k = 0; k < n_h; k++)
+	    b[i][j][k] -= alpha * Ad[i][j][k];
+    }
     update_progress(2 * iter + 2);
     {
       voxel_data s(boost::extents[sz[0]][sz[1]][sz[2]],

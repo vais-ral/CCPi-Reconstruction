@@ -4,8 +4,8 @@
 
 namespace CCPi {
 
-  bool read_tiff(const std::string filename, pixel_type pixel_data[],
-		 const int n_h_pixels, const int n_v_pixels);
+  bool read_tiff(const std::string filename, pixel_data &pixels,
+		 const int angle, const int n_h_pixels, const int n_v_pixels);
   bool write_tiff(const std::string filename, unsigned char data[],
 		  const int nx, const int ny, const int width);
 

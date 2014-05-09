@@ -46,7 +46,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 					 real &hxkp1, real &gxkp1,
 					 std::vector<real> &fxkp1l,
 					 int &kend, const real voxel_size[],
-					 const pixel_type *b, const real alpha,
+					 const pixel_data &b, const real alpha,
 					 real tau, real bL, real bmu,
 					 real epsb_rel, int k_max,
 					 const int Ddim, const int Dm,
@@ -65,7 +65,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 					 std::vector<real> &muklist,
 					 std::list<int> &rp,
 					 const real grid_offset[],
-					 const instrument *device)
+					 instrument *device)
 {
   real q;
   real thetakp1;
@@ -77,7 +77,10 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   real Lm1;
   real nGtm1;
   real gamma0 = 0.0;
-  sl_int n_rays = device->get_data_size();
+  int n_angles = device->get_num_angles();
+  int n_v = device->get_num_v_pixels();
+  int n_h = device->get_num_h_pixels();
+  sl_int n_rays = sl_int(n_angles) * sl_int(n_v) * sl_int(n_h);
 
   INITBREAK
 
@@ -97,7 +100,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   /*temp vectors */
   voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
 	      boost::fortran_storage_order());
-  pixel_type *tv2 = new pixel_type[n_rays];
+  pixel_data tv2(boost::extents[n_angles][n_v][n_h]);
   std::vector<real> uijl(Ddim);
 
   /* INITIALIZE */
@@ -130,13 +133,17 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
       for (int k = 0; k < int(sz[0]); k++)
 	Nablafyk[k][j][i] *= alpha;
   /*-----------------Forward projection--------------------------------*/
-  for (sl_int i = 0; i < n_rays; i++)
-    tv2[i] = 0;
+  for (int i = 0; i < n_angles; i++)
+    for (int j = 0; j < n_v; j++)
+      for (int k = 0; k < n_h; k++)
+	tv2[i][j][k] = 0.0;
   /*tv2 = A*yk */
   device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = tv2 - b */
-  for (sl_int i = 0; i < n_rays; i++)
-    tv2[i] = tv2[i] - b[i];
+  for (int i = 0; i < n_angles; i++)
+    for (int j = 0; j < n_v; j++)
+      for (int k = 0; k < n_h; k++)
+	tv2[i][j][k] = tv2[i][j][k] - b[i][j][k];
 
   numFunc++;
   /* fyk + 0.5*||A*y_k - b||^2 */
@@ -177,13 +184,17 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  for (sl_int i = 0; i < n_rays; i++)
-    tv2[i] = 0;
+  for (int i = 0; i < n_angles; i++)
+    for (int j = 0; j < n_v; j++)
+      for (int k = 0; k < n_h; k++)
+	tv2[i][j][k] = 0.0;
   /*tv2 = A*x_k+1 */
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = (A*x_k+1 - b) */
-  for (sl_int i = 0; i < n_rays; i++)
-    tv2[i] -= b[i];
+  for (int i = 0; i < n_angles; i++)
+    for (int j = 0; j < n_v; j++)
+      for (int k = 0; k < n_h; k++)
+	tv2[i][j][k] -= b[i][j][k];
 
   /* 0.5*||A*x_k+1 - b||^2 */
   gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
@@ -217,13 +228,17 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    for (sl_int i = 0; i < n_rays; i++)
-      tv2[i] = 0;
+    for (int i = 0; i < n_angles; i++)
+      for (int j = 0; j < n_v; j++)
+	for (int k = 0; k < n_h; k++)
+	  tv2[i][j][k] = 0.0;
     /*tv2 = A*x_k+1 */
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
     /* tv2 = (A*x_k+1 - b) */
-    for (sl_int i = 0; i < n_rays; i++)
-      tv2[i] -= b[i];
+    for (int i = 0; i < n_angles; i++)
+      for (int j = 0; j < n_v; j++)
+	for (int k = 0; k < n_h; k++)
+	  tv2[i][j][k] -= b[i][j][k];
 
     /* 0.5*||A*x_k+1 - b||^2 */
     gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
@@ -264,11 +279,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   real fxk = alpha*DTD(xkp1,Nablafxkp1,uijl,tau,Ddim,Dm,Dn,Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  for (sl_int i = 0; i < n_rays; i++)
-    tv2[i] = 0;
+  for (int i = 0; i < n_angles; i++)
+    for (int j = 0; j < n_v; j++)
+      for (int k = 0; k < n_h; k++)
+	tv2[i][j][k] = 0.0;
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-  for (sl_int i = 0; i < n_rays; i++)
-    tv2[i] -= b[i];
+  for (int i = 0; i < n_angles; i++)
+    for (int j = 0; j < n_v; j++)
+      for (int k = 0; k < n_h; k++)
+	tv2[i][j][k] -= b[i][j][k];
 
   numFunc++;
   fxk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
@@ -290,11 +309,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 	  Nablafyk[k][j][i] *= alpha;
 
     /*-----------------Forward projection--------------------------------*/
-    for (sl_int i = 0; i < n_rays; i++)
-      tv2[i] = 0;
+    for (int i = 0; i < n_angles; i++)
+      for (int j = 0; j < n_v; j++)
+	for (int k = 0; k < n_h; k++)
+	  tv2[i][j][k] = 0.0;
     device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
-    for (sl_int i = 0; i < n_rays; i++)
-      tv2[i] -= b[i];
+    for (int i = 0; i < n_angles; i++)
+      for (int j = 0; j < n_v; j++)
+	for (int k = 0; k < n_h; k++)
+	  tv2[i][j][k] -= b[i][j][k];
 
     numFunc++;
     fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
@@ -347,11 +370,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    for (sl_int i = 0; i < n_rays; i++)
-      tv2[i] = 0;
+    for (int i = 0; i < n_angles; i++)
+      for (int j = 0; j < n_v; j++)
+	for (int k = 0; k < n_h; k++)
+	  tv2[i][j][k] = 0.0;
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-    for (sl_int i = 0; i < n_rays; i++)
-      tv2[i] -= b[i];
+    for (int i = 0; i < n_angles; i++)
+      for (int j = 0; j < n_v; j++)
+	for (int k = 0; k < n_h; k++)
+	  tv2[i][j][k] -= b[i][j][k];
 
     gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
@@ -379,11 +406,15 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
       hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
       /*-----------------Forward projection--------------------------------*/
-      for (sl_int i = 0; i < n_rays; i++)
-	tv2[i] = 0;
+      for (int i = 0; i < n_angles; i++)
+	for (int j = 0; j < n_v; j++)
+	  for (int k = 0; k < n_h; k++)
+	    tv2[i][j][k] = 0.0;
       device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-      for (sl_int i = 0; i < n_rays; i++)
-	tv2[i] -= b[i];
+      for (int i = 0; i < n_angles; i++)
+	for (int j = 0; j < n_v; j++)
+	  for (int k = 0; k < n_h; k++)
+	    tv2[i][j][k] -= b[i][j][k];
 
       gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
 
@@ -540,7 +571,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   //delete [] xk;
 
   //delete [] tv;
-  delete [] tv2;
+  //delete [] tv2;
   //delete [] uijl;
   //delete [] temp;
 

@@ -34,6 +34,7 @@ typedef boost::multi_array<pixel_type, 3> pixel_3d;
 typedef boost::multi_array<voxel_type, 2> voxel_2d;
 typedef boost::multi_array<voxel_type, 3> voxel_3d;
 
+typedef boost::multi_array<pixel_type, 3> pixel_data;
 typedef boost::multi_array<voxel_type, 3> voxel_data;
 
 #endif // CCPI_RECON_TYPES

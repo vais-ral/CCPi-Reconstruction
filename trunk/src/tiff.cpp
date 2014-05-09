@@ -10,8 +10,9 @@
 #  define USE_TIMER false
 #endif // USE_TIMER
 
-bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
-		     const int n_h_pixels, const int n_v_pixels)
+bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
+		     const int angle, const int n_h_pixels,
+		     const int n_v_pixels)
 {
   bool ok = true;
   TIFF *tif = TIFFOpen(filename.c_str(), "r");
@@ -82,12 +83,10 @@ bool CCPi::read_tiff(const std::string filename, pixel_type pixel_data[],
 		// storage order is [horiz][vert][angles] fortran order
 		// for compatibility with Matlab.
 		uint16 *b = (uint16 *)buf;
-		sl_int angle_offset = 0;
 		for (int v = 0; v < n_v_pixels; v++) {
 		  for (int h = 0; h < n_h_pixels; h++) {
-		    pixel_data[angle_offset] =
+		    pixels[angle][v][h] =
 		      pixel_type(b[(n_v_pixels - v - 1) * n_h_pixels + h]);
-		    angle_offset++;
 		  }
 		}
 	      }

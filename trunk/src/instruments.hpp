@@ -30,22 +30,20 @@ namespace CCPi {
     int get_num_h_pixels() const;
     int get_num_v_pixels() const;
     int total_num_v_pixels() const;
+    int get_num_angles() const;
     virtual bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 				       const int nx, const int ny,
 				       const int nz) const = 0;
     virtual void apply_beam_hardening() = 0;
-    virtual void forward_project(pixel_type *pixels, voxel_data &voxels,
+    virtual void forward_project(pixel_data &pixels, voxel_data &voxels,
 				 const real origin[3], const real width[3],
-				 const int nx, const int ny,
-				 const int nz) const = 0;
-    virtual void backward_project(pixel_type *pixels, voxel_data &voxels,
+				 const int nx, const int ny, const int nz) = 0;
+    virtual void backward_project(pixel_data &pixels, voxel_data &voxels,
 				  const real origin[3], const real width[3],
-				  const int nx, const int ny,
-				  const int nz) const = 0;
+				  const int nx, const int ny, const int nz) = 0;
     virtual void backward_project(voxel_data &voxels,
 				  const real origin[3], const real width[3],
-				  const int nx, const int ny,
-				  const int nz) const = 0;
+				  const int nx, const int ny, const int nz) = 0;
 
     virtual void setup_projection_matrix(const real origin[3],
 					 const real width[3],
@@ -57,57 +55,50 @@ namespace CCPi {
     void set_v_block(const int size);
 
     // parallel beam
-    template <class pixel_t>
     static void forward_project(const real_1d &det_y, const real_1d &det_z,
 				const real_1d &phi,
-				pixel_t ray_data[], voxel_data &vol_data,
+				pixel_data &ray_data, voxel_data &vol_data,
 				const int n_angles, const int n_rays_y,
 				const int n_rays_z, const real grid_offset[3],
 				const real voxel_size[3], const int nx_voxels,
 				const int ny_voxels, const int nz_voxels);
-    template <class pixel_t>
     static void backward_project(const real_1d &det_y, const real_1d &det_z,
 				 const real_1d &phi,
-				 pixel_t ray_data[], voxel_data &vol_data,
+				 pixel_data &ray_data, voxel_data &vol_data,
 				 const int n_angles, const int n_rays_y,
 				 const int n_rays_z, const real grid_offset[3],
 				 const real voxel_size[3], const int nx_voxels,
 				 const int ny_voxels, const int nz_voxels);
     // cone beam
-    template <class pixel_t>
     static void forward_project(const real source_x, const real source_y,
 				const real source_z, const real det_x,
 				const real_1d &det_y, const real_1d &det_z,
 				const real_1d &phi,
-				pixel_t ray_data[], voxel_data &vol_data,
+				pixel_data &ray_data, voxel_data &vol_data,
 				const int n_angles, const int n_rays_y,
 				const int n_rays_z, const real grid_offset[3],
 				const real voxel_size[3], const int nx_voxels,
 				const int ny_voxels, const int nz_voxels);
-    template <class pixel_t>
     static void backward_project(const real source_x, const real source_y,
 				 const real source_z, const real det_x,
 				 const real_1d &det_y, const real_1d &det_z,
 				 const real_1d &phi,
-				 pixel_t ray_data[], voxel_data &vol_data,
+				 pixel_data &ray_data, voxel_data &vol_data,
 				 const int n_angles, const int n_rays_y,
 				 const int n_rays_z, const real grid_offset[3],
 				 const real voxel_size[3], const int nx_voxels,
 				 const int ny_voxels, const int nz_voxels);
 
     // Todo - protect these? CGLS uses them
-    sl_int get_data_size() const;
-    pixel_type *const get_pixel_data() const;
+    pixel_data &get_pixel_data();
 
   protected:
-    pixel_type *create_pixel_data();
-    void set_pixel_data(pixel_type *p, const sl_int n);
+    pixel_data &create_pixel_data();
 
     const real_1d &get_phi() const;
     const real_1d &get_h_pixels() const;
     const real_1d &get_v_pixels() const;
     const real_1d &get_all_v_pixels() const;
-    int get_num_angles() const;
 
     real_1d &set_phi(const int n);
     real_1d &set_h_pixels(const int n);
@@ -125,20 +116,20 @@ namespace CCPi {
     int n_vertical_pixels;
     int total_vertical_pixels;
     int v_offset;
-    pixel_type *pixel_data;
+    pixel_data *pixels;
   };
 
   class cone_beam : public instrument {
   public:
-    void forward_project(pixel_type *pixels, voxel_data &voxels,
+    void forward_project(pixel_data &pixels, voxel_data &voxels,
 			 const real origin[3], const real width[3],
-			 const int nx, const int ny, const int nz) const;
-    void backward_project(pixel_type *pixels, voxel_data &voxels,
+			 const int nx, const int ny, const int nz);
+    void backward_project(pixel_data &pixels, voxel_data &voxels,
 			  const real origin[3], const real width[3],
-			  const int nx, const int ny, const int nz) const;
+			  const int nx, const int ny, const int nz);
     void backward_project(voxel_data &voxels,
 			  const real origin[3], const real width[3],
-			  const int nx, const int ny, const int nz) const;
+			  const int nx, const int ny, const int nz);
 
     void setup_projection_matrix(const real origin[3], const real width[3],
 				 const int nx, const int ny,
@@ -173,15 +164,15 @@ namespace CCPi {
   public:
     parallel_beam();
 
-    void forward_project(pixel_type *pixels, voxel_data &voxels,
+    void forward_project(pixel_data &pixels, voxel_data &voxels,
 			 const real origin[3], const real width[3],
-			 const int nx, const int ny, const int nz) const;
-    void backward_project(pixel_type *pixels, voxel_data &voxels,
+			 const int nx, const int ny, const int nz);
+    void backward_project(pixel_data &pixels, voxel_data &voxels,
 			  const real origin[3], const real width[3],
-			  const int nx, const int ny, const int nz) const;
+			  const int nx, const int ny, const int nz);
     void backward_project(voxel_data &voxels,
 			  const real origin[3], const real width[3],
-			  const int nx, const int ny, const int nz) const;
+			  const int nx, const int ny, const int nz);
 
     void setup_projection_matrix(const real origin[3], const real width[3],
 				 const int nx, const int ny,
@@ -213,13 +204,13 @@ namespace CCPi {
 			 const int n_rays_y, const real grid_offset[3],
 			 const real voxel_size[3], const int nx_voxels,
 			 const int ny_voxels, const int nz_voxels);
-    void forward_project_matrix(const real_1d &det_z, pixel_type ray_data[],
+    void forward_project_matrix(const real_1d &det_z, pixel_data &ray_data,
 				voxel_data &vol_data, const int n_angles,
 				const int n_rays_y, const int n_rays_z,
 				const real grid_offset[3],
 				const real voxel_size[3], const int nx_voxels,
 				const int ny_voxels, const int nz_voxels) const;
-    void backward_project_matrix(const real_1d &det_z, pixel_type ray_data[],
+    void backward_project_matrix(const real_1d &det_z, pixel_data &ray_data,
 				 voxel_data &vol_data, const int n_angles,
 				 const int n_rays_y, const int n_rays_z,
 				 const real grid_offset[3],

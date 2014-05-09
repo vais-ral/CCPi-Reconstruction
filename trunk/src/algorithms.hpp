@@ -10,7 +10,7 @@ namespace CCPi {
 
   class reconstruction_alg {
   public:
-    virtual bool reconstruct(const class instrument *device, voxel_data &voxels,
+    virtual bool reconstruct(class instrument *device, voxel_data &voxels,
 			     const real origin[3],
 			     const real voxel_size[3]) = 0;
   };
@@ -19,7 +19,7 @@ namespace CCPi {
   public:
     cgls_base(const int niterations);
 
-    bool reconstruct(const class instrument *device, voxel_data &voxels,
+    bool reconstruct(class instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
 
   private:
@@ -31,12 +31,12 @@ namespace CCPi {
     tv_regularization(const real alph, const real t, const real L,
 		      const real mu, const int c);
 
-    bool reconstruct(const instrument *device, voxel_data &voxels,
+    bool reconstruct(instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
 
     static void tvreg_core(voxel_data &xkp1, real &fxkp1, real &hxkp1,
 			   real &gxkp1, std::vector<real> &fxkp1l, int &kend,
-			   const real voxel_size[], const pixel_type *b,
+			   const real voxel_size[], const pixel_data &b,
 			   const real alpha, real tau, real bL, real bmu,
 			   real epsb_rel,int k_max, const int Ddim,
 			   const int Dm, const int Dn, const int Dl,
@@ -49,7 +49,7 @@ namespace CCPi {
 			   int &numRest, std::vector<real> &Lklist,
 			   std::vector<real> &muklist,
 			   std::list<int> &rp, const real grid_offset[],
-			   const class instrument *device);
+			   class instrument *device);
 
   private:
     real alpha;
@@ -58,7 +58,7 @@ namespace CCPi {
     real init_mu;
     int constraint;
 
-    bool reconstruct(const instrument *device, pixel_type *b,
+    bool reconstruct(class instrument *device, pixel_data &b,
 		     voxel_data &voxels, const real origin[3],
 		     const real voxel_size[3]);
   };
