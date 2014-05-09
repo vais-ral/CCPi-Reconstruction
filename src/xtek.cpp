@@ -20,16 +20,16 @@ static pixel_type bilinear(const real x1, const real x2, const real y1,
 			   const pixel_type f22, const real x, const real y);
 static pixel_type angles_linear(const int ph1, const real_1d &h,
 				const int v_slice, const real_1d &angles,
-				const pixel_type *data, const real new_h,
+				const pixel_data &data, const real new_h,
 				const real new_angle, const int nh,
 				const int na, const int nv);
 static pixel_type angles_bilinear(const int ph1, const real_1d &h,
 				  const int v_slice, const real_1d &angles,
-				  const pixel_type *data, const real new_h,
+				  const pixel_data &data, const real new_h,
 				  const real new_angle, const int nh,
 				  const int na, const int nv);
 static pixel_type interpolate2D(const real_1d &h, const int v_slice,
-				const real_1d &angles, const pixel_type *data,
+				const real_1d &angles, const pixel_data &data,
 				const real new_h, const real new_angle,
 				const int nh, const int na, const int nv);
 
@@ -318,7 +318,7 @@ bool CCPi::Nikon_XTek::build_phantom()
     }
   }
 
-  pixel_type *pixels = create_pixel_data();
+  pixel_data &pixels = create_pixel_data();
   // perform projection step
   forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   //delete [] x;
@@ -332,8 +332,8 @@ bool CCPi::Nikon_XTek::build_phantom()
 bool CCPi::Nikon_XTek::read_images(const std::string path)
 {
   bool ok = true;
-  pixel_type *pixels = create_pixel_data();
-  sl_int n_rays = get_data_size();
+  pixel_data &pixels = create_pixel_data();
+  //sl_int n_rays = get_data_size();
   std::string pathbase;
   combine_path_and_name(path, basename, pathbase);
   char index[8];
@@ -341,10 +341,8 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
   for (sl_int i = 0; (i < get_num_angles() and ok); i++) {
     snprintf(index, 8, "%04d", int(i + 1));
     std::string name = pathbase + index + ".tif";
-    sl_int angle_offset = i * ((sl_int) get_num_h_pixels()) * ((sl_int) get_num_v_pixels());
-    ok = read_tiff(name, &pixels[angle_offset], get_num_h_pixels(),
-		   get_num_v_pixels());
-	update_progress(i + 1);
+    ok = read_tiff(name, pixels, i, get_num_h_pixels(), get_num_v_pixels());
+    update_progress(i + 1);
   }
   if (ok) {
     /*
@@ -359,11 +357,15 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     */
     real max_v = real(65535.0);
     // scale and take -ve log, due to exponential extinction in sample.
-    for (sl_int j = 0; j < n_rays; j++) {
-      if (pixels[j] < real(1.0))
-	pixels[j] = - std::log(real(0.00001) / max_v);
-      else
-	pixels[j] = - std::log(pixels[j] / max_v);
+    for (int i = 0; i < get_num_angles(); i++) {
+      for (int j = 0; j < get_num_v_pixels(); j++) {
+	for (int k = 0; k < get_num_h_pixels(); k++) {
+	  if (pixels[i][j][k] < real(1.0))
+	    pixels[i][j][k] = - std::log(real(0.00001) / max_v);
+	  else
+	    pixels[i][j][k] = - std::log(pixels[i][j][k] / max_v);
+	}
+      }
     }
     find_centre(get_num_v_pixels() / 2 + 1);
   }
@@ -387,7 +389,7 @@ pixel_type bilinear(const real x1, const real x2, const real y1, const real y2,
 }
 
 pixel_type angles_linear(const int ph1, const real_1d &h, const int v_slice,
-			 const real_1d &angles, const pixel_type *data,
+			 const real_1d &angles, const pixel_data &data,
 			 const real new_h, const real new_angle,
 			 const int nh, const int na, const int nv)
 {
@@ -397,24 +399,22 @@ pixel_type angles_linear(const int ph1, const real_1d &h, const int v_slice,
       break;
   }
   if (angles[pa1] == new_angle) {
-    return data[ph1 + v_slice * nh + pa1 * nh * nv];
+    return data[pa1][v_slice][ph1];
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
-      return linear(angles[pa1], angles[0] + real(2 * M_PI),
-		    data[ph1 + v_slice * nh + pa1 * nh * nv],
-		    data[ph1 + v_slice * nh + 0 * nh * nv],
+      return linear(angles[pa1], angles[0] + real(2.0 * M_PI),
+		    data[pa1][v_slice][ph1], data[0][v_slice][ph1],
 		    new_angle);
     else
       return linear(angles[pa1], angles[pa1 + 1],
-		    data[ph1 + v_slice * nh + pa1 * nh * nv],
-		    data[ph1 + v_slice * nh + (pa1 + 1) * nh * nv],
+		    data[pa1][v_slice][ph1], data[pa1 + 1][v_slice][ph1],
 		    new_angle);
   }
 }
 
 pixel_type angles_bilinear(const int ph1, const real_1d &h, const int v_slice,
-			   const real_1d &angles, const pixel_type *data,
+			   const real_1d &angles, const pixel_data &data,
 			   const real new_h, const real new_angle,
 			   const int nh, const int na, const int nv)
 {
@@ -425,30 +425,26 @@ pixel_type angles_bilinear(const int ph1, const real_1d &h, const int v_slice,
   }
   if (angles[pa1] == new_angle) {
     return linear(h[ph1], h[ph1 + 1],
-		  data[ph1 + v_slice * nh + pa1 * nh * nv],
-		  data[ph1 + 1 + v_slice * nh + pa1 * nh * nv], new_h);
+		  data[pa1][v_slice][ph1], data[pa1][v_slice][ph1 + 1], new_h);
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
       return bilinear(h[ph1], h[ph1 + 1], angles[pa1],
-		      angles[0] + real(2 * M_PI),
-		      data[ph1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + v_slice * nh + 0 * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + 0 * nh * nv],
+		      angles[0] + real(2.0 * M_PI),
+		      data[pa1][v_slice][ph1], data[0][v_slice][ph1],
+		      data[pa1][v_slice][ph1 + 1], data[0][v_slice][ph1 + 1],
 		      new_h, new_angle);
     else
       return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[pa1 + 1],
-		      data[ph1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + v_slice * nh + (pa1 + 1) * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + pa1 * nh * nv],
-		      data[ph1 + 1 + v_slice * nh + (pa1 + 1) * nh * nv],
+		      data[pa1][v_slice][ph1], data[pa1 + 1][v_slice][ph1],
+		      data[pa1][v_slice][ph1 + 1],
+		      data[pa1 + 1][v_slice][ph1 + 1],
 		      new_h, new_angle);
   }
 }
 
 pixel_type interpolate2D(const real_1d &h, const int v_slice,
-			 const real_1d &angles, const pixel_type *data,
+			 const real_1d &angles, const pixel_data &data,
 			 const real new_h, const real new_angle, const int nh,
 			 const int na, const int nv)
 {
@@ -481,7 +477,7 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
   const real_1d &h_pixels = get_h_pixels();
   int na = get_num_angles();
   const real_1d &ph = get_phi();
-  pixel_type *px = get_pixel_data();
+  pixel_data &px = get_pixel_data();
   real distance = get_detector_x() - get_source_x();
   std::vector<real> gamma_i(nh);
   std::vector<real> beta(nh);
@@ -519,7 +515,7 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 	    pixel_type p = interpolate2D(h_pixels, v_slice, ph, px,
 					 s2[k], alpha_beta, nh, na, nv);
 	    // if (p > 0.0) { ?
-	    pixel_type t = px[k + v_slice * nh + a * nh * nv] - p;
+	    pixel_type t = px[a][v_slice][k] - p;
 	    sum += t * t;
 	    count++;
 	    //} ?
@@ -558,8 +554,9 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 void CCPi::Nikon_XTek::apply_beam_hardening()
 {
   // Todo - does this belong in the base class?
-  sl_int n_rays = get_data_size();
-  pixel_type *pixels = get_pixel_data();
-  for (sl_int i = 0; i < n_rays; i++)
-    pixels[i] = pixels[i] * pixels[i];
+  pixel_data &pixels = get_pixel_data();
+  for (sl_int i = 0; i < get_num_angles(); i++)
+    for (sl_int j = 0; j < get_num_v_pixels(); j++)
+      for (sl_int k = 0; k < get_num_h_pixels(); k++)
+	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
 }

@@ -12,7 +12,7 @@
 #  define USE_TIMER false
 #endif // USE_TIMER
 
-bool CCPi::read_NeXus(pixel_type *pixels, pixel_2d &i_dark, pixel_2d &f_dark,
+bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      pixel_2d &i_bright, pixel_2d &f_bright, int &nh_pixels,
 		      int &nv_pixels, std::vector<real> &angles, int &nangles,
 		      real &hsize, real &vsize, const std::string filename,
@@ -213,7 +213,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_2d &i_dark, pixel_2d &f_dark,
                 nv_pixels = sizes[1];
               else
                 nv_pixels = info.dims[1];
-	      sl_int offset = sizes[1] * sizes[2];
+	      //sl_int offset = sizes[1] * sizes[2];
 	      uint16_t *ptr = 0;
 	      if (read_data)
 		ptr = new uint16_t[sizes[1] * sizes[2]];
@@ -232,8 +232,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		  if (read_data) {
 		    for (sl_int k = 0; k < sizes[1]; k++) {
 		      for (sl_int j = 0; j < sizes[2]; j++) {
-			pixels[(block_size - k - 1) * sizes[2]
-			       + j + n_angles * offset] =
+			pixels[n_angles][(block_size - k - 1)][j] =
 			  pixel_type(ptr[k * sizes[2] + j]);
 		      }
 		    }

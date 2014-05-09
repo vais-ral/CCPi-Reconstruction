@@ -22,6 +22,7 @@ typedef float recon_type;
 
 typedef std::vector<real> real_1d;
 
+typedef boost::multi_array_ref<pixel_type, 3> pixel_data;
 typedef boost::multi_array_ref<voxel_type, 3> voxel_data;
 typedef boost::multi_array<voxel_type, 3> voxel_3d;
 

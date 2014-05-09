@@ -47,11 +47,11 @@ void CCPi::cone_beam::set_params(const real sx, const real sy, const real sz,
     phi[i] = ang[i];
 }
 
-void CCPi::cone_beam::forward_project(pixel_type *pixels,
+void CCPi::cone_beam::forward_project(pixel_data &pixels,
 				      voxel_data &voxels,
 				      const real origin[3],
 				      const real width[3], const int nx,
-				      const int ny, const int nz) const
+				      const int ny, const int nz)
 {
   timer fptime(USE_TIMER);
   instrument::forward_project(source_x, source_y, source_z, detector_x,
@@ -63,11 +63,11 @@ void CCPi::cone_beam::forward_project(pixel_type *pixels,
   fptime.output(" forward projection");
 }
 
-void CCPi::cone_beam::backward_project(pixel_type *pixels,
+void CCPi::cone_beam::backward_project(pixel_data &pixels,
 				       voxel_data &voxels,
 				       const real origin[3],
 				       const real width[3], const int nx,
-				       const int ny, const int nz) const
+				       const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,
@@ -82,7 +82,7 @@ void CCPi::cone_beam::backward_project(pixel_type *pixels,
 void CCPi::cone_beam::backward_project(voxel_data &voxels,
 				       const real origin[3],
 				       const real width[3], const int nx,
-				       const int ny, const int nz) const
+				       const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,

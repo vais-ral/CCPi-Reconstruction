@@ -5,29 +5,32 @@
 #include "ui_calls.hpp"
 
 // driver routine designed to initialise from CGLS
-bool CCPi::tv_regularization::reconstruct(const instrument *device,
+bool CCPi::tv_regularization::reconstruct(instrument *device,
 					  voxel_data &voxels,
 					  const real origin[3],
 					  const real voxel_size[3])
 {
   // Need copy of pixels before initial CGLS guess overwrites them
-  sl_int n_pixels = device->get_data_size();
-  pixel_type *const p = device->get_pixel_data();
-  pixel_type *b = new pixel_type[n_pixels];
-  for (sl_int i = 0; i < n_pixels; i++)
-    b[i] = p[i];
+  pixel_data &p = device->get_pixel_data();
+  int n_angles = device->get_num_angles();
+  int n_h = device->get_num_h_pixels();
+  int n_v = device->get_num_v_pixels();
+  pixel_data b = pixel_data(boost::extents[n_angles][n_v][n_h]);
+  for (sl_int i = 0; i < n_angles; i++)
+    for (sl_int j = 0; j < n_v; j++)
+      for (sl_int k = 0; k < n_h; k++)
+	b[i][j][k] = p[i][j][k];
   cgls_base cgls(5);
   bool ok = cgls.reconstruct(device, voxels, origin, voxel_size);
   if (ok)
     ok = reconstruct(device, b, voxels, origin, voxel_size);
-  delete [] p;
   return ok;
 }
 
 // should be passed an initial guess in voxels, either from CGLS or
 // some other method
-bool CCPi::tv_regularization::reconstruct(const instrument *device,
-					  pixel_type *b, voxel_data &voxels,
+bool CCPi::tv_regularization::reconstruct(instrument *device,
+					  pixel_data &b, voxel_data &voxels,
 					  const real origin[3],
 					  const real voxel_size[3])
 {

@@ -66,7 +66,7 @@ bool CCPi::Diamond::read_data_size(const std::string path,
     bool ok = false;
     std::string fullname;
     combine_path_and_name(path, name,fullname);
-    pixel_type *pixels = 0;
+    pixel_data pixels(boost::extents[1][1][1]);
     int nh_pixels = 0;
     int nv_pixels = 0;
     std::vector<real> angles;
@@ -173,7 +173,7 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   }
 
   set_v_offset(offset);
-  pixel_type *pixels = create_pixel_data();
+  pixel_data &pixels = create_pixel_data();
   // perform projection step
   forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   //delete [] x;
@@ -186,7 +186,6 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   bool ok = false;
   std::string fullname;
   combine_path_and_name(path, name,fullname);
-  pixel_type *pixels = 0;
   int nh_pixels = 0;
   int nv_pixels = 0;
   std::vector<real> angles(2 * get_num_angles());
@@ -195,11 +194,9 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   real vsize = 0.0;
   int nv = get_num_v_pixels();
   int nh = get_num_h_pixels();
-  sl_int sz =  sl_int(nv) * sl_int(nh);
   if (first)
-    pixels = new pixel_type[get_num_angles() * sz];
-  else
-    pixels = get_pixel_data();
+    (void) create_pixel_data();
+  pixel_data &pixels = get_pixel_data();
   pixel_2d i_dark(boost::extents[nv][nh]);
   pixel_2d f_dark(boost::extents[nv][nh]);
   pixel_2d i_bright(boost::extents[nv][nh]);
@@ -221,14 +218,10 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   // store data in class - now done by read_data_sizes
   set_v_offset(offset);
   if (ok) {
-    sl_int n_rays = sl_int(nangles) * sz;
-    if (first)
-      set_pixel_data(pixels, n_rays);
     const real_1d &angles = get_phi();
     // linear interpolate bright/dark frames. Todo - something else?
     // Todo, also use initial final bright/dark angles? rather than assuming
     // initial/final sample angles?
-    sl_int n = sz;
     pixel_2d dark(boost::extents[nv][nh]);
     pixel_2d bright(boost::extents[nv][nh]);
     for (int i = 0; i < nangles; i++) {
@@ -252,19 +245,21 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       }
       for (sl_int j = 0; j < nv; j++) {
 	for (sl_int k = 0; k < nh; k++) {
-	  pixels[k + j * nh + i * n] -= dark[j][k];
-	  if (pixels[k + j * nh + i * n] < real(0.1))
-	    pixels[k + j * nh + i * n] = 0.1;
+	  pixels[i][j][k] -= dark[j][k];
+	  if (pixels[i][j][k] < real(0.1))
+	    pixels[i][j][k] = 0.1;
 	}
       }
       // scale each data pixel by bright pixel
       for (sl_int j = 0; j < nv; j++)
 	for (sl_int k = 0; k < nh; k++)
-	  pixels[k + j * nh + i * n] /= bright[j][k];
+	  pixels[i][j][k] /= bright[j][k];
     }
     // take -ve log, due to exponential extinction in sample.
-    for (sl_int j = 0; j < n_rays; j++)
-      pixels[j] = - std::log(pixels[j]);
+    for (int i = 0; i < nangles; i++)
+      for (sl_int j = 0; j < nv; j++)
+	for (sl_int k = 0; k < nh; k++)
+	  pixels[i][j][k] = - std::log(pixels[i][j][k]);
     //find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;
@@ -297,8 +292,9 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
 void CCPi::Diamond::apply_beam_hardening()
 {
   // Todo - does this belong in the base class?
-  sl_int n_rays = get_data_size();
-  pixel_type *pixels = get_pixel_data();
-  for (sl_int i = 0; i < n_rays; i++)
-    pixels[i] = pixels[i] * pixels[i];
+  pixel_data &pixels = get_pixel_data();
+  for (sl_int i = 0; i < get_num_angles(); i++)
+    for (sl_int j = 0; j < get_num_v_pixels(); j++)
+      for (sl_int k = 0; k < get_num_h_pixels(); k++)
+	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
 }
