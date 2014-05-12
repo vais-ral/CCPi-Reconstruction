@@ -26,7 +26,7 @@ $(OBJECTS): base_types.hpp
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp mpi.hpp
 
-cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp
+cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp blas.hpp
 
 instruments.o: instruments.cpp instruments.hpp ui_calls.hpp
 

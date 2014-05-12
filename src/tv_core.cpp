@@ -80,7 +80,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   int n_angles = device->get_num_angles();
   int n_v = device->get_num_v_pixels();
   int n_h = device->get_num_h_pixels();
-  sl_int n_rays = sl_int(n_angles) * sl_int(n_v) * sl_int(n_h);
+  //sl_int n_rays = sl_int(n_angles) * sl_int(n_v) * sl_int(n_h);
 
   INITBREAK
 
@@ -96,6 +96,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 	      boost::fortran_storage_order());
   voxel_3d temp(boost::extents[sz[0]][sz[1]][sz[2]],
 		boost::fortran_storage_order());
+  sl_int nx = sl_int(sz[0]);
+  sl_int ny = sl_int(sz[1]);
+  sl_int nz = sl_int(sz[2]);
 
   /*temp vectors */
   voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
@@ -119,7 +122,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 
   /* Include a backtracking to initialize everything */
   /* y_k = x_k+1 */
-  dcopy(prodDims, xkp1, 1, yk, 1);
+  copy(xkp1, yk, nx, ny, nz);
 
   /* Calculate the gradient in yk=xk+1 */
   numGrad++;
@@ -128,120 +131,81 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   real fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /* For each voxel */
-  for (int i = 0; i < int(sz[2]); i++)
-    for (int j = 0; j < int(sz[1]); j++)
-      for (int k = 0; k < int(sz[0]); k++)
-	Nablafyk[k][j][i] *= alpha;
+  scal_y(alpha, Nablafyk, nx, ny, nz);
   /*-----------------Forward projection--------------------------------*/
-  for (int i = 0; i < n_angles; i++)
-    for (int j = 0; j < n_v; j++)
-      for (int k = 0; k < n_h; k++)
-	tv2[i][j][k] = 0.0;
+  init_data(tv2, n_angles, n_v, n_h);
   /*tv2 = A*yk */
   device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = tv2 - b */
-  for (int i = 0; i < n_angles; i++)
-    for (int j = 0; j < n_v; j++)
-      for (int k = 0; k < n_h; k++)
-	tv2[i][j][k] = tv2[i][j][k] - b[i][j][k];
+  sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
 
   numFunc++;
   /* fyk + 0.5*||A*y_k - b||^2 */
-  fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+  fyk += real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
-  for (int i = 0; i < int(sz[2]); i++)
-    for (int j = 0; j < int(sz[1]); j++)
-      for (int k = 0; k < int(sz[0]); k++)
-	tv[k][j][i] = 0.0;
+  init_data(tv, nx, ny, nz);
   /*------------------Backward projection------------------------------*/
-  for (int i = 0; i < int(sz[2]); i++)
-    for (int j = 0; j < int(sz[1]); j++)
-      for (int k = 0; k < int(sz[0]); k++)
-	temp[k][j][i] = 0.0;
+  init_data(temp, nx, ny, nz);
   device->backward_project(tv2, temp, grid_offset, voxel_size, Dm, Dn, Dl);
   /* For each voxel */
-  for (int i = 0; i < int(sz[2]); i++)
-    for (int j = 0; j < int(sz[1]); j++)
-      for (int k = 0; k < int(sz[0]); k++)
-	Nablafyk[k][j][i] += temp[k][j][i];
+  sum_axpy(1.0, temp, Nablafyk, nx, ny, nz);
 
   /* Take the projected step from yk to xkp1 */
   /* bL is original setting of L_k */
   t = - 1 / bL;
-  dcopy(prodDims, yk, 1, xkp1, 1);
   /* x_k+1 = y_k - t*Nablaf(y_k) */
-  daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
+  sum_xbyz(yk, t, Nablafyk, xkp1, nx, ny, nz);
 
   P(xkp1, ctype, d, c, sz);
 
   /* Backtracking on Lipschitz parameter. */
-  for (int i = 0; i < int(sz[2]); i++)
-    for (int j = 0; j < int(sz[1]); j++)
-      for (int k = 0; k < int(sz[0]); k++)
-	tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
+  diff_xyz(xkp1, yk, tv, nx, ny, nz);
 
   /* alpha*T_tau(xkp1+1) (Nablafyk is returned as gradient) */
   hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  for (int i = 0; i < n_angles; i++)
-    for (int j = 0; j < n_v; j++)
-      for (int k = 0; k < n_h; k++)
-	tv2[i][j][k] = 0.0;
+  init_data(tv2, n_angles, n_v, n_h);
   /*tv2 = A*x_k+1 */
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = (A*x_k+1 - b) */
-  for (int i = 0; i < n_angles; i++)
-    for (int j = 0; j < n_v; j++)
-      for (int k = 0; k < n_h; k++)
-	tv2[i][j][k] -= b[i][j][k];
+  sum_axpy(-1.0, b, tv2, n_angles, n_v, n_h);
 
   /* 0.5*||A*x_k+1 - b||^2 */
-  gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+  gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
   numFunc++;
   // f(x_k+1) = h(x_k+1) + g(x_k+1) = alpha*T_tau(x_k+1) + 0.5*||A*x_k+1 - b||^2
   fxkp1 = hxkp1 + gxkp1;
 
-  while (fxkp1 / (1+1e-14) > fyk + ddot(prodDims, Nablafyk, 1, tv, 1)
-	 + (bL / 2) * std::pow(dnrm2(prodDims, tv, 1), 2)) {
+  while (fxkp1 / (1+1e-14) > fyk + dot_prod(Nablafyk, tv, nx, ny, nz)
+	 + (bL / 2) * norm_voxels(tv, nx, ny, nz)) {
     numBack++;
     bL *= s_L;
 
     /* Take the projected step from yk to xkp1 */
     /* t = - L^-1 */
     t = - 1 / bL;
-    /* x_k+1 = y_k */
-    dcopy(prodDims, yk, 1, xkp1, 1);
-    /* x_k+1 = x_k+1 - t*Nablafyk */
-    daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
+    /* x_k+1 = y_k - t*Nablafyk */
+    sum_xbyz(yk, t, Nablafyk, xkp1, nx, ny, nz);
     /* project to within bounds (x_k+1) */
     P(xkp1, ctype, d, c, sz);
 
     /* Backtracking on Lipschitz parameter. */
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
+    diff_xyz(xkp1, yk, tv, nx, ny, nz);
 
     /* alpha*T_tau(x_k+1) */
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    for (int i = 0; i < n_angles; i++)
-      for (int j = 0; j < n_v; j++)
-	for (int k = 0; k < n_h; k++)
-	  tv2[i][j][k] = 0.0;
+    init_data(tv2, n_angles, n_v, n_h);
     /*tv2 = A*x_k+1 */
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
     /* tv2 = (A*x_k+1 - b) */
-    for (int i = 0; i < n_angles; i++)
-      for (int j = 0; j < n_v; j++)
-	for (int k = 0; k < n_h; k++)
-	  tv2[i][j][k] -= b[i][j][k];
+    sum_axpy(-1.0, b, tv2, n_angles, n_v, n_h);
 
     /* 0.5*||A*x_k+1 - b||^2 */
-    gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+    gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
     numFunc++;
     /* f(x_k+1) = h(x_k+1) + g(x_k+1)
@@ -251,26 +215,22 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 
   /* Calculate initial gradient map */
   if (ctype == 1) { // No constraints - just real numbers
-    nGt = dnrm2(prodDims, Nablafxkp1, 1);
+    nGt = std::sqrt(norm_voxels(Nablafxkp1, nx, ny, nz));
   } else { /* Positivity constraint */
     t = - 1 / bL;
-    dcopy(prodDims, xkp1, 1, tv, 1);
-    daxpy(prodDims, t, Nablafxkp1, 1, tv, 1);
+    sum_xbyz(xkp1, t, Nablafxkp1, tv, nx, ny, nz);
     P(tv, ctype, d, c, sz);
 
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  tv[k][j][i] = xkp1[k][j][i] - tv[k][j][i];
+    scal_xby(xkp1, real(-1.0), tv, nx, ny, nz);
 
-    nGt = bL * dnrm2(prodDims, tv, 1);
+    nGt = bL * std::sqrt(norm_voxels(tv, nx, ny, nz));
   }
 
   /* save the initial parameter */
   Lm1 = bL;
   nGtm1 = nGt;
-  dcopy(prodDims, xkp1, 1, xk, 1);
-  dcopy(prodDims, xkp1, 1, yk, 1);
+  copy(xkp1, xk, nx, ny, nz);
+  copy(xkp1, yk, nx, ny, nz);
 
   /* LOOP */
   bool stop = false; /*Flag for when to break the for-loop*/
@@ -279,18 +239,12 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   real fxk = alpha*DTD(xkp1,Nablafxkp1,uijl,tau,Ddim,Dm,Dn,Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  for (int i = 0; i < n_angles; i++)
-    for (int j = 0; j < n_v; j++)
-      for (int k = 0; k < n_h; k++)
-	tv2[i][j][k] = 0.0;
+  init_data(tv2, n_angles, n_v, n_h);
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-  for (int i = 0; i < n_angles; i++)
-    for (int j = 0; j < n_v; j++)
-      for (int k = 0; k < n_h; k++)
-	tv2[i][j][k] -= b[i][j][k];
+  sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
 
   numFunc++;
-  fxk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+  fxk += real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
   // BGS - does this duplicate at lot of the previous code suggesting a common
   // subroutine?
@@ -303,120 +257,80 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     numGrad++;
     fyk = alpha * DTD(yk, Nablafyk, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  Nablafyk[k][j][i] *= alpha;
+    scal_y(alpha, Nablafyk, nx, ny, nz);
 
     /*-----------------Forward projection--------------------------------*/
-    for (int i = 0; i < n_angles; i++)
-      for (int j = 0; j < n_v; j++)
-	for (int k = 0; k < n_h; k++)
-	  tv2[i][j][k] = 0.0;
+    init_data(tv2, n_angles, n_v, n_h);
     device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
-    for (int i = 0; i < n_angles; i++)
-      for (int j = 0; j < n_v; j++)
-	for (int k = 0; k < n_h; k++)
-	  tv2[i][j][k] -= b[i][j][k];
+    sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
 
     numFunc++;
-    fyk += real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+    fyk += real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  tv[k][j][i] = 0.0;
+    init_data(tv, nx, ny, nz);
 
     /*------------------Backward projection------------------------------*/
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  temp[k][j][i] = 0.0;
+    init_data(temp, nx, ny, nz);
     device->backward_project(tv2, temp, grid_offset, voxel_size, Dm, Dn, Dl);
     /* For each voxel */
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  Nablafyk[k][j][i] += temp[k][j][i];
+    sum_axpy(real(1.0), temp, Nablafyk, nx, ny,
+	     nz);
 
     /* Update estimate of the strong convexity parameter as minimum of current
        value and the computed value between xk and yk */
     if (k != 0) {
-      for (int i = 0; i < int(sz[2]); i++)
-	for (int j = 0; j < int(sz[1]); j++)
-	  for (int k = 0; k < int(sz[0]); k++)
-	    tv[k][j][i] = xk[k][j][i] - yk[k][j][i];
+      diff_xyz(xk, yk, tv, nx, ny, nz);
 
       bmu = std::max(std::min(real(2) * (fxk * (real(1) + real(1e-14))
-					 - (fyk + ddot(prodDims, Nablafyk,
-						       1, tv, 1)))
-			      / std::pow(dnrm2(prodDims, tv, 1), 2), bmu),
+					 - (fyk
+					    + dot_prod(Nablafyk, tv, nx,ny,nz)))
+			      / norm_voxels(tv, nx, ny, nz), bmu),
 		     real(0.0));
     }
 
     /* Take the projected step from yk to xkp1 */
     t = - 1 / bL;
-    dcopy(prodDims, yk, 1, xkp1, 1);
-    daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
+    sum_xbyz(yk, t, Nablafyk, xkp1, nx, ny, nz);
 
     P(xkp1, ctype, d, c, sz);
 
     /* Backtracking on Lipschitz parameter. */
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
+    diff_xyz(xkp1, yk, tv, nx, ny, nz);
 
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    for (int i = 0; i < n_angles; i++)
-      for (int j = 0; j < n_v; j++)
-	for (int k = 0; k < n_h; k++)
-	  tv2[i][j][k] = 0.0;
+    init_data(tv2, n_angles, n_v, n_h);
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-    for (int i = 0; i < n_angles; i++)
-      for (int j = 0; j < n_v; j++)
-	for (int k = 0; k < n_h; k++)
-	  tv2[i][j][k] -= b[i][j][k];
+    sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
 
-    gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+    gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
     numFunc++;
     fxkp1 = hxkp1 + gxkp1;
 
     while (fxkp1 / (real(1) + real(1e-14)) > fyk
-	   + ddot(prodDims, Nablafyk, 1, tv, 1)
-	   + (bL / real(2)) * std::pow(dnrm2(prodDims, tv, 1), 2)) {
+	   + dot_prod(Nablafyk, tv, nx, ny, nz)
+	   + (bL / real(2)) * norm_voxels(tv, nx, ny, nz)) {
       numBack++;
       bL *= s_L;
 
       /* Take the projected step from yk to xkp1 */
       t = - 1 / bL;
-      dcopy(prodDims, yk, 1, xkp1, 1);
-      daxpy(prodDims, t, Nablafyk, 1, xkp1, 1);
+      sum_xbyz(yk, t, Nablafyk, xkp1, nx, ny, nz);
       P(xkp1, ctype, d, c, sz);
 
       /* Backtracking on Lipschitz parameter. */
-      for (int i = 0; i < int(sz[2]); i++)
-	for (int j = 0; j < int(sz[1]); j++)
-	  for (int k = 0; k < int(sz[0]); k++)
-	    tv[k][j][i] = xkp1[k][j][i] - yk[k][j][i];
+      diff_xyz(xkp1, yk, tv, nx, ny, nz);
 
       hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
       /*-----------------Forward projection--------------------------------*/
-      for (int i = 0; i < n_angles; i++)
-	for (int j = 0; j < n_v; j++)
-	  for (int k = 0; k < n_h; k++)
-	    tv2[i][j][k] = 0.0;
+      init_data(tv2, n_angles, n_v, n_h);
       device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-      for (int i = 0; i < n_angles; i++)
-	for (int j = 0; j < n_v; j++)
-	  for (int k = 0; k < n_h; k++)
-	    tv2[i][j][k] -= b[i][j][k];
+      sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
 
-      gxkp1 = real(0.5) * std::pow(dnrm2(n_rays, tv2, 1), 2);
+      gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
       numFunc++;
       fxkp1 = hxkp1 + gxkp1;
@@ -448,47 +362,34 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 
     /* calculate the gradient in xkp1 */
     numGrad++;
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  Nablafxkp1[k][j][i] *= alpha;
+    scal_y(alpha, Nablafxkp1, nx, ny, nz);
 
     /*------------------Backward projection------------------------------*/
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  temp[k][j][i] = 0;
+    init_data(temp, nx, ny, nz);
     device->backward_project(tv2, temp, grid_offset, voxel_size, Dm, Dn, Dl);
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  Nablafxkp1[k][j][i] += temp[k][j][i];
+    sum_axpy(real(1.0), temp, Nablafxkp1, nx, ny, nz);
 
     /* Check stopping criteria xkp1*/
     if (ctype == 1) {
-      nGt = dnrm2(prodDims, Nablafxkp1, 1);
+      nGt = std::sqrt(norm_voxels(Nablafxkp1, nx, ny, nz));
       if (nGt <= epsb_rel * prodDims) {
 	stop = true;
 	/*overwrite xkp1 to return with*/
 	t = - 1 / bL;
-	daxpy(prodDims, t, Nablafxkp1, 1, xkp1, 1);
+	sum_axpy(t, Nablafxkp1, xkp1, nx, ny, nz);
       }
     } else {
       t = - 1 / bL;
-      dcopy(prodDims, xkp1, 1, tv, 1);
-      daxpy(prodDims, t, Nablafxkp1, 1, tv, 1);
+      sum_xbyz(xkp1, t, Nablafxkp1, tv, nx, ny, nz);
       P(tv, ctype, d, c, sz);
 
-      for (int i = 0; i < int(sz[2]); i++)
-	for (int j = 0; j < int(sz[1]); j++)
-	  for (int k = 0; k < int(sz[0]); k++)
-	    tv[k][j][i] = xkp1[k][j][i] - tv[k][j][i];
+      scal_xby(xkp1, real(-1.0), tv, nx, ny, nz);
 
-      nGt = bL * dnrm2(prodDims, tv, 1);
+      nGt = bL * std::sqrt(norm_voxels(tv, nx, ny, nz));
       if (nGt <= epsb_rel * prodDims) {
 	stop = true;
 	/*overwrite xkp1 to return with*/
-	daxpy(prodDims, t, Nablafxkp1, 1, xkp1, 1);
+	sum_axpy(t, Nablafxkp1, xkp1, nx, ny, nz);
 	P(xkp1, ctype, d, c, sz);
       }
     }
@@ -499,15 +400,12 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 
     /* Check stopping criteria yk*/
     if (ctype == 1) {
-      if (dnrm2(prodDims, Nablafyk, 1) <= epsb_rel * prodDims)
+      if (std::sqrt(norm_voxels(Nablafyk, nx, ny, nz)) <= epsb_rel * prodDims)
 	stop = true;
     } else {
       t = - 1 / bL;
-      for (int i = 0; i < int(sz[2]); i++)
-	for (int j = 0; j < int(sz[1]); j++)
-	  for (int k = 0; k < int(sz[0]); k++)
-	    tv[k][j][i] = yk[k][j][i] - xkp1[k][j][i];
-      if (bL * dnrm2(prodDims, tv, 1) <= epsb_rel * prodDims)
+      diff_xyz(yk, xkp1, tv, nx, ny, nz);
+      if (bL * std::sqrt(norm_voxels(tv, nx, ny, nz)) <= epsb_rel * prodDims)
 	stop = true;
     }
 
@@ -547,17 +445,13 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 
     /* accelerated term*/
     /* yk = xkp1 + betak*(xkp1-xk) */
-    for (int i = 0; i < int(sz[2]); i++)
-      for (int j = 0; j < int(sz[1]); j++)
-	for (int k = 0; k < int(sz[0]); k++)
-	  tv[k][j][i] = xkp1[k][j][i] - xk[k][j][i];
+    diff_xyz(xkp1, xk, tv, nx, ny, nz);
 
-    dcopy(prodDims, xkp1, 1, yk, 1);
-    daxpy(prodDims, betak, tv, 1, yk, 1);
+    sum_xbyz(xkp1, betak, tv, yk, nx, ny, nz);
 
     /* Update the values for the next iteration*/
     thetak = thetakp1;
-    dcopy(prodDims, xkp1, 1, xk, 1);
+    copy(xkp1, xk, nx, ny, nz);
 
     fxk = fxkp1;
 
@@ -618,10 +512,7 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
   real tau2 = 1 / (tau * 2);
 
   /* Clear the current gradient */
-  for (int i = 0; i < int(sz[2]); i++)
-    for (int j = 0; j < int(sz[1]); j++)
-      for (int k = 0; k < int(sz[0]); k++)
-	Nablafx[k][j][i] = 0.0;
+  init_data(Nablafx, sl_int(sz[0]), sl_int(sz[1]), sl_int(sz[2]));
 
   if (Ddim == 2) {
     for (sl_int u = 0; u <= Dm - 1; u++) {
