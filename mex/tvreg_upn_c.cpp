@@ -19,8 +19,7 @@ struct Dtype {
         sl_int prodDims;
 };
 
-static void dcopyf(const sl_int n, const float x[], const int incx, real y[],
-		   const int incy);
+static void dcopyf(const sl_int n, const float x[], float y[]);
 
 // dummy cone-beam device
 namespace CCPi {
@@ -187,7 +186,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     real_1dr Lklist(mxGetPr(plhs[13]), boost::extents[k_max + 1]);
     real_1dr muklist(mxGetPr(plhs[14]), boost::extents[k_max + 1]);
 
-    dcopy(prodDims,x,1,xkp1,1); 
+    dcopyf(prodDims,x,xkp1); 
 
     CCPi::cone_beam *dev = new CCPi::dummy_cone;
     dev->set_params(*source_x, *source_y, *source_z, *det_x, det_y, det_z,
@@ -234,8 +233,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 }
 
-void dcopyf(const sl_int n, const float x[], const int incx, real y[],
-	   const int incy)
+void dcopyf(const sl_int n, const float x[], float y[])
 {
   for (sl_int i = 0; i < n; i++)
     y[i] = real(x[i]);
