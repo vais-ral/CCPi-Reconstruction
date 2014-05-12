@@ -5,6 +5,7 @@
 #include "algorithms.hpp"
 #include "timer.hpp"
 #include "ui_calls.hpp"
+#include "blas.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -21,23 +22,19 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
   int n_angles = device->get_num_angles();
   int n_h = device->get_num_h_pixels();
   int n_v = device->get_num_v_pixels();
+  sl_int nx = sl_int(sz[0]);
+  sl_int ny = sl_int(sz[1]);
+  sl_int nz = sl_int(sz[2]);
 
   // Prepare for CG iteration.
   voxel_data d(boost::extents[sz[0]][sz[1]][sz[2]],
 	       boost::fortran_storage_order());
-  for (sl_int i = 0; i < sl_int(sz[2]); i++)
-    for (sl_int j = 0; j < sl_int(sz[1]); j++)
-      for (sl_int k = 0; k < sl_int(sz[0]); k++)
-	d[i][j][k] = 0.0;
+  init_data(d, nx, ny, nz);
   initialise_progress(2 * iterations + 1, "CGLS iterating...");
   device->backward_project(d, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
 
-  real normr2 = 0.0;
-  for (sl_int i = 0; i < sl_int(sz[2]); i++)
-    for (sl_int j = 0; j < sl_int(sz[1]); j++)
-      for (sl_int k = 0; k < sl_int(sz[0]); k++)
-	normr2 += d[i][j][k] * d[i][j][k];
+  real normr2 = norm_voxels(d, nx, ny, nz);
   update_progress(1);
 
   // Iterate.
@@ -50,50 +47,27 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
     // Update x and r vectors.
     {
       pixel_data Ad(boost::extents[n_angles][n_v][n_h]);
-      for (sl_int i = 0; i < n_angles; i++)
-	for (sl_int j = 0; j < n_v; j++)
-	  for (sl_int k = 0; k < n_h; k++)
-	    Ad[i][j][k] = 0.0;
+      init_data(Ad, n_angles, n_v, n_h);
       device->forward_project(Ad, d, origin, voxel_size,
 			      (int)sz[0], (int)sz[1], (int)sz[2]);
-      real alpha = 0.0;
-      for (sl_int i = 0; i < n_angles; i++)
-	for (sl_int j = 0; j < n_v; j++)
-	  for (sl_int k = 0; k < n_h; k++)
-	    alpha += Ad[i][j][k] * Ad[i][j][k];
+      real alpha = norm_pixels(Ad, n_angles, n_v, n_h);
       alpha = normr2 / alpha;
-      for (sl_int i = 0; i < sl_int(sz[2]); i++)
-	for (sl_int j = 0; j < sl_int(sz[1]); j++)
-	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
-	    voxels[i][j][k] += alpha * d[i][j][k];
-      for (sl_int i = 0; i < n_angles; i++)
-	for (sl_int j = 0; j < n_v; j++)
-	  for (sl_int k = 0; k < n_h; k++)
-	    b[i][j][k] -= alpha * Ad[i][j][k];
+      sum_axpy(alpha, d, voxels, nx, ny, nz);
+      sum_axpy(-alpha, Ad, b, n_angles, n_v, n_h);
     }
     update_progress(2 * iter + 2);
     {
       voxel_data s(boost::extents[sz[0]][sz[1]][sz[2]],
 		   boost::fortran_storage_order());
-      for (sl_int i = 0; i < sl_int(sz[2]); i++)
-	for (sl_int j = 0; j < sl_int(sz[1]); j++)
-	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
-	    s[i][j][k] = 0.0;
+      init_data(s, nx, ny, nz);
       device->backward_project(b, s, origin, voxel_size,
 			       (int)sz[0], (int)sz[1], (int)sz[2]);
 
       // Update d vector.
-      real normr2_new = 0.0;
-      for (sl_int i = 0; i < sl_int(sz[2]); i++)
-	for (sl_int j = 0; j < sl_int(sz[1]); j++)
-	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
-	    normr2_new += s[i][j][k] * s[i][j][k];
+      real normr2_new = norm_voxels(s, nx, ny, nz);
       real beta = normr2_new / normr2;
       normr2 = normr2_new;
-      for (sl_int i = 0; i < sl_int(sz[2]); i++)
-	for (sl_int j = 0; j < sl_int(sz[1]); j++)
-	  for (sl_int k = 0; k < sl_int(sz[0]); k++)
-	    d[i][j][k] = s[i][j][k] + beta * d[i][j][k];
+      scal_xby(s, beta, d, nx, ny, nz);
     }
     update_progress(2 * iter + 3);
     iter_time.accumulate();
