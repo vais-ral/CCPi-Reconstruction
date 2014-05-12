@@ -35,19 +35,17 @@ namespace CCPi {
 		     const real origin[3], const real voxel_size[3]);
 
     static void tvreg_core(voxel_data &xkp1, real &fxkp1, real &hxkp1,
-			   real &gxkp1, std::vector<real> &fxkp1l, int &kend,
+			   real &gxkp1, real_1dr &fxkp1l, int &kend,
 			   const real voxel_size[], const pixel_data &b,
 			   const real alpha, real tau, real bL, real bmu,
 			   real epsb_rel,int k_max, const int Ddim,
 			   const int Dm, const int Dn, const int Dl,
 			   const sl_int prodDims, const int ctype,
-			   std::vector<real> &d, std::vector<real> &c,
-			   const bool ghxl, const bool xl,
-			   std::vector<real> &hxkp1l, std::vector<real> &gxkp1l,
-			   std::vector<real> &xlist, const bool verbose,
+			   real_1dr &d, real_1dr &c, const bool ghxl,
+			   const bool xl, real_1dr &hxkp1l, real_1dr &gxkp1l,
+			   real_1dr &xlist, const bool verbose,
 			   int &numGrad, int &numBack, int &numFunc,
-			   int &numRest, std::vector<real> &Lklist,
-			   std::vector<real> &muklist,
+			   int &numRest, real_1dr &Lklist, real_1dr &muklist,
 			   std::list<int> &rp, const real grid_offset[],
 			   class instrument *device);
 

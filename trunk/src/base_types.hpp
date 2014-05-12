@@ -24,6 +24,7 @@ typedef float pixel_type;
 typedef float recon_type;
 
 typedef std::vector<real> real_1d;
+typedef std::vector<real> real_1dr;
 typedef std::vector<pixel_type> pixel_1d;
 typedef std::vector<voxel_type> voxel_1d;
 
