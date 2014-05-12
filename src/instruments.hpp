@@ -90,10 +90,10 @@ namespace CCPi {
 				 const int ny_voxels, const int nz_voxels);
 
     // Todo - protect these? CGLS uses them
-    pixel_data &get_pixel_data();
+    pixel_3d &get_pixel_data();
 
   protected:
-    pixel_data &create_pixel_data();
+    pixel_3d &create_pixel_data();
 
     const real_1d &get_phi() const;
     const real_1d &get_h_pixels() const;
@@ -116,7 +116,7 @@ namespace CCPi {
     int n_vertical_pixels;
     int total_vertical_pixels;
     int v_offset;
-    pixel_data *pixels;
+    pixel_3d *pixels;
   };
 
   class cone_beam : public instrument {

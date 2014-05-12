@@ -15,13 +15,13 @@
    current Matlab structures.
 */
 
-pixel_data &CCPi::instrument::get_pixel_data()
+pixel_3d &CCPi::instrument::get_pixel_data()
 {
   return *pixels;
 }
 
-pixel_data &CCPi::instrument::create_pixel_data()
+pixel_3d &CCPi::instrument::create_pixel_data()
 {
-  pixels = new pixel_data(boost::extents[n_angles][n_vertical_pixels][n_horizontal_pixels]);
+  pixels = new pixel_3d(boost::extents[n_angles][n_vertical_pixels][n_horizontal_pixels]);
   return *pixels;
 }

@@ -36,15 +36,15 @@ void ex_sigint(int sig) {
 }
 #endif
 
-static void P(voxel_data &y, const int ctype, const std::vector<real> &d,
-	      const std::vector<real> &c, const voxel_data::size_type sz[]);
+static void P(voxel_data &y, const int ctype, const real_1dr &d,
+	      const real_1dr &c, const voxel_data::size_type sz[]);
 static real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 		const real tau, const int Ddim, const int Dm, const int Dn,
 		const int Dl, const voxel_data::size_type sz[]);
 
 void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 					 real &hxkp1, real &gxkp1,
-					 std::vector<real> &fxkp1l,
+					 real_1dr &fxkp1l,
 					 int &kend, const real voxel_size[],
 					 const pixel_data &b, const real alpha,
 					 real tau, real bL, real bmu,
@@ -52,17 +52,17 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 					 const int Ddim, const int Dm,
 					 const int Dn, const int Dl,
 					 const sl_int prodDims, const int ctype,
-					 std::vector<real> &d,
-					 std::vector<real> &c, const bool ghxl,
+					 real_1dr &d,
+					 real_1dr &c, const bool ghxl,
 					 const bool xl,
-					 std::vector<real> &hxkp1l,
-					 std::vector<real> &gxkp1l,
-					 std::vector<real> &xlist,
+					 real_1dr &hxkp1l,
+					 real_1dr &gxkp1l,
+					 real_1dr &xlist,
 					 const bool verbose, int &numGrad,
 					 int &numBack, int &numFunc,
 					 int &numRest,
-					 std::vector<real> &Lklist,
-					 std::vector<real> &muklist,
+					 real_1dr &Lklist,
+					 real_1dr &muklist,
 					 std::list<int> &rp,
 					 const real grid_offset[],
 					 instrument *device)
@@ -100,7 +100,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   /*temp vectors */
   voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
 	      boost::fortran_storage_order());
-  pixel_data tv2(boost::extents[n_angles][n_v][n_h]);
+  pixel_3d tv2(boost::extents[n_angles][n_v][n_h]);
   std::vector<real> uijl(Ddim);
 
   /* INITIALIZE */
@@ -578,8 +578,8 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   kend = kk;
 }
 
-void P(voxel_data &y, const int ctype, const std::vector<real> &d,
-       const std::vector<real> &c, const voxel_data::size_type sz[])
+void P(voxel_data &y, const int ctype, const real_1dr &d,
+       const real_1dr &c, const voxel_data::size_type sz[])
 {
   if (ctype == 2) { /* c <= x <= d (elementwise) */
     sl_int mnl = 0;
