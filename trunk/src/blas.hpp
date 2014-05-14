@@ -24,8 +24,8 @@ inline void scal_y(const real beta, boost::multi_array_ref<real_type, 3> &y,
     (y.data())[i] = b * (y.data())[i];
 }
 
-inline voxel_type norm_voxels(voxel_data &v, const sl_int nx, const sl_int ny,
-			      const sl_int nz)
+inline voxel_type norm_voxels(const voxel_data &v, const sl_int nx,
+			      const sl_int ny, const sl_int nz)
 {
   voxel_type norm = 0.0;
 #pragma omp parallel for reduction(+:norm) shared(v) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -42,8 +42,24 @@ inline voxel_type norm_voxels(voxel_data &v, const sl_int nx, const sl_int ny,
   return norm;
 }
 
-inline voxel_type norm_pixels(pixel_data &p, const sl_int na, const sl_int nv,
-			      const sl_int nh)
+inline void norm_voxels(const voxel_data &v, const sl_int nx, const sl_int ny,
+			const sl_int nz, voxel_1d &norm)
+{
+#pragma omp parallel for shared(v) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nz; i++) {
+    voxel_type n1 = 0.0;
+    for (sl_int j = 0; j < ny; j++) {
+      voxel_type n2 = 0.0;
+      for (sl_int k = 0; k < nx; k++)
+	n2 += v[k][j][i] * v[k][j][i];
+      n1 += n2;
+    }
+    norm[i] = n1;
+  }
+}
+
+inline pixel_type norm_pixels(const pixel_data &p, const sl_int na,
+			      const sl_int nv, const sl_int nh)
 {
   pixel_type norm = 0.0;
 #pragma omp parallel for reduction(+:norm) shared(p) firstprivate(na, nv, nh) schedule(dynamic)
@@ -58,6 +74,22 @@ inline voxel_type norm_pixels(pixel_data &p, const sl_int na, const sl_int nv,
     norm += n1;
   }
   return norm;
+}
+
+inline void norm_pixels(const pixel_data &p, const sl_int na, const sl_int nv,
+			const sl_int nh, pixel_1d &norm)
+{
+#pragma omp parallel for shared(p) firstprivate(na, nv, nh) schedule(dynamic)
+  for (sl_int j = 0; j < nv; j++) {
+    pixel_type n1 = 0.0;
+    for (sl_int i = 0; i < na; i++) {
+      pixel_type n2 = 0.0;
+      for (sl_int k = 0; k < nh; k++)
+	n2 += p[i][j][k] * p[i][j][k];
+      n1 += n2;
+    }
+    norm[j] = n1;
+  }
 }
 
 template <class real_type>
@@ -75,6 +107,38 @@ inline void sum_axpy(const real alpha,
 }
 
 template <class real_type>
+inline void sum_axpy(const pixel_1d &alpha,
+		     const boost::multi_array_ref<real_type, 3> &x,
+		     boost::multi_array_ref<real_type, 3> &y, const sl_int nx,
+		     const sl_int ny, const sl_int nz)
+{
+  // y += alpha * x
+#pragma omp parallel for shared(x, y, alpha) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nz; i++) {
+    voxel_type a = alpha[i];
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nx; k++)
+	y[k][j][i] += a * x[k][j][i];
+  }
+}
+
+template <class real_type>
+inline void sub_axpy(const pixel_1d &alpha,
+		     const boost::multi_array_ref<real_type, 3> &x,
+		     boost::multi_array_ref<real_type, 3> &y, const sl_int nx,
+		     const sl_int ny, const sl_int nz, const int ppv)
+{
+  // y += alpha * x
+#pragma omp parallel for shared(x, y, alpha) firstprivate(nx, ny, nz, ppv) schedule(dynamic)
+  for (sl_int i = 0; i < nz; i++) {
+    voxel_type a = alpha[i / ppv];
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nx; k++)
+	y[k][j][i] -= a * x[k][j][i];
+  }
+}
+
+template <class real_type>
 inline void scal_xby(const boost::multi_array_ref<real_type, 3> &x,
 		     const real beta, boost::multi_array_ref<real_type, 3> &y,
 		     const sl_int nx, const sl_int ny, const sl_int nz)
@@ -85,6 +149,22 @@ inline void scal_xby(const boost::multi_array_ref<real_type, 3> &x,
 #pragma omp parallel for shared(x, y) firstprivate(n, b) schedule(dynamic)
   for (sl_int i = 0; i < n; i++)
     (y.data())[i] = b * (y.data())[i] + (x.data())[i];
+}
+
+template <class real_type>
+inline void scal_xby(const boost::multi_array_ref<real_type, 3> &x,
+		     const voxel_1d &beta,
+		     boost::multi_array_ref<real_type, 3> &y,
+		     const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // y = x + beta * y
+#pragma omp parallel for shared(x, y, beta) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nz; i++) {
+    voxel_type b = beta[i];
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nx; k++)
+	y[k][j][i] = b * y[k][j][i] + x[k][j][i];
+  }
 }
 
 template <class real_type>
