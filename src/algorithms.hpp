@@ -13,6 +13,7 @@ namespace CCPi {
     virtual bool reconstruct(class instrument *device, voxel_data &voxels,
 			     const real origin[3],
 			     const real voxel_size[3]) = 0;
+    virtual bool supports_blocks() const = 0;
   };
 
   class cgls_base : public reconstruction_alg {
@@ -22,8 +23,64 @@ namespace CCPi {
     bool reconstruct(class instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
 
+  protected:
+    virtual int size_of_voxel_norm(const int nz) const = 0;
+    virtual void normalise_voxels(voxel_data &v, const sl_int nx,
+				  const sl_int ny, const sl_int nz,
+				  voxel_1d &norm) const = 0;
+    virtual void pixel_update(const pixel_data &Ad, pixel_data &b,
+			      const sl_int n_angles, const sl_int n_v,
+			      const sl_int n_h, const voxel_data &d, 
+			      voxel_data &v, const sl_int nx,
+			      const sl_int ny, const sl_int nz,
+			      const voxel_1d &norm) const = 0;
+    virtual void voxel_update(const voxel_data &s, voxel_data &v,
+			      const sl_int nx, const sl_int ny, const sl_int nz,
+			      voxel_1d &norm) const = 0;
+
   private:
     int iterations;
+  };
+
+  class cgls_3d : public cgls_base {
+  public:
+    cgls_3d(const int niterations);
+
+    bool supports_blocks() const;
+
+  protected:
+    int size_of_voxel_norm(const int nz) const;
+    void normalise_voxels(voxel_data &v, const sl_int nx, const sl_int ny,
+			  const sl_int nz, voxel_1d &norm) const;
+    void pixel_update(const pixel_data &Ad, pixel_data &b,
+		      const sl_int n_angles, const sl_int n_v,
+		      const sl_int n_h, const voxel_data &d, voxel_data &voxels,
+		      const sl_int nx, const sl_int ny, const sl_int nz,
+		      const voxel_1d &norm) const;
+    void voxel_update(const voxel_data &s, voxel_data &v, const sl_int nx,
+		      const sl_int ny, const sl_int nz, voxel_1d &norm) const;
+  };
+
+  class cgls_2d : public cgls_base {
+  public:
+    cgls_2d(const int niterations, const int ppv);
+
+    bool supports_blocks() const;
+
+  protected:
+    int size_of_voxel_norm(const int nz) const;
+    void normalise_voxels(voxel_data &v, const sl_int nx, const sl_int ny,
+			  const sl_int nz, voxel_1d &norm) const;
+    void pixel_update(const pixel_data &Ad, pixel_data &b,
+		      const sl_int n_angles, const sl_int n_v,
+		      const sl_int n_h, const voxel_data &d, voxel_data &voxels,
+		      const sl_int nx, const sl_int ny, const sl_int nz,
+		      const voxel_1d &norm) const;
+    void voxel_update(const voxel_data &s, voxel_data &v, const sl_int nx,
+		      const sl_int ny, const sl_int nz, voxel_1d &norm) const;
+
+  private:
+    int pixels_per_voxel;
   };
 
   class tv_regularization : public reconstruction_alg {
@@ -33,6 +90,7 @@ namespace CCPi {
 
     bool reconstruct(instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
+    bool supports_blocks() const;
 
     static void tvreg_core(voxel_data &xkp1, real &fxkp1, real &hxkp1,
 			   real &gxkp1, real_1dr &fxkp1l, int &kend,
@@ -65,6 +123,16 @@ namespace CCPi {
 
 inline CCPi::cgls_base::cgls_base(const int niterations)
   : iterations(niterations)
+{
+}
+
+inline CCPi::cgls_3d::cgls_3d(const int niterations)
+  : cgls_base(niterations)
+{
+}
+
+inline CCPi::cgls_2d::cgls_2d(const int niterations, const int ppv)
+  : cgls_base(niterations), pixels_per_voxel(ppv)
 {
 }
 

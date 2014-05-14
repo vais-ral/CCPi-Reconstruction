@@ -20,7 +20,7 @@ bool CCPi::tv_regularization::reconstruct(instrument *device,
     for (sl_int j = 0; j < n_v; j++)
       for (sl_int k = 0; k < n_h; k++)
 	b[i][j][k] = p[i][j][k];
-  cgls_base cgls(5);
+  cgls_3d cgls(5);
   bool ok = cgls.reconstruct(device, voxels, origin, voxel_size);
   if (ok)
     ok = reconstruct(device, b, voxels, origin, voxel_size);
@@ -109,4 +109,9 @@ bool CCPi::tv_regularization::reconstruct(instrument *device,
   if (k == k_max)
     report_error("Did not find a epsb_rel solution in k_max iterations.");
   return true;
+}
+
+bool CCPi::tv_regularization::supports_blocks() const
+{
+  return false;
 }
