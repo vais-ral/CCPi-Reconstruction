@@ -4,6 +4,8 @@
 
 #include <string>
 #include <climits>
+#include <vector>
+#include <boost/multi_array.hpp>
 
 #if LONG_MAX == 2147483647L
 typedef long long sl_int;
@@ -16,9 +18,14 @@ typedef double real;
 typedef float voxel_type;
 typedef float pixel_type;
 
-typedef double recon_type;
+typedef float recon_type;
 
-// dummy
-typedef double *voxel_data;
+typedef std::vector<real> real_1d;
+typedef boost::multi_array_ref<real, 1> real_1dr;
+
+typedef boost::multi_array_ref<pixel_type, 3> pixel_data;
+typedef boost::multi_array<pixel_type, 3> pixel_3d;
+typedef boost::multi_array_ref<voxel_type, 3> voxel_data;
+typedef boost::multi_array<voxel_type, 3> voxel_3d;
 
 #endif // CCPI_MEX_TYPES

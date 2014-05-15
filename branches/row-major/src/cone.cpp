@@ -35,16 +35,22 @@ void CCPi::cone_beam::set_params(const real sx, const real sy, const real sz,
 {
   set_source(sx, sy, sz);
   set_detector(dx);
-  set_h_pixels(dy, ny);
-  set_v_pixels(dz, nz);
-  set_phi(ang, nang);
+  real_1d &hp = set_h_pixels(ny);
+  for (int i = 0; i < ny; i++)
+    hp[i] = dy[i];
+  real_1d &vp = set_v_pixels(nz);
+  for (int i = 0; i < nz; i++)
+    vp[i] = dz[i];
+  real_1d &phi = set_phi(nang);
+  for (int i = 0; i < nang; i++)
+    phi[i] = ang[i];
 }
 
-void CCPi::cone_beam::forward_project(pixel_type *pixels,
-				      voxel_type *const voxels,
+void CCPi::cone_beam::forward_project(pixel_data &pixels,
+				      voxel_data &voxels,
 				      const real origin[3],
 				      const real width[3], const int nx,
-				      const int ny, const int nz) const
+				      const int ny, const int nz)
 {
   timer fptime(USE_TIMER);
   instrument::forward_project(source_x, source_y, source_z, detector_x,
@@ -56,11 +62,11 @@ void CCPi::cone_beam::forward_project(pixel_type *pixels,
   fptime.output(" forward projection");
 }
 
-void CCPi::cone_beam::backward_project(pixel_type *pixels,
-				       voxel_type *const voxels,
+void CCPi::cone_beam::backward_project(pixel_data &pixels,
+				       voxel_data &voxels,
 				       const real origin[3],
 				       const real width[3], const int nx,
-				       const int ny, const int nz) const
+				       const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,
@@ -72,10 +78,10 @@ void CCPi::cone_beam::backward_project(pixel_type *pixels,
   bptime.output("backward projection");
 }
 
-void CCPi::cone_beam::backward_project(voxel_type *const voxels,
+void CCPi::cone_beam::backward_project(voxel_data &voxels,
 				       const real origin[3],
 				       const real width[3], const int nx,
-				       const int ny, const int nz) const
+				       const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
   instrument::backward_project(source_x, source_y, source_z, detector_x,
