@@ -125,16 +125,17 @@ inline void sum_axpy(const pixel_1d &alpha,
 template <class real_type>
 inline void sub_axpy(const pixel_1d &alpha,
 		     const boost::multi_array_ref<real_type, 3> &x,
-		     boost::multi_array_ref<real_type, 3> &y, const sl_int nx,
-		     const sl_int ny, const sl_int nz, const int ppv)
+		     boost::multi_array_ref<real_type, 3> &y, const sl_int na,
+		     const sl_int nv, const sl_int nh, const int ppv)
 {
   // y += alpha * x
-#pragma omp parallel for shared(x, y, alpha) firstprivate(nx, ny, nz, ppv) schedule(dynamic)
-  for (sl_int i = 0; i < nz; i++) {
-    voxel_type a = alpha[i / ppv];
-    for (sl_int j = 0; j < ny; j++)
-      for (sl_int k = 0; k < nx; k++)
-	y[k][j][i] -= a * x[k][j][i];
+#pragma omp parallel for shared(x, y, alpha) firstprivate(na, nv, nh, ppv) schedule(dynamic)
+  for (sl_int i = 0; i < na; i++) {
+    for (sl_int j = 0; j < nv; j++) {
+      voxel_type a = alpha[j / ppv];
+      for (sl_int k = 0; k < nh; k++)
+	y[i][j][k] -= a * x[i][j][k];
+    }
   }
 }
 
