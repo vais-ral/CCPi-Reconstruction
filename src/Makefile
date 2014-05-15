@@ -27,7 +27,8 @@ $(OBJECTS): base_types.hpp
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
 	mpi.hpp fbp.hpp
 
-cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp fbp.hpp ui_calls.hpp
+cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp fbp.hpp blas.hpp \
+	ui_calls.hpp
 
 instruments.o: instruments.cpp instruments.hpp ui_calls.hpp
 

@@ -8,13 +8,14 @@ static inline real cb_r_i(const sl_int i, const real r_0, const real step)
   return r_0 + i * step;
 }
 
-template <class pixel_t, class voxel_t>
 void CCPi::instrument::backward_project(const real source_x,
 					const real source_y,
 					const real source_z, const real det_x,
-					const real det_y[], const real det_z[],
-					const real phi[], pixel_t ray_data[],
-					voxel_t *const vol_data,
+					const real_1d &det_y,
+					const real_1d &det_z,
+					const real_1d &phi,
+					pixel_data &ray_data,
+					voxel_data &vol_data,
 					const int n_angles, const int n_rays_y,
 					const int n_rays_z,
 					const real grid_offset[3],
@@ -24,10 +25,9 @@ void CCPi::instrument::backward_project(const real source_x,
 					const int nz_voxels)
 {
   sl_int curr_angle, curr_ray_y, curr_ray_z;
-  sl_int ray_offset;
   real cos_curr_angle, sin_curr_angle;
   real start[3], end[3];
-#pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, ray_offset, cos_curr_angle, sin_curr_angle)
+#pragma omp parallel shared(det_y, det_z, phi, grid_offset, voxel_size) private(curr_angle, curr_ray_y, curr_ray_z, start, end, cos_curr_angle, sin_curr_angle)
   {
     int nz_offset = 0;
     int nz_step = 0;
@@ -96,8 +96,8 @@ void CCPi::instrument::backward_project(const real source_x,
 	    start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
 	    start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
 
-	    ray_offset = curr_angle * sl_int(n_rays_y) * sl_int(n_rays_z)
-	      + curr_ray_z * sl_int(n_rays_y);
+	    //ray_offset = curr_angle * sl_int(n_rays_y) * sl_int(n_rays_z)
+	    //+ curr_ray_z * sl_int(n_rays_y);
 
 	    /* loop over y values on detector */
 	    for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
@@ -107,8 +107,8 @@ void CCPi::instrument::backward_project(const real source_x,
 		+ cos_curr_angle * det_y[curr_ray_y];
 
 	      /* loop over z values on detector */
-	      project_singledata<pixel_t, voxel_t, true>(start, end,
-				 ray_data[ray_offset + curr_ray_y],
+	      project_singledata<pixel_type, true>(start, end,
+				 ray_data[curr_angle][curr_ray_z][curr_ray_y],
 				 vol_data, grid_offset[0], grid_offset[1],
 				 b_z, voxel_size[0], voxel_size[1],
 				 voxel_size[2], nx_voxels, ny_voxels,
