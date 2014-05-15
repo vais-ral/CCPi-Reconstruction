@@ -436,7 +436,8 @@ void CCPi::parallel_beam::map_2Dprojection(const real start[], const real end[],
     return;
 }
 
-void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
+void CCPi::parallel_beam::setup_2D_matrix(const real_1d &det_y,
+					  const real_1d &phi,
 					  const int n_angles,
 					  const int n_rays_z,
 					  const int n_rays_y,
@@ -460,10 +461,10 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   start[2] = end[2];
 
   // generate forward projections.
-  real **forward_data = new real *[n_rays_y * n_angles];
-  int **forward_x = new int *[n_rays_y * n_angles];
-  int **forward_y = new int *[n_rays_y * n_angles];
-  int *forward_sizes = new int[n_rays_y * n_angles];
+  std::vector<std::vector<real> > forward_data(n_rays_y * n_angles);
+  std::vector<std::vector<int> > forward_x(n_rays_y * n_angles);
+  std::vector<std::vector<int> > forward_y(n_rays_y * n_angles);
+  std::vector<int> forward_sizes(n_rays_y * n_angles);
 
   sl_int total = 0;
   // Todo parallelize?
@@ -492,9 +493,9 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
       forward_sizes[offset] = sz;
       if (sz > 0) {
 	total += sz;
-	forward_data[offset] = new real[sz];
-	forward_x[offset] = new int[sz];
-	forward_y[offset] = new int[sz];
+	forward_data[offset].resize(sz);
+	forward_x[offset].resize(sz);
+	forward_y[offset].resize(sz);
 	int i = 0;
 	for (projection_map::const_iterator ptr = map.begin();
 	     ptr != map.end(); ++ptr) {
@@ -503,10 +504,6 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 	  forward_y[offset][i] = ptr->first.x;
 	  i++;
 	}
-      } else {
-	forward_data[offset] = 0;
-	forward_x[offset] = 0;
-	forward_y[offset] = 0;
       }
       offset++;
     }
@@ -516,9 +513,9 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
   // MKL 0 indexed coordinate format, CSR is a bit tricky as needs all rows
   // even though we only want a 2D subset (its because of z in angles,z,y)
   matrix_size = total;
-  forward_matrix = new real[total];
-  forward_cols = new sl_int[total];
-  forward_rows = new sl_int[total];
+  forward_matrix.resize(total);
+  forward_cols.resize(total);
+  forward_rows.resize(total);
   sl_int column = 0;
   sl_int row = 0;
   sl_int index = 0;
@@ -542,10 +539,10 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
 
   // produce backward projections from forward data - since we have packed
   // y,x memory order we can use CSR format
-  backward_matrix = new real[total];
-  backward_cols = new sl_int[total];
-  backward_rowb = new sl_int[nx_voxels * ny_voxels];
-  backward_rowe = new sl_int[nx_voxels * ny_voxels];
+  backward_matrix.resize(total);
+  backward_cols.resize(total);
+  backward_rowb.resize(nx_voxels * ny_voxels);
+  backward_rowe.resize(nx_voxels * ny_voxels);
 
   sl_int count = 0;
   column = 0;
@@ -595,17 +592,6 @@ void CCPi::parallel_beam::setup_2D_matrix(const real det_y[], const real phi[],
       offset++;
     }
   }
-  for (int i = 0; i < n_angles * n_rays_y; i++) {
-    if (forward_sizes[i] > 0) {
-      delete [] forward_y[i];
-      delete [] forward_x[i];
-      delete [] forward_data[i];
-    }
-  }
-  delete [] forward_sizes;
-  delete [] forward_y;
-  delete [] forward_x;
-  delete [] forward_data;
 #ifdef USE_TIMER
   add_output("Total matrix data is ");
   add_output(total);

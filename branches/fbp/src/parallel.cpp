@@ -33,11 +33,11 @@ bool CCPi::parallel_beam::supports_blocks() const
   return true;
 }
 
-void CCPi::parallel_beam::backward_project(pixel_type *pixels,
-					   voxel_type *const voxels,
+void CCPi::parallel_beam::backward_project(pixel_data &pixels,
+					   voxel_data &voxels,
 					   const real origin[3],
 					   const real width[3], const int nx,
-					   const int ny, const int nz) const
+					   const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
   if (has_projection_matrix)
@@ -53,10 +53,10 @@ void CCPi::parallel_beam::backward_project(pixel_type *pixels,
   bptime.output("backward projection");
 }
 
-void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
+void CCPi::parallel_beam::backward_project(voxel_data &voxels,
 					   const real origin[3],
 					   const real width[3], const int nx,
-					   const int ny, const int nz) const
+					   const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
   if (has_projection_matrix)
@@ -72,11 +72,11 @@ void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
   bptime.output("backward projection");
 }
 
-void CCPi::parallel_beam::forward_project(pixel_type *pixels,
-					  voxel_type *const voxels,
+void CCPi::parallel_beam::forward_project(pixel_data &pixels,
+					  voxel_data &voxels,
 					  const real origin[3],
 					  const real width[3], const int nx,
-					  const int ny, const int nz) const
+					  const int ny, const int nz)
 {
   timer fptime(USE_TIMER);
   if (has_projection_matrix)
@@ -110,9 +110,9 @@ void CCPi::parallel_beam::setup_projection_matrix(const real origin[3],
   ptime.output("projection map");
 }
 
-void CCPi::parallel_beam::forward_project_matrix(const real det_z[],
-						 pixel_type ray_data[],
-						 voxel_type *const vol_data,
+void CCPi::parallel_beam::forward_project_matrix(const real_1d &det_z,
+						 pixel_data &ray_data,
+						 voxel_data &vol_data,
 						 const int n_angles,
 						 const int n_rays_y,
 						 const int n_rays_z,
@@ -129,12 +129,10 @@ void CCPi::parallel_beam::forward_project_matrix(const real det_z[],
 			       - grid_offset[2]) / voxel_size[2]);
     if (k < 0 or k >= nz_voxels)
       continue;
-    sl_int k_offset = k * nx_voxels * ny_voxels;
-    sl_int z_offset = curr_ray_z * n_rays_y;
 
     for (sl_int i = 0; i < matrix_size; i++)
-      ray_data[forward_rows[i] + z_offset] += forward_matrix[i]
-	* vol_data[k_offset + forward_cols[i]];
+      ray_data[forward_rows[i] / (n_rays_z * n_rays_y)][curr_ray_z][forward_rows[i] % n_rays_y] += 
+	forward_matrix[i] * vol_data[forward_cols[i]][curr_ray_z][k];
     /*
     char desc[6];
     desc[0] = 'G';
@@ -151,9 +149,9 @@ void CCPi::parallel_beam::forward_project_matrix(const real det_z[],
   }
 }
 
-void CCPi::parallel_beam::backward_project_matrix(const real det_z[],
-						  pixel_type ray_data[],
-						  voxel_type *const vol_data,
+void CCPi::parallel_beam::backward_project_matrix(const real_1d &det_z,
+						  pixel_data &ray_data,
+						  voxel_data &vol_data,
 						  const int n_angles,
 						  const int n_rays_y,
 						  const int n_rays_z,
@@ -165,7 +163,7 @@ void CCPi::parallel_beam::backward_project_matrix(const real det_z[],
 {
 #pragma omp parallel for shared(det_z, ray_data) schedule(dynamic)
   for (sl_int k = 0; k < nz_voxels; k++) {
-    sl_int k_offset = k * nx_voxels * ny_voxels;
+    //sl_int k_offset = k * nx_voxels * ny_voxels;
     sl_int z_min = -1;
     sl_int z_max = -1;
     // Todo - calculate range rather than looping
@@ -182,11 +180,10 @@ void CCPi::parallel_beam::backward_project_matrix(const real det_z[],
 
     sl_int size = nx_voxels * ny_voxels;
     for (sl_int curr_ray_z = z_min; curr_ray_z <= z_max; curr_ray_z++) {
-      sl_int z_offset = curr_ray_z * n_rays_y;
       for (sl_int i = 0; i < size; i++) {
 	for (sl_int j = backward_rowb[i]; j < backward_rowe[i]; j++) {
-	  vol_data[k_offset + i] += backward_matrix[j] *
-	    ray_data[backward_cols[j] + z_offset];
+	  vol_data[i][curr_ray_z][k] += backward_matrix[j] *
+	    ray_data[forward_cols[i] / (n_rays_z * n_rays_y)][curr_ray_z][forward_cols[i] % n_rays_y];
 	}
       }
       /*

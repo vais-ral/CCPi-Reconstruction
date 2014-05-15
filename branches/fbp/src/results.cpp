@@ -121,7 +121,7 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
 	  }
 	}
       }
-      ok = write_tiff(name, sdata, cdata, (int)s[0], (int)s[1], width);
+      ok = write_tiff(name, cdata, (int)s[0], (int)s[1], width);
     }
     delete [] sdata;
   }

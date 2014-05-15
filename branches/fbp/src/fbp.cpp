@@ -13,19 +13,9 @@
 #endif // USE_TIMER
 
 // Todo - not sure 1d.data() is legal
-// - move these to header as will be needed elsewhere.
-typedef std::vector<real> real_1d;
-typedef boost::multi_array<real, 2> real_2d;
-typedef boost::multi_array<real, 3> real_3d;
 typedef std::vector<std::complex<real> > complex_1d;
 typedef boost::multi_array<std::complex<real>, 2> complex_2d;
-typedef std::vector<pixel_type> pixel_1d;
-typedef boost::multi_array<pixel_type, 2> pixel_2d;
-typedef boost::multi_array<pixel_type, 3> pixel_3d;
 typedef boost::multi_array<std::complex<pixel_type>, 3> complex_pixel_3d;
-typedef std::vector<voxel_type> voxel_1d;
-typedef boost::multi_array<voxel_type, 2> voxel_2d;
-typedef boost::multi_array<voxel_type, 3> voxel_3d;
 
 static bool fbp_axial(complex_1d &vf, complex_1d &vi, real_1d &vo,
 		      const real angle_step, const int n, const int nangles);
@@ -47,7 +37,7 @@ static void transform_sinogram_sol(const int nx, const int ny,
 				   const int required_width, int &ta_nx,
 				   int &ta_ny, int &tb_nx, int &tb_ny, int &nz,
 				   const real alpha);
-static void transform_sinogram(pixel_3d &mapping, const pixel_type *pixels,
+static void transform_sinogram(pixel_3d &mapping, const pixel_data &pixels,
 			       const int z, const int nangles, const int nv,
 			       const int nh, const real_2d &mapx,
 			       const real_2d &mapy, int &ta_nx, int &ta_ny,
@@ -511,7 +501,7 @@ void transform_sinogram_sol(const int nx, const int ny, const int nangles,
   }
 }
 
-void transform_sinogram(pixel_3d &mapping, const pixel_type *pixels,
+void transform_sinogram(pixel_3d &mapping, const pixel_data &pixels,
 			const int z, const int nangles, const int nv,
 			const int nh, const real_2d &mapx, const real_2d &mapy,
 			int &ta_nx, int &ta_ny, int &tb_nx, int &tb_ny, int &nz)
@@ -528,12 +518,12 @@ void transform_sinogram(pixel_3d &mapping, const pixel_type *pixels,
   // This is for shape point with no missing angles
   for (int j = 0; j < nangles; j++) {
     for (int i = 0; i < nh; i++)
-      vtb[i + 3][j] = pixels[j * nh * nv + z * nh + i];
+      vtb[i + 3][j] = pixels[j][z][i];
   }
   for (int j = 0; j < nangles; j++) {
     std::cerr << "loop " << j << '\n';
     for (int i = 0; i < nh; i++)
-      std::cerr << j * nh + i << ' ' << pixels[j * nh * nv + z * nh + i] << '\n';
+      std::cerr << j * nh + i << ' ' << pixels[j][z][i] << '\n';
   }
   // no missed stuff so skip next if
   int extrapolation_pixels = 10; // Todo
@@ -623,7 +613,7 @@ void transform_sinogram(pixel_3d &mapping, const pixel_type *pixels,
   }
 }
 
-bool CCPi::fbp_alg::reconstruct(const instrument *device, voxel_data &voxels,
+bool CCPi::fbp_alg::reconstruct(instrument *device, voxel_data &voxels,
 				const real origin[3], const real voxel_size[3])
 {
   bool ok = device->filtered_back_project(voxels, origin, voxel_size,
@@ -637,14 +627,14 @@ bool CCPi::parallel_beam::filtered_back_project(voxel_data &voxels,
 						const filter_name_t name,
 						const filter_window_t window,
 						const filter_norm_t norm,
-						const real bandwidth) const
+						const real bandwidth)
 {
   // Todo?
   real alpha = 1.0; // pixelParam
   const voxel_data::size_type *sz = voxels.shape();
   //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
   //voxel_type *const data = voxels.data();
-  pixel_type *const pixels = get_pixel_data();
+  pixel_data &pixels = get_pixel_data();
   //sl_int n_rays = get_data_size();
 
   int nv = get_num_v_pixels();
@@ -657,10 +647,10 @@ bool CCPi::parallel_beam::filtered_back_project(voxel_data &voxels,
   int z_vox = 0;
   int z_count = 0;
   int nangles = get_num_angles();
-  real *angles = get_phi();
+  const real_1d &angles = get_phi();
   real angle_step = angles[1] - angles[0];
   int nh = get_num_h_pixels();
-  real *h_pixels = get_h_pixels();
+  const real_1d &h_pixels = get_h_pixels();
   real h_step = (h_pixels[1] - h_pixels[0]);
   real inv_h_step = real(1.0) / h_step;
   //int new_x = 0;
@@ -794,8 +784,13 @@ bool CCPi::cone_beam::filtered_back_project(voxel_data &voxels,
 					    const filter_name_t name,
 					    const filter_window_t window,
 					    const filter_norm_t norm,
-					    const real bandwidth) const
+					    const real bandwidth)
 {
   report_error("FBP not implemented for cone beam");
   return false;
+}
+
+bool CCPi::fbp_alg::supports_blocks() const
+{
+  return true;
 }

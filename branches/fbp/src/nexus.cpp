@@ -12,13 +12,12 @@
 #  define USE_TIMER false
 #endif // USE_TIMER
 
-bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
-		      pixel_type *f_dark, pixel_type *i_bright,
-		      pixel_type *f_bright, int &nh_pixels, int &nv_pixels,
-		      real * &angles, int &nangles, real &hsize, real &vsize,
-		      const std::string filename, const bool all_angles,
-		      const bool read_data, const int start_idx,
-		      const int block_size)
+bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
+		      pixel_2d &i_bright, pixel_2d &f_bright, int &nh_pixels,
+		      int &nv_pixels, std::vector<real> &angles, int &nangles,
+		      real &hsize, real &vsize, const std::string filename,
+		      const bool all_angles, const bool read_data,
+		      const int start_idx, const int block_size)
 {
   bool ok = true;
   timer ldtime(USE_TIMER);
@@ -152,7 +151,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 	  ok = false;
 	  std::cerr << "Problem reading angles\n";
 	} else {
-	  angles = new real[n_ang];
+	  angles.resize(n_ang);
 	  input.closeGroup();
 	  // now read the data
 	  input.openGroup("instrument", "NXinstrument");
@@ -214,7 +213,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
                 nv_pixels = sizes[1];
               else
                 nv_pixels = info.dims[1];
-	      sl_int offset = sizes[1] * sizes[2];
+	      //sl_int offset = sizes[1] * sizes[2];
 	      uint16_t *ptr = 0;
 	      if (read_data)
 		ptr = new uint16_t[sizes[1] * sizes[2]];
@@ -233,8 +232,7 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		  if (read_data) {
 		    for (sl_int k = 0; k < sizes[1]; k++) {
 		      for (sl_int j = 0; j < sizes[2]; j++) {
-			pixels[(block_size - k - 1) * sizes[2]
-			       + j + n_angles * offset] =
+			pixels[n_angles][(block_size - k - 1)][j] =
 			  pixel_type(ptr[k * sizes[2] + j]);
 		      }
 		    }
@@ -245,9 +243,9 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		  if (read_data) {
 		    // bright
 		    // Todo - check angles, no average? ...
-		    pixel_type *bptr = i_bright;
+		    pixel_type *bptr = i_bright.data();
 		    if (i > n_ang / 2) {
-		      bptr = f_bright;
+		      bptr = f_bright.data();
 		      n_fbright++;
 		    } else
 		      n_ibright++;
@@ -261,9 +259,9 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
 		} else if (keys[i] == 2) {
 		  if (read_data) {
 		    // dark
-		    pixel_type *dptr = i_dark;
+		    pixel_type *dptr = i_dark.data();
 		    if (i > n_ang / 2) {
-		      dptr = f_dark;
+		      dptr = f_dark.data();
 		      n_fdark++;
 		    } else
 		      n_idark++;
@@ -294,15 +292,18 @@ bool CCPi::read_NeXus(pixel_type *pixels, pixel_type *i_dark,
     ldtime.accumulate();
     ldtime.output("NeXus load");
     // Average bright/dark frames - Todo, something else? outside here?
-    int size = nh_pixels * nv_pixels;
-    for (int i = 0; i < size; i++)
-      i_dark[i] /= pixel_type(n_idark);
-    for (int i = 0; i < size; i++)
-      f_dark[i] /= pixel_type(n_fdark);
-    for (int i = 0; i < size; i++)
-      i_bright[i] /= pixel_type(n_ibright);
-    for (int i = 0; i < size; i++)
-      f_bright[i] /= pixel_type(n_fbright);
+    for (int i = 0; i < nv_pixels; i++)
+      for (int j = 0; j < nh_pixels; j++)
+	i_dark[i][j] /= pixel_type(n_idark);
+    for (int i = 0; i < nv_pixels; i++)
+      for (int j = 0; j < nh_pixels; j++)
+	f_dark[i][j] /= pixel_type(n_fdark);
+    for (int i = 0; i < nv_pixels; i++)
+      for (int j = 0; j < nh_pixels; j++)
+	i_bright[i][j] /= pixel_type(n_ibright);
+    for (int i = 0; i < nv_pixels; i++)
+      for (int j = 0; j < nh_pixels; j++)
+	f_bright[i][j] /= pixel_type(n_fbright);
     // destructor closes file
   }
   return ok;
