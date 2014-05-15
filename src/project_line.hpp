@@ -4,9 +4,9 @@
 
 namespace CCPi {
 
-  template <class pixel_t, class voxel_t, bool backward>
+  template <class pixel_t, bool backward>
   void project_singledata(const real start[], const real end[],
-			  pixel_t &ray_data, voxel_t *const vol_data,
+			  pixel_t &ray_data, voxel_data &vol_data,
 			  const real b_x, const real b_y, const real b_z,
 			  const real d_x, const real d_y, const real d_z,
 			  const int im_size_x, const int im_size_y,
@@ -88,9 +88,9 @@ static inline real floor_j(const real arg)
   return std::floor( arg );
 }
 
-template <class pixel_t, class voxel_t, bool backward>
+template <class pixel_t, bool backward>
 void CCPi::project_singledata(const real start[], const real end[],
-			      pixel_t &ray_data, voxel_t *const vol_data,
+			      pixel_t &ray_data, voxel_data &vol_data,
 			      const real b_x, const real b_y, const real b_z,
 			      const real d_x, const real d_y, const real d_z,
 			      const int im_size_x, const int im_size_y,
@@ -110,9 +110,9 @@ void CCPi::project_singledata(const real start[], const real end[],
     recon_type alpha_x_u = 0.0, alpha_y_u = 0.0, alpha_z_u = 0.0;
     recon_type l_ij;
     int i_min, j_min, k_min, i_max, j_max, k_max, n_count, i_u, j_u, k_u;
-    sl_int i_step, j_step, k_step;
+    //sl_int i_step, j_step, k_step;
     
-    sl_int ray_index;
+    //sl_int ray_index;
 	
     p1_x = start[0];
     p1_y = start[1];
@@ -346,10 +346,10 @@ void CCPi::project_singledata(const real start[], const real end[],
 
 
 	alpha_c=alpha_min;
-	ray_index = i*im_size_y*im_size_z + j*im_size_z + (k+z_offset);
-	i_step = i_u * im_size_y * im_size_z;
-	j_step = j_u * im_size_z;
-	k_step = k_u;
+	//ray_index = i*im_size_y*im_size_z + j*im_size_z + (k+z_offset);
+	//i_step = i_u * im_size_y * im_size_z;
+	//j_step = j_u * im_size_z;
+	//k_step = k_u;
 	recon_type data = 0.0;
 	recon_type rdata = (recon_type)ray_data;
 
@@ -361,26 +361,26 @@ void CCPi::project_singledata(const real start[], const real end[],
 		/* ray intersects pixel(i,j) with length l_ij */
 
 	      if (backward)
-	      vol_data[ray_index] += (voxel_t)((alpha_x-alpha_c)*d_conv * rdata);
+	      vol_data[i][j][k+z_offset] += (voxel_type)((alpha_x-alpha_c)*d_conv * rdata);
 	      else
-        data += (alpha_x-alpha_c)*d_conv * vol_data[ray_index];
+        data += (alpha_x-alpha_c)*d_conv * vol_data[i][j][k+z_offset];
 
 		if( y_defined && alpha_x == alpha_y) {
 		    j += j_u;
-		    ray_index += j_step;
+		    //ray_index += j_step;
 		    n_count++;
 		    alpha_y += alpha_y_u;
 		}
 
 		if( z_defined && alpha_x == alpha_z) {
 		    k += k_u;
-		    ray_index += k_step;
+		    //ray_index += k_step;
 		    n_count++;
 		    alpha_z += alpha_z_u;
 		}
 
 		i += i_u;
-		ray_index += i_step;
+		//ray_index += i_step;
 		alpha_c=alpha_x;
 		alpha_x += alpha_x_u;
 	    }
@@ -390,19 +390,19 @@ void CCPi::project_singledata(const real start[], const real end[],
 		/* ray intersects pixel(i,j) with length l_ij */
 
 	      if (backward)
-	      vol_data[ray_index] += (voxel_t)((alpha_y-alpha_c)*d_conv * rdata);
+	      vol_data[i][j][k+z_offset] += (voxel_type)((alpha_y-alpha_c)*d_conv * rdata);
 	      else
-		data += (alpha_y-alpha_c)*d_conv * vol_data[ray_index];
+		data += (alpha_y-alpha_c)*d_conv * vol_data[i][j][k+z_offset];
 
 		if( z_defined && alpha_y == alpha_z) {
 		    k += k_u;
-		    ray_index += k_step;
+		    //ray_index += k_step;
 		    n_count++;
 		    alpha_z += alpha_z_u;
 		}
 
 		j=j+j_u;
-		ray_index += j_step;
+		//ray_index += j_step;
 		alpha_c=alpha_y;
 		alpha_y += alpha_y_u;
 	    }
@@ -412,12 +412,12 @@ void CCPi::project_singledata(const real start[], const real end[],
 		/* ray intersects pixel(i,j) with length l_ij */
 
 	      if (backward)
-	      vol_data[ray_index] += (voxel_t)((alpha_z-alpha_c)*d_conv * rdata);
+	      vol_data[i][j][k+z_offset] += (voxel_type)((alpha_z-alpha_c)*d_conv * rdata);
 	      else
-		data += (alpha_z-alpha_c)*d_conv * vol_data[ray_index];
+		data += (alpha_z-alpha_c)*d_conv * vol_data[i][j][k+z_offset];
 
 		k += k_u;
-		ray_index += k_step;
+		//ray_index += k_step;
 		alpha_c=alpha_z;
 		alpha_z += alpha_z_u;
 	    }
@@ -445,9 +445,9 @@ void CCPi::project_singledata(const real start[], const real end[],
 	    l_ij=(alpha_max-alpha_c)*d_conv;
 
 	    if (backward)
-	    vol_data[ray_index] += (voxel_t)(l_ij * rdata);
+	    vol_data[i][j][k+z_offset] += (voxel_type)(l_ij * rdata);
 	    else
-	    data += l_ij * vol_data[ray_index];
+	    data += l_ij * vol_data[i][j][k+z_offset];
 	  }
 	}
 	if (!backward)

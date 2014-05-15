@@ -27,12 +27,12 @@ bool CCPi::parallel_beam::supports_blocks() const
   return true;
 }
 
-void CCPi::parallel_beam::safe_forward_project(pixel_type *pixels,
-					       voxel_type *const voxels,
+void CCPi::parallel_beam::safe_forward_project(pixel_data &pixels,
+					       voxel_data &voxels,
 					       const real origin[3],
 					       const real width[3],
 					       const int nx, const int ny,
-					       const int nz) const
+					       const int nz)
 {
   timer fptime(USE_TIMER);
   instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
@@ -43,11 +43,11 @@ void CCPi::parallel_beam::safe_forward_project(pixel_type *pixels,
   fptime.output(" forward projection");
 }
 
-void CCPi::parallel_beam::backward_project(pixel_type *pixels,
-					   voxel_type *const voxels,
+void CCPi::parallel_beam::backward_project(pixel_data &pixels,
+					   voxel_data &voxels,
 					   const real origin[3],
 					   const real width[3], const int nx,
-					   const int ny, const int nz) const
+					   const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
     /*
@@ -65,10 +65,10 @@ void CCPi::parallel_beam::backward_project(pixel_type *pixels,
   bptime.output("backward projection");
 }
 
-void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
+void CCPi::parallel_beam::backward_project(voxel_data &voxels,
 					   const real origin[3],
 					   const real width[3], const int nx,
-					   const int ny, const int nz) const
+					   const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
     /*
@@ -86,11 +86,11 @@ void CCPi::parallel_beam::backward_project(voxel_type *const voxels,
   bptime.output("backward projection");
 }
 
-void CCPi::parallel_beam::forward_project(pixel_type *pixels,
-					  voxel_type *const voxels,
+void CCPi::parallel_beam::forward_project(pixel_data &pixels,
+					  voxel_data &voxels,
 					  const real origin[3],
 					  const real width[3], const int nx,
-					  const int ny, const int nz) const
+					  const int ny, const int nz)
 {
   timer fptime(USE_TIMER);
   /**/

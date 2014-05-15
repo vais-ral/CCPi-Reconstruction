@@ -65,7 +65,10 @@ int main()
     setup_ok = false;
     break;
   case CCPi::alg_CGLS:
-    recon_algorithm = new CCPi::cgls_base(niterations);
+    if (blocking_factor > 0 and instrument->supports_blocks())
+      recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
+    else
+      recon_algorithm = new CCPi::cgls_3d(niterations);
     break;
   case CCPi::alg_TVreg:
     recon_algorithm = new CCPi::tv_regularization(alpha, tau, l, mu,
@@ -102,7 +105,8 @@ int main()
 	    nz_voxels = instrument->get_num_v_pixels() / pixels_per_voxel;
 	    block_size = nz_voxels;
 	    block_step = nz_voxels;
-	  } else if (instrument->supports_blocks()) {
+	  } else if (instrument->supports_blocks() and
+		     recon_algorithm->supports_blocks()) {
 	    int sz = 1;
 	    if (blocking_factor > 0)
 	      sz = blocking_factor;

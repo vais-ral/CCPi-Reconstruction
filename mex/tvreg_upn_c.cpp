@@ -19,8 +19,7 @@ struct Dtype {
         sl_int prodDims;
 };
 
-static void dcopyf(const sl_int n, const float x[], const int incx, real y[],
-		   const int incy);
+static void dcopyf(const sl_int n, const float x[], float y[]);
 
 // dummy cone-beam device
 namespace CCPi {
@@ -41,9 +40,9 @@ namespace CCPi {
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
-  register double *d,*c,*dims,alpha,tau,bL,bmu,epsb_rel,*hxkp1l,*gxkp1l,*xlist, *voxel_size;
+  register double *dptr,*cptr,*dims,alpha,tau,bL,bmu,epsb_rel,*voxel_size;
   register double *source_x, *source_y, *source_z, *det_x, *det_y, *det_z, *angles, *grid_offset; 
-  register double *fxkp1,*hxkp1,*gxkp1,*fxkp1l,*k,*numGrad,*numBack,*numFunc,*numRest,*Lklist,*muklist,*rklist;
+  register double *fxkp1,*hxkp1,*gxkp1,*k,*numGrad,*numBack,*numFunc,*numRest;
   register float *b, *x, *xkp1;
   mxArray *M,*S,*Mdims;
   int i,j,k_max,dim,ctype,ghxl,xl,verbose,temp, n_rays_y, n_rays_z, n_angles;
@@ -92,10 +91,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     ctype = (int)(mxGetScalar(S));
 
     M = (mxArray*)prhs[11];
-    d = mxGetPr(M);
+    dptr = mxGetPr(M);
 
     M = (mxArray*)prhs[12];
-    c = mxGetPr(M);
+    cptr = mxGetPr(M);
 
     S = (mxArray*)prhs[13];
     ghxl = (int)(mxGetScalar(S));
@@ -118,6 +117,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     n_rays_y = mxGetM(prhs[20]);
     n_rays_z = mxGetM(prhs[21]);
     n_angles = mxGetM(prhs[22]);
+    pixel_data px(b, boost::extents[n_angles][n_rays_z][n_rays_y]);
         
     /*obtain the dimensions */
     dim = std::max( mxGetM(Mdims), mxGetN(Mdims) );
@@ -132,6 +132,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }else
       D.l = 1;
     D.prodDims =prodDims;
+
+    real_1dr d(dptr, boost::extents[prodDims]);
+    real_1dr c(cptr, boost::extents[prodDims]);
         
     /*Allocate memory and assign output pointer*/
     plhs[0] = mxCreateNumericMatrix(prodDims, 1, mxSINGLE_CLASS, mxREAL); 
@@ -165,44 +168,61 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     /* Get a pointer to the data space in our newly allocated memory */
     xkp1 = (float*)mxGetPr(plhs[0]);
+    voxel_data vxkp1(xkp1, boost::extents[D.m][D.n][D.l],
+		     boost::c_storage_order());
     fxkp1 = mxGetPr(plhs[1]);
     hxkp1 = mxGetPr(plhs[2]);
     gxkp1 = mxGetPr(plhs[3]);
-    fxkp1l = mxGetPr(plhs[4]);
+    real_1dr fxkp1l(mxGetPr(plhs[4]), boost::extents[k_max + 1]);
     k = mxGetPr(plhs[5]);
-    hxkp1l = mxGetPr(plhs[6]);
-    gxkp1l = mxGetPr(plhs[7]);
-    xlist = mxGetPr(plhs[8]);
+    real_1dr hxkp1l(mxGetPr(plhs[6]), boost::extents[k_max + 1]);
+    real_1dr gxkp1l(mxGetPr(plhs[7]), boost::extents[k_max + 1]);
+    real_1dr xlist(mxGetPr(plhs[8]), boost::extents[prodDims * (k_max + 1)]);
 
     numGrad = mxGetPr(plhs[9]);
     numBack = mxGetPr(plhs[10]);
     numFunc = mxGetPr(plhs[11]);
     numRest = mxGetPr(plhs[12]);
-    Lklist = mxGetPr(plhs[13]);
-    muklist = mxGetPr(plhs[14]);
+    real_1dr Lklist(mxGetPr(plhs[13]), boost::extents[k_max + 1]);
+    real_1dr muklist(mxGetPr(plhs[14]), boost::extents[k_max + 1]);
 
-    dcopy(prodDims,x,1,xkp1,1); 
+    dcopyf(prodDims,x,xkp1); 
 
     CCPi::cone_beam *dev = new CCPi::dummy_cone;
     dev->set_params(*source_x, *source_y, *source_z, *det_x, det_y, det_z,
 		    angles, n_rays_y, n_rays_z, n_angles);
 
+    // fxkp1l,d,c,hxkp1l,gxkp1l,xlist,Lklist,muklist
+    real fxkp1r = *fxkp1;
+    real hxkp1r = *hxkp1;
+    real gxkp1r = *gxkp1;
+    int nBack;
+    int nGrad;
+    int nFunc;
+    int nRest;
     int ki = 0;
-    CCPi::tv_regularization::tvreg_core(xkp1,fxkp1,hxkp1,gxkp1,fxkp1l,&ki,
-					voxel_size, b,alpha,tau,bL,bmu,epsb_rel,
+    CCPi::tv_regularization::tvreg_core(vxkp1,fxkp1r,hxkp1r,gxkp1r,fxkp1l,ki,
+					voxel_size,px,alpha,tau,bL,bmu,epsb_rel,
 					k_max,D.dim, D.m, D.n, D.l, D.prodDims,
 					ctype,d,c,(bool)ghxl,(bool)xl,hxkp1l,
-					gxkp1l,xlist,(bool)verbose,numGrad,
-					numBack,numFunc,numRest,Lklist,
+					gxkp1l,xlist,(bool)verbose,nGrad,
+					nBack,nFunc,nRest,Lklist,
 					muklist,rp,grid_offset, dev);
 
     delete dev;
+    *fxkp1 = fxkp1r;
+    *hxkp1 = hxkp1r;
+    *gxkp1 = gxkp1r;
     *k = (double)ki;
+    *numGrad = nGrad;
+    *numBack = nBack;
+    *numFunc = nFunc;
+    *numRest = nRest;
     /*write the dynamical allocated restart list to a vector with the correct dimensions*/			
     sl_int rql = (sl_int)rp.size();
 
     plhs[15] = mxCreateDoubleMatrix( rql-1, 1, mxREAL);
-    rklist = mxGetPr(plhs[15]);
+    double *rklist = mxGetPr(plhs[15]);
 
     rql = 0;
     for (std::list<int>::const_iterator p = rp.begin(); p != rp.end(); ++p) {
@@ -213,8 +233,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 }
 
-void dcopyf(const sl_int n, const float x[], const int incx, real y[],
-	   const int incy)
+void dcopyf(const sl_int n, const float x[], float y[])
 {
   for (sl_int i = 0; i < n; i++)
     y[i] = real(x[i]);
