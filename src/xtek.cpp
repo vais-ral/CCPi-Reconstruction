@@ -290,9 +290,9 @@ bool CCPi::Nikon_XTek::build_phantom()
   // set up phantom volume
   voxel_data x(boost::extents[nx][ny][nz], boost::c_storage_order());
   //sl_int n_vox = nx * ny * nz;
-  for (sl_int i = 0; i < nz; i++)
+  for (sl_int k = 0; k < nx; k++)
     for (sl_int j = 0; j < ny; j++)
-      for (sl_int k = 0; k < nx; k++)
+      for (sl_int i = 0; i < nz; i++)
 	x[k][j][i] = 0.0;
 
   // add cubes - column major

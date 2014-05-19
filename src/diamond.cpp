@@ -144,9 +144,9 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   // set up phantom volume
   voxel_data x(boost::extents[nx][ny][nz], boost::c_storage_order());
   //sl_int n_vox = nx * ny * nz;
-  for (sl_int i = 0; i < nz; i++)
+  for (sl_int k = 0; k < nx; k++)
     for (sl_int j = 0; j < ny; j++)
-      for (sl_int k = 0; k < nx; k++)
+      for (sl_int i = 0; i < nz; i++)
 	x[k][j][i] = 0.0;
 
   // add cubes - column major
@@ -197,16 +197,16 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   if (first)
     (void) create_pixel_data();
   pixel_data &pixels = get_pixel_data();
-  pixel_2d i_dark(boost::extents[nv][nh]);
-  pixel_2d f_dark(boost::extents[nv][nh]);
-  pixel_2d i_bright(boost::extents[nv][nh]);
-  pixel_2d f_bright(boost::extents[nv][nh]);
-  for (sl_int i = 0; i < nv; i++) {
-    for (sl_int j = 0; j < nh; j++) {
-      i_dark[i][j] = 0.0;
-      f_dark[i][j] = 0.0;
-      i_bright[i][j] = 0.0;
-      f_bright[i][j] = 0.0;
+  pixel_2d i_dark(boost::extents[nh][nv]);
+  pixel_2d f_dark(boost::extents[nh][nv]);
+  pixel_2d i_bright(boost::extents[nh][nv]);
+  pixel_2d f_bright(boost::extents[nh][nv]);
+  for (sl_int j = 0; j < nh; j++) {
+    for (sl_int i = 0; i < nv; i++) {
+      i_dark[j][i] = 0.0;
+      f_dark[j][i] = 0.0;
+      i_bright[j][i] = 0.0;
+      f_bright[j][i] = 0.0;
     }
   }
 #ifdef HAS_NEXUS
@@ -228,38 +228,38 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       // Based on fbp code, interpolate bright/dark
       // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
       real w = angles[i] / angles[nangles - 1];
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  dark[j][k] = i_dark[j][k] * (real(1.0) - w) + f_dark[j][k] * w;
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  bright[j][k] = i_bright[j][k] * (real(1.0) - w) + f_bright[j][k] * w;
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  dark[k][j] = i_dark[k][j] * (real(1.0) - w) + f_dark[k][j] * w;
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  bright[k][j] = i_bright[k][j] * (real(1.0) - w) + f_bright[k][j] * w;
       // subtract dark from data/bright
       // and clamp min data/bright value to 0.1
-      for (sl_int j = 0; j < nv; j++) {
-	for (sl_int k = 0; k < nh; k++) {
-	  bright[j][k] -= dark[j][k];
-	  if (bright[j][k] < real(0.1))
-	    bright[j][k] = 0.1;
+      for (sl_int k = 0; k < nh; k++) {
+	for (sl_int j = 0; j < nv; j++) {
+	  bright[k][j] -= dark[k][j];
+	  if (bright[k][j] < real(0.1))
+	    bright[k][j] = 0.1;
 	}
       }
-      for (sl_int j = 0; j < nv; j++) {
-	for (sl_int k = 0; k < nh; k++) {
-	  pixels[i][j][k] -= dark[j][k];
-	  if (pixels[i][j][k] < real(0.1))
-	    pixels[i][j][k] = 0.1;
+      for (sl_int k = 0; k < nh; k++) {
+	for (sl_int j = 0; j < nv; j++) {
+	  pixels[i][k][j] -= dark[k][j];
+	  if (pixels[i][k][j] < real(0.1))
+	    pixels[i][k][j] = 0.1;
 	}
       }
       // scale each data pixel by bright pixel
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  pixels[i][j][k] /= bright[j][k];
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  pixels[i][k][j] /= bright[k][j];
     }
     // take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < nangles; i++)
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  pixels[i][j][k] = - std::log(pixels[i][j][k]);
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  pixels[i][k][j] = - std::log(pixels[i][k][j]);
     //find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;
@@ -294,7 +294,7 @@ void CCPi::Diamond::apply_beam_hardening()
   // Todo - does this belong in the base class?
   pixel_data &pixels = get_pixel_data();
   for (sl_int i = 0; i < get_num_angles(); i++)
-    for (sl_int j = 0; j < get_num_v_pixels(); j++)
-      for (sl_int k = 0; k < get_num_h_pixels(); k++)
-	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
+    for (sl_int k = 0; k < get_num_h_pixels(); k++)
+      for (sl_int j = 0; j < get_num_v_pixels(); j++)
+	pixels[i][k][j] = pixels[i][k][j] * pixels[i][k][j];
 }
