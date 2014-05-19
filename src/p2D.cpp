@@ -349,7 +349,7 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
 		//vox_y -= nyz;
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
-		    pixels[a][h][k_range + v] += voxels[y + 1][x][k] * len;
+		    pixels[a][h][k_range + v] += voxels[y - 1][x][k] * len;
 		  k_range += pixels_per_voxel;
 		}
 #ifdef TESTBP
@@ -381,7 +381,7 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
 		//vox_y -= sl_int(nz);
 		for (int k = 0; k < nz; k++) {
 		  for (int v = 0; v < pixels_per_voxel; v++)
-		    pixels[a][h][k_range + v] += voxels[x][y + 1][k] * len;
+		    pixels[a][h][k_range + v] += voxels[x][y - 1][k] * len;
 		  k_range += pixels_per_voxel;
 		}
 #ifdef TESTBP
