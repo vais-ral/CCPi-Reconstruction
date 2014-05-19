@@ -23,9 +23,9 @@ int main()
   // Todo - usage messages if started up wrong?
   bool phantom = true;
   bool beam_harden = false;
-  int niterations = 10;
-  //CCPi::devices device = CCPi::dev_Nikon_XTek;
-  CCPi::devices device = CCPi::dev_Diamond_I12;
+  int niterations = 5;
+  CCPi::devices device = CCPi::dev_Nikon_XTek;
+  //CCPi::devices device = CCPi::dev_Diamond_I12;
   CCPi::algorithms algorithm = CCPi::alg_CGLS;
   CCPi::instrument *instrument = 0;
   CCPi::reconstruction_alg *recon_algorithm = 0;

@@ -325,8 +325,8 @@ void CCPi::project_singledata(const real start[], const real end[],
 	alpha_z_u = d_z/std::abs(p2_z-p1_z);
 	  if (k < 0)
 	    k = 0;
-	  else if (k >= im_size_z)
-	    k = im_size_z - 1;
+	  else if (k >= z_step)
+	    k = z_step - 1;
 	}
 
 	if (p1_x < p2_x)
@@ -435,7 +435,7 @@ void CCPi::project_singledata(const real start[], const real end[],
 	/* in case we're ending inside grid, finish off last voxel */
 	if( (alpha_max - alpha_c) > PRECISION) {
 	  // Trap for issues with large umber of threads
-	  if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= im_size_z) {
+	  if( i < 0 || j < 0 || k < 0 || i >= im_size_x || j >= im_size_y || k >= z_step) {
 #ifdef DEBUG
 	    if (alpha_max - alpha_c > recon_type(0.005))
 	      std::cerr << "Data left on voxel boundary " << alpha_max - alpha_c << '\n';
