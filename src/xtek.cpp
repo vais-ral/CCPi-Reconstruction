@@ -320,7 +320,7 @@ bool CCPi::Nikon_XTek::build_phantom()
 
   pixel_data &pixels = create_pixel_data();
   // perform projection step
-  forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
+  safe_forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   //delete [] x;
   // Todo - could do with adding noise.
   offset[0] = 0.0;

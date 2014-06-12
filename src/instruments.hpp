@@ -143,12 +143,73 @@ namespace CCPi {
     void set_source(const real x, const real y, const real z);
     void set_detector(const real x);
 
+    void safe_forward_project(pixel_data &pixels, voxel_data &voxels,
+			      const real origin[3], const real width[3],
+			      const int nx, const int ny, const int nz);
+
   private:
     real source_x;
     real source_y;
     real source_z;
     // Todo - does this need further generalisation?
     real detector_x;
+
+    static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
+			  const recon_1d &alpha_xy, const std::vector<int> &i,
+			  const std::vector<int> &j, const int n, const int a,
+			  const int h, const recon_type p1_z,
+			  const recon_type b_z, const recon_type d_z,
+			  const int nv, const int nz, const int midp,
+			  const recon_2d &d_conv, const recon_1d &delta_z,
+			  const recon_1d &inv_delz, const recon_1d &vox_z);
+    static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
+			  const recon_1d &alpha_xy_0,
+			  const recon_1d &alpha_xy_1,
+			  const std::vector<int> &a, const std::vector<int> &h,
+			  const int n, const int i, const int j,
+			  const recon_type p1_z, const recon_type b_z,
+			  const recon_type d_z, const int nv, const int nz,
+			  const int midp, const recon_2d &d_conv,
+			  const recon_1d &delta_z, const recon_1d &inv_delz,
+			  const recon_1d &vox_z);
+    static void fproject_xy(const real p1_x, const real p1_y, const real p2_x,
+			    const real p2_y, pixel_data &pixels,
+			    voxel_data &voxels, const real b_x, const real b_y,
+			    const real b_z, const real d_x, const real d_y,
+			    const real d_z, const int nx, const int ny,
+			    const int nz, const int a, const int h,
+			    const real source_z, const int nv, const int midp,
+			    const recon_2d &d_conv, const recon_1d &delta_z,
+			    const recon_1d &inv_delz, const recon_1d &vox_z);
+    static void bproject_ah(const real source_x, const real source_y,
+			    const real detector_x, pixel_data &pixels,
+			    voxel_data &voxels, const real b_x, const real b_y,
+			    const real b_z, const real d_x, const real d_y,
+			    const real d_z, const int nx, const int ny,
+			    const int nz, const int i, const int j,
+			    const real source_z, const int n_angles,
+			    const int n_h, const int n_v,
+			    const real_1d &h_pixels, const real_1d &v_pixels,
+			    const int midp, const real_1d &cangle,
+			    const real_1d &sangle, const recon_2d &d_conv,
+			    const recon_1d &delta_z, const recon_1d &inv_delz,
+			    const recon_1d &vox_z);
+    static void f2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real grid_offset[3],
+		    const real voxel_size[3], const int nx_voxels,
+		    const int ny_voxels, const int nz_voxels);
+    static void b2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real vox_origin[3],
+		    const real vox_size[3], const int nx, const int ny,
+		    const int nz);
   };
 
   class parallel_beam : public instrument {

@@ -13,7 +13,7 @@ LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB)
 
 OBJECTS = recon.o results.o instruments.o parallel.o cone.o diamond.o xtek.o\
 	cgls.o p2D.o tv_reg.o tv_core.o nexus.o tiff.o timer.o utils.o \
-	ui_calls.o mpi.o point.o
+	ui_calls.o mpi.o point.o c2D.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -33,8 +33,7 @@ instruments.o: instruments.cpp instruments.hpp ui_calls.hpp
 parallel.o: parallel.cpp instruments.hpp parallel_f.hpp parallel_b.hpp \
 	project_line.hpp timer.hpp
 
-cone.o: cone.cpp instruments.hpp cone_b.hpp cone_f.hpp \
-	project_line.hpp timer.hpp
+cone.o: cone.cpp instruments.hpp cone_f.hpp project_line.hpp timer.hpp
 
 diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
 
@@ -47,6 +46,8 @@ tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp
 tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
 
 p2D.o: p2D.cpp instruments.hpp ui_calls.hpp
+
+c2D.o: c2D.cpp instruments.hpp ui_calls.hpp
 
 tiff.o: tiff.cpp tiff.hpp timer.hpp ui_calls.hpp
 
