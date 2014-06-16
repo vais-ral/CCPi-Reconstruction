@@ -1,4 +1,5 @@
 
+#include <float.h>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
@@ -7,6 +8,14 @@
 #include "instruments.hpp"
 #include "timer.hpp"
 #include "ui_calls.hpp"
+
+extern bool test_voxel(const real start[], const real end[],
+		       pixel_data &pixels, voxel_data &voxels,
+		       const real b_x, const real b_y,
+		       const real d_x, const real d_y,
+		       const int im_size_x, const int im_size_y,
+		       const int im_size_z, const int a, const int h,
+		       real &length);
 
 void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy,
@@ -363,6 +372,8 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
   recon_1d vox_z(nz_voxels + 1);
   for (int i = 0; i <= nz_voxels; i++)
     vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
+  // Todo - 1d arrays of x,y positions for voxels?
+
 
   //#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
   for (int a = 0; a < n_angles; a++) {
@@ -383,6 +394,7 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
   }
 }
 
+// Todo - loop over k and find v? alpha_xy may be the wrong info for this.
 void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy_0,
 				const recon_1d &alpha_xy_1,
@@ -459,7 +471,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   rescaling t
       (x) = (sx * cphi - sy * sphi) + t (cphi)
       (y) = (sx * sphi + sy * cphi) +   (sphi)
-  so the line representing the detector pixels which in perpendicular to this is
+  so the line representing the detector pixels which is perpendicular to this is
       (x) = (dx * cphi - sy * sphi) + t ( sphi)
       (y) = (dx * sphi + sy * cphi) +   (-cphi)
   Let the source rotated though theta be (px, py) , then a line from the
@@ -481,9 +493,9 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
       t = (px + u (vx-px) - qx) / sphi
       py + u (vy-px) = qy - (px + u (vx-px) - qx) cphi / sphi
    => u [(vy-py) + (vx-px) cphi/sphi] = qy - py + (qx - px) cphi/sphi
-  So we solve for t, generate u and apply u to a source line at theta == 0
-  in order to map it into a value in the pixel array
-  y = - t cphi
+  So we solve for t, generate u and apply u.
+  Then the detector line transformed back to 0 angle has
+  x = dx and y = sy - t
 */
 
 /*
@@ -534,7 +546,7 @@ void bproject_ah(const real source_x, const real source_y,
 	(delta_x + delta_y * sphi / cphi);
       t = (qy - py - u * delta_y) / cphi;
     }
-    real y = -t * cphi;
+    real y = -t * cphi; // wrong
     int hmid = int((y - h_pixels[0]) / pixel_step);
     // If it intercepts voxel then calc alpha_xy_0, alpha_xy_1 and store
     // find where line from source through centre of voxel would hit
@@ -695,7 +707,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	(delta_x + delta_y * sphi / cphi);
       t = (qy - py - u * delta_y) / cphi;
     }
-    real y00 = -t * cphi;
+    real y00 = source_y - t;
     int h00 = int((y00 - h_pixels[0]) / pixel_step);
     delta_x = x_0 - px;
     delta_y = y_n - py;
@@ -708,7 +720,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	(delta_x + delta_y * sphi / cphi);
       t = (qy - py - u * delta_y) / cphi;
     }
-    real y01 = -t * cphi;
+    real y01 = source_y - t;
     int h01 = int((y01 - h_pixels[0]) / pixel_step);
     int hmin = std::min(h00, h01);
     int hmax = std::max(h00, h01);
@@ -723,7 +735,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	(delta_x + delta_y * sphi / cphi);
       t = (qy - py - u * delta_y) / cphi;
     }
-    real y10 = -t * cphi;
+    real y10 = source_y - t;
     int h10 = int((y10 - h_pixels[0]) / pixel_step);
     hmin = std::min(hmin, h10);
     hmax = std::max(hmax, h10);
@@ -738,7 +750,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	(delta_x + delta_y * sphi / cphi);
       t = (qy - py - u * delta_y) / cphi;
     }
-    real y11 = -t * cphi;
+    real y11 = source_y - t;
     int h11 = int((y11 - h_pixels[0]) / pixel_step);
     hmin = std::max(std::min(hmin, h11), 0);
     hmax = std::min(std::max(hmax, h11), n_h - 1);
@@ -772,20 +784,54 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 					real(0.0));
 	const real alpha_max = std::min(std::min(alpha_x_max, alpha_y_max),
 					real(1.0));
-	if (alpha_min < alpha_max) {
+	if (alpha_min < alpha_max - FLT_EPSILON) {
 	  alpha_xy_0[count] = alpha_min;
 	  alpha_xy_1[count] = alpha_max;
 	  a_arr[count] = a;
 	  h_arr[count] = h;
 	  count++;
-	} else
-	  break;
+	} //else
+	  //break;
       }
     }
   }
 #ifdef TESTBP
   if (count > 2 * pix_per_vox * n_angles)
     report_error("back project overflow");
+  {
+    real start[3];
+    real end[3];
+    int vc = 0;
+    for (int a = 0; a < n_angles; a++) {
+      for (int h = 0; h < n_h; h++) {
+	real cos_curr_angle = cangle[a];
+	real sin_curr_angle = sangle[a];
+	start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
+	start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
+	/* loop over y values on detector */
+	end[0] = cos_curr_angle * detector_x - sin_curr_angle * h_pixels[h];
+	end[1] = sin_curr_angle * detector_x + cos_curr_angle * h_pixels[h];
+	real ln;
+	if (test_voxel(start, end, pixels, voxels, x_0, y_0, d_x, d_y,
+		       1, 1, nz, a, h, ln)) {
+	  if (vc < count) {
+	    if (a_arr[vc] == a and h_arr[vc] == h)
+	      vc++;
+	    else if (ln > FLT_EPSILON) {
+	      std::cerr << "Bug " << i << ' ' << j << ' ' << a << ' ' << h 
+			<< ' ' << ln << ' ' << alpha_xy_1[vc] - alpha_xy_0[vc]
+			<< '\n';
+	      //exit(0);
+	    }
+	  } else if (ln > FLT_EPSILON) {
+	    std::cerr << "Overflow " << i << ' ' << j << ' ' << a << ' ' << h
+		      << ' ' << count << '\n';
+	    //exit(0);
+	  }
+	}
+      }
+    }
+  }
 #endif // TESTBP
   if (count > 0)
     calc_ah_z(pixels, voxels, alpha_xy_0, alpha_xy_1, a_arr, h_arr, count,
