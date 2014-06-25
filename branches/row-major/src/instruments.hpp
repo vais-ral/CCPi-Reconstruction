@@ -161,7 +161,8 @@ namespace CCPi {
 			  const recon_type b_z, const recon_type d_z,
 			  const int nv, const int nz, const int midp,
 			  const recon_2d &d_conv, const recon_1d &delta_z,
-			  const recon_1d &inv_delz, const recon_1d &vox_z);
+			  const recon_1d &inv_delz, const recon_1d &vox_z,
+			  recon_2d &zpix);
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 			  const recon_1d &alpha_xy_0,
 			  const recon_1d &alpha_xy_1,
@@ -171,7 +172,7 @@ namespace CCPi {
 			  const recon_type d_z, const int nv, const int nz,
 			  const int midp, const recon_2d &d_conv,
 			  const recon_1d &delta_z, const recon_1d &inv_delz,
-			  const recon_1d &vox_z);
+			  const recon_1d &vox_z, recon_2d &zpix);
     static void fproject_xy(const real p1_x, const real p1_y, const real p2_x,
 			    const real p2_y, pixel_data &pixels,
 			    voxel_data &voxels, const real b_x, const real b_y,
@@ -180,7 +181,8 @@ namespace CCPi {
 			    const int nz, const int a, const int h,
 			    const real source_z, const int nv, const int midp,
 			    const recon_2d &d_conv, const recon_1d &delta_z,
-			    const recon_1d &inv_delz, const recon_1d &vox_z);
+			    const recon_1d &inv_delz, const recon_1d &vox_z,
+			    const real_1d &v_pixels);
     static void bproject_ah(const real source_x, const real source_y,
 			    const real detector_x, pixel_data &pixels,
 			    voxel_data &voxels, const real b_x, const real b_y,
