@@ -54,9 +54,8 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   for (int m = 1; m < n; m++) {
     const recon_type alpha_inv = alpha_xy[m - 1] * inv_dz;
     for (int v = midp - 1; v >= 0; v--) {
-      // truncation of -0.2 -> 0 issue, when we want to terminate as k < 0
-      int k = int(pzbz + alpha_inv * delta_z[v] + 1.0);
-      k = k - 1;
+      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
+      //k = k - 1;
       if (k > 0) {
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
@@ -76,7 +75,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 	break;
     }
     for (int v = midp; v < nv; v++) {
-      int k = int(pzbz + alpha_inv * delta_z[v]);
+      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
       if (k < nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
@@ -147,7 +146,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
       //return;
     } else {
       // line parallel to y
-      int i = int(q1_x); // == q2_x
+      int i = int(std::floor(q1_x)); // == q2_x
       if (i >= 0 and i < nx) {
 	if (delta_y < 0.0) {
 	  alpha_xy[count] = (real(ny) - q1_y) * inv_dy;
@@ -176,7 +175,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
     }
   } else if (std::abs(delta_y) < epsilon) {
     // line parallel to x
-    int j = int(q1_y); // == q2_y
+    int j = int(std::floor(q1_y)); // == q2_y
     if (j >= 0 and j < ny) {
       if (delta_x < 0.0) {
 	alpha_xy[count] = (real(nx) - q1_x) * inv_dx;
@@ -235,9 +234,9 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	if (delta_y > 0.0) {
 	  if (alpha_min == alpha_x_0) {
 	    x = 0;
-	    y = int(q1_y + alpha_min * delta_y);
+	    y = int(std::floor(q1_y + alpha_min * delta_y));
 	  } else if (alpha_min == alpha_y_0) {
-	    x = int(q1_x + alpha_min * delta_x);
+	    x = int(std::floor(q1_x + alpha_min * delta_x));
 	    y = 0;
 	  } else
 	    report_error("something wrong in x+ y+");
@@ -266,11 +265,11 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  }
 	} else {
 	  if (alpha_min == alpha_y_n) {
-	    x = int(q1_x + alpha_min * delta_x);
+	    x = int(std::floor(q1_x + alpha_min * delta_x));
 	    y = ny - 1;
 	  } else if (alpha_min == alpha_x_0) {
 	    x = 0;
-	    y = int(q1_y + alpha_min * delta_y);
+	    y = int(std::floor(q1_y + alpha_min * delta_y));
 	  } else
 	    report_error("something wrong in x+ y-");
 	  alpha_xy[count] = alpha_min;
@@ -298,9 +297,9 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	if (delta_y > 0.0) {
 	  if (alpha_min == alpha_x_n) {
 	    x = nx - 1;
-	    y = int(q1_y + alpha_min * delta_y);
+	    y = int(std::floor(q1_y + alpha_min * delta_y));
 	  } else if (alpha_min == alpha_y_0) {
-	    x = int(q1_x + alpha_min * delta_x);
+	    x = int(std::floor(q1_x + alpha_min * delta_x));
 	    y = 0;
 	  } else
 	    report_error("something wrong in x- y+");
@@ -330,9 +329,9 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	    if (alpha_min == alpha_y_n)
 	      y = ny - 1;
 	    else
-	      y = int(q1_y + alpha_min * delta_y);
+	      y = int(std::floor(q1_y + alpha_min * delta_y));
 	  } else if (alpha_min == alpha_y_n) {
-	    x = int(q1_x + alpha_min * delta_x);
+	    x = int(std::floor(q1_x + alpha_min * delta_x));
 	    y = ny - 1;
 	  } else
 	    report_error("something wrong in x- y-");
@@ -451,8 +450,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  }
 	  if (m == count and lnk > epsilon)
 	    std::cerr << "pix missed " << a << ' ' << h << ' ' << v
-		      << ' ' << lnk << ' ' << zvec[m][v] << ' '
-		      << lnk-zvec[m][v] << ' ' << i << ' ' << j << '\n';
+		      << ' ' << lnk << ' ' << i << ' ' << j << '\n';
 	}
       }
       for (int m = 1; m < count; m++) {
@@ -580,7 +578,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     const recon_type alpha_inv = alpha_xy_0[m] * inv_dz;
     for (int v = midp - 1; v >= 0; v--) {
       // truncation of -0.2 -> 0 issue, when we want to terminate as k < 0
-      int k = int(pzbz + alpha_inv * delta_z[v] + 1.0);
+      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
       k = k - 1;
       if (k > 0) {
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
@@ -605,7 +603,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	break;
     }
     for (int v = midp; v < nv; v++) {
-      int k = int(pzbz + alpha_inv * delta_z[v]);
+      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
       if (k < nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
@@ -719,7 +717,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
       t = (qy - py - u * delta_y) / cphi;
     }
     real y00 = source_y - t;
-    int h00 = int((y00 - h_pixels[0]) / pixel_step);
+    int h00 = int(std::floor((y00 - h_pixels[0]) / pixel_step));
     delta_x = x_0 - px;
     delta_y = y_n - py;
     if (std::abs(sphi) > std::abs(cphi)) {
@@ -732,7 +730,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
       t = (qy - py - u * delta_y) / cphi;
     }
     real y01 = source_y - t;
-    int h01 = int((y01 - h_pixels[0]) / pixel_step);
+    int h01 = int(std::floor((y01 - h_pixels[0]) / pixel_step));
     int hmin = std::min(h00, h01);
     int hmax = std::max(h00, h01);
     delta_x = x_n - px;
@@ -747,7 +745,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
       t = (qy - py - u * delta_y) / cphi;
     }
     real y10 = source_y - t;
-    int h10 = int((y10 - h_pixels[0]) / pixel_step);
+    int h10 = int(std::floor((y10 - h_pixels[0]) / pixel_step));
     hmin = std::min(hmin, h10);
     hmax = std::max(hmax, h10);
     delta_x = x_n - px;
@@ -762,7 +760,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
       t = (qy - py - u * delta_y) / cphi;
     }
     real y11 = source_y - t;
-    int h11 = int((y11 - h_pixels[0]) / pixel_step);
+    int h11 = int(std::floor((y11 - h_pixels[0]) / pixel_step));
     hmin = std::max(std::min(hmin, h11), 0);
     hmax = std::min(std::max(hmax, h11), n_h - 1);
     // If it intercepts voxel then calc alpha_xy_0, alpha_xy_1 and store
@@ -895,8 +893,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	  }
 	  if (m == count and lnk > epsilon)
 	    std::cerr << "vox missed " << a << ' ' << h
-		      << ' ' << lnk << ' ' << zvec[m][k] << ' '
-		      << lnk-zvec[m][k] << ' ' << i << ' ' << j
+		      << ' ' << lnk << ' ' << ' ' << i << ' ' << j
 		      << ' ' << k << '\n';
 	}
       }
