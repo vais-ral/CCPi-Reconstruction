@@ -65,6 +65,8 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 	zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
 #endif // TEST3D
       } else if (k == 0) {
+	if (pzbz + alpha_inv * delta_z[v] < 0.0)
+	  std::cerr << "Naughty\n";
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
 	pixels[a][h][v] += voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1]);
@@ -520,7 +522,6 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
   recon_1d vox_z(nz_voxels + 1);
   for (int i = 0; i <= nz_voxels; i++)
     vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
-  // Todo - 1d arrays of x,y positions for voxels?
 
 
   //#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
@@ -577,9 +578,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   for (int m = 0; m < n; m++) {
     const recon_type alpha_inv = alpha_xy_0[m] * inv_dz;
     for (int v = midp - 1; v >= 0; v--) {
-      // truncation of -0.2 -> 0 issue, when we want to terminate as k < 0
       int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
-      k = k - 1;
       if (k > 0) {
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
@@ -592,6 +591,8 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	zpix[m][k - 1] += (alpha_xy_1[m] - min_z) * d_conv[h[m]][v];
 #endif // TEST3D
       } else if (k == 0) {
+	if (pzbz + alpha_inv * delta_z[v] < 0.0)
+	  std::cerr << "Naughty\n";
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
 	voxels[i][j][k] += pixels[a[m]][h[m]][v] * (min_z - alpha_xy_0[m])
@@ -666,8 +667,9 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 
 void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const real detector_x, pixel_data &pixels,
-				  voxel_data &voxels, const real b_x,
-				  const real b_y, const real b_z,
+				  voxel_data &voxels, const real x_0,
+				  const real y_0, const real x_n,
+				  const real y_n, const real b_z,
 				  const real d_x, const real d_y,
 				  const real d_z, const int nx, const int ny,
 				  const int nz, const int i, const int j,
@@ -692,10 +694,6 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   recon_1d alpha_xy_0(2 * pix_per_vox * n_angles);
   recon_1d alpha_xy_1(2 * pix_per_vox * n_angles);
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
-  const real x_0 = b_x + real(i) * d_x;
-  const real y_0 = b_y + real(j) * d_y;
-  const real x_n = b_x + real(i + 1) * d_x;
-  const real y_n = b_y + real(j + 1) * d_y;
   real pixel_step = h_pixels[1] - h_pixels[0];
   for (int a = 0; a < n_angles; a++) {
     real cphi = cangle[a];
@@ -937,9 +935,6 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
     }
   }
 
-  // Todo - 1d arrays of x,y,p1x.p1y positions and 2d p2x/p2y?
-
-  //recon_2d line_angles(boost::extents[n_angles][n_h]);
   real_1d c_angle(n_angles);
   real_1d s_angle(n_angles);
   for (int a = 0; a < n_angles; a++) {
@@ -969,11 +964,17 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
   for (int i = 0; i <= nz; i++)
     vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
 
+  real_1d yvals(ny + 1);
+  for (int j = 0; j <= ny; j++)
+    yvals[j] = vox_origin[1] + real(j) * vox_size[1];
+
   // #pragma
   for (int i = 0; i < nx; i++) {
+    const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+    const real x_n = vox_origin[0] + real(i) * vox_size[0];
     for (int j = 0; j < ny; j++) {
       bproject_ah(source_x, source_y, detector_x, pixels, voxels,
-		  vox_origin[0], vox_origin[1], vox_origin[2],
+		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
 		  source_z, n_angles, n_h, n_v, h_pixels, v_pixels, mid,
 		  c_angle, s_angle, d_conv, delta_z, inv_delz, vox_z);

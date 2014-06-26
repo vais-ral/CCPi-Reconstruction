@@ -185,8 +185,10 @@ namespace CCPi {
 			    const real_1d &v_pixels);
     static void bproject_ah(const real source_x, const real source_y,
 			    const real detector_x, pixel_data &pixels,
-			    voxel_data &voxels, const real b_x, const real b_y,
-			    const real b_z, const real d_x, const real d_y,
+			    voxel_data &voxels, const real x_0,
+			    const real y_0, const real x_n,
+			    const real y_n, const real b_z,
+			    const real d_x, const real d_y,
 			    const real d_z, const int nx, const int ny,
 			    const int nz, const int i, const int j,
 			    const real source_z, const int n_angles,
