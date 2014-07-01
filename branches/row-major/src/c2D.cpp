@@ -26,8 +26,8 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy,
 				const std::vector<int> &i,
 				const std::vector<int> &j, const int n,
-				const int a, const int h, const recon_type p1_z,
-				const recon_type b_z, const recon_type d_z,
+				const int a, const int h,
+				const recon_type pzbz, const recon_type inv_dz,
 				const int nv, const int nz, const int midp,
 				const recon_2d &d_conv, const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z,
@@ -49,47 +49,141 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
   const int nzm1 = nz - 1;
-  const recon_type inv_dz = 1.0 / d_z;
-  const recon_type pzbz = (p1_z - b_z) * inv_dz;
+  recon_1d alpha_inv(n);
+  for (int l = 0; l < n; l++)
+    alpha_inv[l] = alpha_xy[l] * inv_dz;
+  int min_xy_all = n;
   for (int m = 1; m < n; m++) {
-    const recon_type alpha_inv = alpha_xy[m - 1] * inv_dz;
-    for (int v = midp - 1; v >= 0; v--) {
-      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
-      //k = k - 1;
+    int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[0]));
+    if (k == 0) {
+      min_xy_all = m;
+      break;
+    }
+  }
+  int max_xy_all = n;
+  for (int m = 1; m < n; m++) {
+    int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[nzm1]));
+    if (k == nzm1) {
+      max_xy_all = m;
+      break;
+    }
+  }
+  // Now find the range of v for which all m fit in the voxels
+  int min_v_all = midp;
+  for (int v = 0; v < midp; v++) {
+    int k = int(std::floor(pzbz + alpha_inv[n - 2] * delta_z[v]));
+    if (k > 0) {
+      min_v_all = v;
+      break;
+    }
+  }
+  int max_v_all = midp - 1;
+  for (int v = nv - 1; v >= midp; v--) {
+    int k = int(std::floor(pzbz + alpha_inv[n - 2] * delta_z[v]));
+    if (k < nzm1) {
+      max_v_all = v;
+      break;
+    }
+  }
+#ifdef TEST2D
+  if (min_xy_all != max_xy_all)
+    std::cerr << "Min/Max" << min_xy_all << ' ' << max_xy_all << ' '
+	      << a << ' ' << h << '\n';
+#endif // TEST2D
+  int ncom = std::min(min_xy_all, max_xy_all);
+  for (int m = 1; m < ncom; m++) {
+    const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = 0; v < midp; v++) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      recon_type alpha_z = vox_z[k] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			  + voxels[i[m]][j[m]][k - 1] * (alpha_xy[m] - min_z));
+#ifdef TEST3D
+      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+#endif // TEST3D
+    }
+    for (int v = midp; v < nv; v++) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			  + voxels[i[m]][j[m]][k + 1] * (alpha_xy[m] - min_z));
+#ifdef TEST3D
+      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+#endif // TEST3D
+    }
+  }
+  // Do the rest where its all inside
+  for (int m = ncom; m < n; m++) {
+    const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = min_v_all; v < midp; v++) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      recon_type alpha_z = vox_z[k] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			  + voxels[i[m]][j[m]][k - 1] * (alpha_xy[m] - min_z));
+#ifdef TEST3D
+      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+#endif // TEST3D
+    }
+    for (int v = midp; v <= max_v_all; v++) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			  + voxels[i[m]][j[m]][k + 1] * (alpha_xy[m] - min_z));
+#ifdef TEST3D
+      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+#endif // TEST3D
+    }
+  }
+  // Do the upper or lower bit if min_xy != max_xy, unlikely in most cases
+  for (int m = ncom; m < min_xy_all; m++) {
+    const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = 0; v < midp; v++) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      recon_type alpha_z = vox_z[k] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			  + voxels[i[m]][j[m]][k - 1] * (alpha_xy[m] - min_z));
+#ifdef TEST3D
+      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+#endif // TEST3D
+    }
+  }
+  for (int m = ncom; m < max_xy_all; m++) {
+    const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = midp; v < nv; v++) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			  + voxels[i[m]][j[m]][k + 1] * (alpha_xy[m] - min_z));
+#ifdef TEST3D
+      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+#endif // TEST3D
+    }
+  }
+  // The bits along the edge where only 1 voxel can be crossed
+  for (int m = min_xy_all; m < n; m++) {
+    const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = min_v_all - 1; v >= 0; v--) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       if (k > 0) {
+	int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][k - 1] * (alpha_xy[m] - min_z);
+	pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			    + voxels[i[m]][j[m]][k - 1]
+			    * (alpha_xy[m] - min_z));
 #ifdef TEST3D
 	zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
 #endif // TEST3D
       } else if (k == 0) {
-	if (pzbz + alpha_inv * delta_z[v] < 0.0)
-	  std::cerr << "Naughty\n";
-	recon_type alpha_z = vox_z[k] * inv_delz[v];
+	recon_type alpha_z = vox_z[0] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1]);
-#ifdef TEST3D
-	zpix[m][v] += (min_z - alpha_xy[m - 1]);
-#endif // TEST3D
-      } else
-	break;
-    }
-    for (int v = midp; v < nv; v++) {
-      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
-      if (k < nzm1) {
-	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][k + 1] * (alpha_xy[m] - min_z);
-#ifdef TEST3D
-	zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
-#endif // TEST3D
-      } else if (k == nzm1) {
-	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1]);
+	pixels[a][h][v] += voxels[i[m]][j[m]][0] * (min_z - alpha_xy[m - 1]);
 #ifdef TEST3D
 	zpix[m][v] += (min_z - alpha_xy[m - 1]);
 #endif // TEST3D
@@ -97,6 +191,32 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 	break;
     }
   }
+  for (int m = max_xy_all; m < n; m++) {
+    const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = max_v_all + 1; v < nv; v++) {
+      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      if (k < nzm1) {
+	int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+	pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
+			    + voxels[i[m]][j[m]][k + 1]
+			    * (alpha_xy[m] - min_z));
+#ifdef TEST3D
+	zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+#endif // TEST3D
+      } else if (k == nzm1) {
+	recon_type alpha_z = vox_z[nz] * inv_delz[v];
+	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
+	pixels[a][h][v] += voxels[i[m]][j[m]][nzm1] * (min_z - alpha_xy[m - 1]);
+#ifdef TEST3D
+	zpix[m][v] += (min_z - alpha_xy[m - 1]);
+#endif // TEST3D
+      } else
+	break;
+    }
+  }
+  // scale
   for (int v = 0; v < nv; v++)
     pixels[a][h][v] *= d_conv[h][v];
 #ifdef TEST3D
@@ -119,7 +239,9 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 				  const recon_1d &delta_z,
 				  const recon_1d &inv_delz,
 				  const recon_1d &vox_z,
-				  const real_1d &v_pixels)
+				  const real_1d &v_pixels,
+				  const recon_type pzbz,
+				  const recon_type inv_dz)
 {
   // Find intercepts with voxels (x1,y1) (x2, y2)
   // line goes from (p1_x, p1_y) to (p2_x, p2_y) delta = p2 - p1
@@ -412,8 +534,8 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
     for (int m = 0; m < count; m++)
       for (int v = 0; v < nv; v++)
 	zvec[m][v] = 0.0;
-    calc_xy_z(pixels, voxels, alpha_xy, i_arr, j_arr, count, a, h, source_z,
-	      b_z, d_z, nv, nz, midp, d_conv, delta_z, inv_delz, vox_z, zvec);
+    calc_xy_z(pixels, voxels, alpha_xy, i_arr, j_arr, count, a, h, pzbz,
+	      inv_dz, nv, nz, midp, d_conv, delta_z, inv_delz, vox_z, zvec);
 #ifdef TEST3D
     real start[3];
     real end[3];
@@ -513,6 +635,9 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
     }
   }
 
+  const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
+  const recon_type pzbz = recon_type((source_z
+				      - grid_offset[2]) / voxel_size[2]);
   recon_1d delta_z(n_v);
   for (int i = 0; i < n_v; i++)
     delta_z[i] = v_pixels[i] - source_z;
@@ -522,7 +647,6 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
   recon_1d vox_z(nz_voxels + 1);
   for (int i = 0; i <= nz_voxels; i++)
     vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
-
 
   //#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
   for (int a = 0; a < n_angles; a++) {
@@ -539,7 +663,7 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 		  grid_offset[1], grid_offset[2], voxel_size[0], voxel_size[1],
 		  voxel_size[2], nx_voxels, ny_voxels, nz_voxels, a, h,
 		  source_z, n_v, mid, d_conv, delta_z, inv_delz, vox_z,
-		  v_pixels);
+		  v_pixels, pzbz, inv_dz);
     }
   }
 }
@@ -551,9 +675,8 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				const std::vector<int> &a,
 				const std::vector<int> &h,
 				const int n, const int i, const int j,
-				const recon_type p1_z, const recon_type b_z,
-				const recon_type d_z, const int nv,
-				const int nz, const int midp,
+				const recon_type pzbz, const recon_type inv_dz,
+				const int nv, const int nz, const int midp,
 				const recon_2d &d_conv, const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z,
 				recon_2d &zpix)
@@ -573,8 +696,6 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
   const int nzm1 = nz - 1;
-  const recon_type inv_dz = 1.0 / d_z;
-  const recon_type pzbz = (p1_z - b_z) * inv_dz;
   for (int m = 0; m < n; m++) {
     const recon_type alpha_inv = alpha_xy_0[m] * inv_dz;
     for (int v = midp - 1; v >= 0; v--) {
@@ -591,8 +712,10 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	zpix[m][k - 1] += (alpha_xy_1[m] - min_z) * d_conv[h[m]][v];
 #endif // TEST3D
       } else if (k == 0) {
+#ifdef TEST2D
 	if (pzbz + alpha_inv * delta_z[v] < 0.0)
 	  std::cerr << "Naughty\n";
+#endif // TEST2D
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
 	voxels[i][j][k] += pixels[a[m]][h[m]][v] * (min_z - alpha_xy_0[m])
@@ -681,7 +804,8 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const recon_2d &d_conv,
 				  const recon_1d &delta_z,
 				  const recon_1d &inv_delz,
-				  const recon_1d &vox_z)
+				  const recon_1d &vox_z, const recon_type pzbz,
+				  const recon_type inv_dz)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
@@ -849,7 +973,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
       for (int k = 0; k < nz; k++)
 	zvec[m][k] = 0.0;
     calc_ah_z(pixels, voxels, alpha_xy_0, alpha_xy_1, a_arr, h_arr, count,
-	      i, j, source_z, b_z, d_z, n_v, nz, midp, d_conv, delta_z,
+	      i, j, pzbz, inv_dz, n_v, nz, midp, d_conv, delta_z,
 	      inv_delz, vox_z, zvec);
 #ifdef TEST3D
     real start[3];
@@ -954,6 +1078,9 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
     }
   }
 
+  const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
+  const recon_type pzbz = recon_type((source_z - vox_origin[2]) / vox_size[2]);
+
   recon_1d delta_z(n_v);
   for (int i = 0; i < n_v; i++)
     delta_z[i] = v_pixels[i] - source_z;
@@ -971,13 +1098,14 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
   // #pragma
   for (int i = 0; i < nx; i++) {
     const real x_0 = vox_origin[0] + real(i) * vox_size[0];
-    const real x_n = vox_origin[0] + real(i) * vox_size[0];
+    const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
     for (int j = 0; j < ny; j++) {
       bproject_ah(source_x, source_y, detector_x, pixels, voxels,
 		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
 		  source_z, n_angles, n_h, n_v, h_pixels, v_pixels, mid,
-		  c_angle, s_angle, d_conv, delta_z, inv_delz, vox_z);
+		  c_angle, s_angle, d_conv, delta_z, inv_delz, vox_z, pzbz,
+		  inv_dz);
     }
   }      
 }
