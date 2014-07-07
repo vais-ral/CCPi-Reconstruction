@@ -239,35 +239,29 @@ namespace CCPi {
 
   private:
     static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &alpha_xy, const std::vector<int> &i,
+			  const recon_1d &l_xy, const std::vector<int> &i,
 			  const std::vector<int> &j, const int n, const int a,
-			  const int h, const recon_type pzbz,
-			  const recon_type inv_dz, const int nv, const int nz,
-			  const recon_type d_conv,
-			  const recon_1d &delta_z, const recon_1d &inv_delz,
-			  const recon_1d &vox_z, recon_2d &zpix);
+			  const int h, const int nv, const int nz,
+			  const std::vector<int> &mapping,
+			  const int map_type, recon_2d &zpix);
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &alpha_xy_0,
-			  const recon_1d &alpha_xy_1,
+			  const recon_1d &l_xy,
 			  const std::vector<int> &a, const std::vector<int> &h,
 			  const int n, const int i, const int j,
-			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz,
-			  const recon_type d_conv, const recon_1d &delta_z,
-			  const recon_1d &inv_delz, const recon_1d &vox_z,
-			  recon_2d &zpix);
+			  const std::vector<int> &mapping,
+			  const int map_type, recon_2d &zpix);
     static void fproject_xy(const real p1_x, const real p1_y, const real p2_x,
 			    const real p2_y, pixel_data &pixels,
 			    voxel_data &voxels, const real b_x, const real b_y,
 			    const real b_z, const real d_x, const real d_y,
 			    const real d_z, const int nx, const int ny,
 			    const int nz, const int a, const int h,
-			    const real source_z, const int nv,
-			    const recon_type d_conv, const recon_1d &delta_z,
-			    const recon_1d &inv_delz, const recon_1d &vox_z,
-			    const real_1d &v_pixels, const recon_type pzbz,
-			    const recon_type inv_dz);
-    static void bproject_ah(const real source_x, const real source_y,
+			    const int nv, const recon_type d_conv,
+			    const real_1d &v_pixels,
+			    const std::vector<int> &mapping,
+			    const int map_type);
+    static void bproject_ah(const real source_x,
 			    const real detector_x, pixel_data &pixels,
 			    voxel_data &voxels, const real x_0,
 			    const real y_0, const real x_n,
@@ -275,14 +269,13 @@ namespace CCPi {
 			    const real d_x, const real d_y,
 			    const real d_z, const int nx, const int ny,
 			    const int nz, const int i, const int j,
-			    const real source_z, const int n_angles,
+			    const int n_angles,
 			    const int n_h, const int n_v,
 			    const real_1d &h_pixels, const real_1d &v_pixels,
 			    const real_1d &cangle,
 			    const real_1d &sangle, const recon_type d_conv,
-			    const recon_1d &delta_z, const recon_1d &inv_delz,
-			    const recon_1d &vox_z, const recon_type pzbz,
-			    const recon_type inv_dz);
+			    const std::vector<int> &mapping,
+			    const int map_type);
     static void f2D(const real_1d &h_pixels, const real_1d &v_pixels,
 		    const real_1d &angles, const int n_angles,
 		    const int nh_pixels, const int nv_pixels,
@@ -296,6 +289,9 @@ namespace CCPi {
 		    const int nv_pixels, const real grid_offset[3],
 		    const real voxel_size[3], const int nx_voxels,
 		    const int ny_voxels, const int nz_voxels);
+    static void gen_mapping(std::vector<int> &mapping, int &map_type,
+			    const real_1d &v_pixels, const real vox_z,
+			    const real size_z, const int nv);
   };
 
   class Diamond : public parallel_beam {
