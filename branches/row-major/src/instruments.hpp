@@ -259,6 +259,7 @@ namespace CCPi {
 			    const int nz, const int a, const int h,
 			    const int nv, const recon_type d_conv,
 			    const real_1d &v_pixels,
+			    const real cphi, const real sphi,
 			    const std::vector<int> &mapping,
 			    const int map_type);
     static void bproject_ah(const real source_x,
