@@ -168,59 +168,35 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 				      const int a, const int h,
 				      const int nv, const recon_type d_conv,
 				      const real_1d &v_pixels,
+				      const real cphi, const real sphi,
 				      const std::vector<int> &mapping,
 				      const int map_type)
 {
   // Todo? In parallel beam some of this should be common in a since
   // all h within a have same angle to voxels.
-  // Find intercepts with voxels (x1,y1) (x2, y2)
-  // line goes from (p1_x, p1_y) to (p2_x, p2_y) delta = p2 - p1
-  // so parametric form x = p1_x + alpha * delta_x, y = p1_y + alpha * delta_y
-  // alpha from 0 to 1 contains the voxels.
-  // Rescaled so voxel origin at 0, voxels size 1 (px, py) -> (qx, qy)
-  // Alpha should be unchanged by scaling since its still the same fraction
-  // of the line (I think)
-  const real q1_x = (p1_x - b_x) / d_x;
-  const real q1_y = (p1_y - b_y) / d_y;
-  const real q2_x = (p2_x - b_x) / d_x;
-  const real q2_y = (p2_y - b_y) / d_y;
-  const real delta_x = q2_x - q1_x;
-  const real delta_y = q2_y - q1_y;
-  const real inv_dx = 1.0 / delta_x;
-  const real inv_dy = 1.0 / delta_y;
-
   int max_n = std::max(nx, ny);
   recon_1d l_xy(2 * max_n);
   std::vector<int> i_arr(2 * max_n + 1);
   std::vector<int> j_arr(2 * max_n + 1);
   int count = 0;
-  if (std::abs(delta_x) < epsilon) {
-    if (std::abs(delta_y) < epsilon) {
+  if (std::abs(cphi) < epsilon) {
+    if (std::abs(sphi) < epsilon) {
       // Its not a line - shouldn't happen
       //return;
     } else {
       // line parallel to y
-      int i = int(std::floor(q1_x)); // == q2_x
+      int i = int(std::floor((p2_x - b_x) / d_x)); // == q2_x
       if (i >= 0 and i < nx) {
-	real length = std::abs(inv_dy) * d_conv;
-	if (delta_y < 0.0) {
-	  //l_xy[count] = inv_dy * d_conv;
-	  //i_arr[count] = i;
-	  //j_arr[count] = ny - 1;
-	  //count++;
+	if (sphi < 0.0) {
 	  for (int j = ny - 1; j >= 0; j--) {
-	    l_xy[count] = length;
+	    l_xy[count] = d_y;
 	    i_arr[count] = i;
 	    j_arr[count] = j;
 	    count++;
 	  }
 	} else {
-	  //l_xy[count] = inv_dy * d_conv;
-	  //i_arr[count] = i;
-	  //j_arr[count] = 0;
-	  //count++;
 	  for (int j = 0; j < ny; j++) {
-	    l_xy[count] = length;
+	    l_xy[count] = d_y;
 	    i_arr[count] = i;
 	    j_arr[count] = j;
 	    count++;
@@ -228,29 +204,20 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	}
       }
     }
-  } else if (std::abs(delta_y) < epsilon) {
+  } else if (std::abs(sphi) < epsilon) {
     // line parallel to x
-    int j = int(std::floor(q1_y)); // == q2_y
+    int j = int(std::floor((p2_y - b_y) / d_y)); // == q2_y
     if (j >= 0 and j < ny) {
-      real length = std::abs(inv_dx) * d_conv;
-      if (delta_x < 0.0) {
-	//l_xy[count] = inv_dx * d_conv;
-	//i_arr[count] = nx - 1;
-	//j_arr[count] = j;
-	//count++;
+      if (cphi < 0.0) {
 	for (int i = nx - 1; i >= 0; i--) {
-	  l_xy[count] = length;
+	  l_xy[count] = d_x;
 	  i_arr[count] = i;
 	  j_arr[count] = j;
 	  count++;
 	}
       } else {
-	//l_xy[count] = inv_dx * d_conv;
-	//i_arr[count] = 0;
-	//j_arr[count] = j;
-	//count++;
 	for (int i = 0; i < nx; i++) {
-	  l_xy[count] = length;
+	  l_xy[count] = d_x;
 	  i_arr[count] = i;
 	  j_arr[count] = j;
 	  count++;
@@ -259,66 +226,62 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
     }
   } else {
     // general line drawing - find intercepts
-    // rescaled so
-    const real x_0 = 0.0;
-    const real y_0 = 0.0;
-    const real x_n = real(nx);
-    const real y_n = real(ny);
-    const real alpha_x_0 = (x_0 - q1_x) * inv_dx;
-    const real alpha_y_0 = (y_0 - q1_y) * inv_dy;
-    const real alpha_x_n = (x_n - q1_x) * inv_dx;
-    const real alpha_y_n = (y_n - q1_y) * inv_dy;
+    const real x_0 = b_x;
+    const real y_0 = b_y;
+    const real x_n = b_x + real(nx) * d_x;
+    const real y_n = b_y + real(ny) * d_y;
+    const real delta_x = cphi;
+    const real delta_y = sphi;
+    const real inv_dx = 1.0 / delta_x;
+    const real inv_dy = 1.0 / delta_y;
+    const real alpha_x_0 = (x_0 - p2_x) * inv_dx;
+    const real alpha_y_0 = (y_0 - p2_y) * inv_dy;
+    const real alpha_x_n = (x_n - p2_x) * inv_dx;
+    const real alpha_y_n = (y_n - p2_y) * inv_dy;
     const real alpha_x_min = std::min(alpha_x_0, alpha_x_n);
     const real alpha_x_max = std::max(alpha_x_0, alpha_x_n);
     const real alpha_y_min = std::min(alpha_y_0, alpha_y_n);
     const real alpha_y_max = std::max(alpha_y_0, alpha_y_n);
     const real alpha_min = std::max(std::max(alpha_x_min, alpha_y_min),
-				    real(0.0));
+				    real(-d_conv));
     const real alpha_max = std::min(std::min(alpha_x_max, alpha_y_max),
-				    real(1.0));
-    
+				    real(0.0));
     if (alpha_min < alpha_max - epsilon) {
       real_1d alpha_x(nx + 1);
       for (int i = 0; i <= nx; i++)
-	alpha_x[i] = ((real(i) - q1_x) * inv_dx);
+	alpha_x[i] = (b_x + real(i) * d_x - p2_x) * inv_dx;
       real_1d alpha_y(ny + 1);
       for (int i = 0; i <= ny; i++)
-	alpha_y[i] = ((real(i) - q1_y) * inv_dy);
+	alpha_y[i] = (b_y + real(i) * d_y - p2_y) * inv_dy;
       int x = 0;
       int y = 0;
       real alpha_p = alpha_min;
-      // Todo - pre-scale alpha_x/y by d_conv outside loops?
       if (delta_x > 0.0) {
 	if (delta_y > 0.0) {
 	  if (alpha_min == alpha_x_0) {
 	    x = 0;
-	    y = int(std::floor(q1_y + alpha_min * delta_y));
+	    y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else if (alpha_min == alpha_y_0) {
-	    x = int(std::floor(q1_x + alpha_min * delta_x));
+	    x = int(std::floor((p2_x + alpha_min * delta_x - b_x) / d_x));
 	    y = 0;
 	  } else
 	    report_error("something wrong in x+ y+");
-	  //l_xy[count] = alpha_min;
-	  //i_arr[count] = x;
-	  //j_arr[count] = y;
-	  //count++;
 	  // could do x_next/y_next here and only calc the one that changes
 	  // inside the if statements below, which would reduce the flops
 	  while (x < nx and y < ny) {
-	    // could calc a general alpha_step and maybe have rounding issues
 	    i_arr[count] = x;
 	    j_arr[count] = y;
 	    if (alpha_x[x + 1] < alpha_y[y + 1] - epsilon) {
-	      l_xy[count] = (alpha_x[x + 1] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_x[x + 1] - alpha_p);
 	      alpha_p = alpha_x[x + 1];
 	      x++;
 	    } else if (alpha_y[y + 1] < alpha_x[x + 1] - epsilon) {
-	      l_xy[count] = (alpha_y[y + 1] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_y[y + 1] - alpha_p);
 	      alpha_p = alpha_y[y + 1];
 	      y++;
 	    } else {
 	      real mx = std::max(alpha_x[x + 1], alpha_y[y + 1]);
-	      l_xy[count] = (mx - alpha_p) * d_conv;
+	      l_xy[count] = (mx - alpha_p);
 	      x++;
 	      y++;
 	      alpha_p = mx;
@@ -327,31 +290,27 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	  }
 	} else {
 	  if (alpha_min == alpha_y_n) {
-	    x = int(std::floor(q1_x + alpha_min * delta_x));
+	    x = int(std::floor((p2_x + alpha_min * delta_x - b_x) / d_x));
 	    y = ny - 1;
 	  } else if (alpha_min == alpha_x_0) {
 	    x = 0;
-	    y = int(std::floor(q1_y + alpha_min * delta_y));
+	    y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else
 	    report_error("something wrong in x+ y-");
-	  //l_xy[count] = alpha_min;
-	  //i_arr[count] = x;
-	  //j_arr[count] = y;
-	  //count++;
 	  while (x < nx and y >= 0) {
 	    i_arr[count] = x;
 	    j_arr[count] = y;
 	    if (alpha_x[x + 1] < alpha_y[y] - epsilon) {
-	      l_xy[count] = (alpha_x[x + 1] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_x[x + 1] - alpha_p);
 	      alpha_p = alpha_x[x + 1];
 	      x++;
 	    } else if (alpha_y[y] < alpha_x[x + 1] - epsilon) {
-	      l_xy[count] = (alpha_y[y] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_y[y] - alpha_p);
 	      alpha_p = alpha_y[y];
 	      y--;
 	    } else {
 	      real mx = std::max(alpha_x[x + 1], alpha_y[y]);
-	      l_xy[count] = (mx - alpha_p) * d_conv;
+	      l_xy[count] = (mx - alpha_p);
 	      x++;
 	      y--;
 	      alpha_p = mx;
@@ -363,30 +322,26 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	if (delta_y > 0.0) {
 	  if (alpha_min == alpha_x_n) {
 	    x = nx - 1;
-	    y = int(std::floor(q1_y + alpha_min * delta_y));
+	    y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else if (alpha_min == alpha_y_0) {
-	    x = int(std::floor(q1_x + alpha_min * delta_x));
+	    x = int(std::floor((p2_x + alpha_min * delta_x - b_x) / d_x));
 	    y = 0;
 	  } else
 	    report_error("something wrong in x- y+");
-	  //l_xy[count] = alpha_min;
-	  //i_arr[count] = x;
-	  //j_arr[count] = y;
-	  //count++;
 	  while (x >= 0 and y < ny) {
 	    i_arr[count] = x;
 	    j_arr[count] = y;
 	    if (alpha_x[x] < alpha_y[y + 1] - epsilon) {
-	      l_xy[count] = (alpha_x[x] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_x[x] - alpha_p);
 	      alpha_p = alpha_x[x];
 	      x--;
 	    } else if (alpha_y[y + 1] < alpha_x[x] - epsilon) {
-	      l_xy[count] = (alpha_y[y + 1] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_y[y + 1] - alpha_p);
 	      alpha_p = alpha_y[y + 1];
 	      y++;
 	    } else {
 	      real mx = std::max(alpha_y[y + 1], alpha_x[x]);
-	      l_xy[count] = (mx - alpha_p) * d_conv;
+	      l_xy[count] = (mx - alpha_p);
 	      x--;
 	      y++;
 	      alpha_p = mx;
@@ -399,30 +354,26 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    if (alpha_min == alpha_y_n)
 	      y = ny - 1;
 	    else
-	      y = int(std::floor(q1_y + alpha_min * delta_y));
+	      y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else if (alpha_min == alpha_y_n) {
-	    x = int(std::floor(q1_x + alpha_min * delta_x));
+	    x = int(std::floor((p2_x + alpha_min * delta_x - b_x) / d_x));
 	    y = ny - 1;
 	  } else
 	    report_error("something wrong in x- y-");
-	  //l_xy[count] = alpha_min;
-	  //i_arr[count] = x;
-	  //j_arr[count] = y;
-	  //count++;
 	  while (x >= 0 and y >= 0) {
 	    i_arr[count] = x;
 	    j_arr[count] = y;
 	    if (alpha_x[x] < alpha_y[y] - epsilon) {
-	      l_xy[count] = (alpha_x[x] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_x[x] - alpha_p);
 	      alpha_p = alpha_x[x];
 	      x--;
 	    } else if (alpha_y[y] < alpha_x[x] - epsilon) {
-	      l_xy[count] = (alpha_y[y] - alpha_p) * d_conv;
+	      l_xy[count] = (alpha_y[y] - alpha_p);
 	      alpha_p = alpha_y[y];
 	      y--;
 	    } else {
 	      real mx = std::max(alpha_x[x], alpha_y[y]);
-	      l_xy[count] = (mx - alpha_p) * d_conv;
+	      l_xy[count] = (mx - alpha_p);
 	      x--;
 	      y--;
 	      alpha_p = mx;
@@ -575,8 +526,8 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
       real p1_y = p2_y - real(3.0) * sina * detector_x;
       fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vox_origin[0],
 		  vox_origin[1], vox_origin[2], vox_size[0], vox_size[1],
-		  vox_size[2], nx, ny, nz, a, h,
-		  nv_pixels, d_conv, v_pixels, mapping, map_type);
+		  vox_size[2], nx, ny, nz, a, h, nv_pixels, d_conv, v_pixels,
+		  cosa, sina, mapping, map_type);
     }
   }
 }
