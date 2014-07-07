@@ -85,11 +85,11 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
       break;
     }
   }
-#ifdef TEST2D
+#ifdef TEST3D
   if (min_xy_all != max_xy_all)
     std::cerr << "Min/Max" << min_xy_all << ' ' << max_xy_all << ' '
 	      << a << ' ' << h << '\n';
-#endif // TEST2D
+#endif // TEST3D
   int ncom = std::min(min_xy_all, max_xy_all);
   for (int m = 1; m < ncom; m++) {
     const recon_type alpha_val = alpha_inv[m - 1];
@@ -138,6 +138,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 #endif // TEST3D
     }
   }
+  /*
   // Do the upper or lower bit if min_xy != max_xy, unlikely in most cases
   for (int m = ncom; m < min_xy_all; m++) {
     const recon_type alpha_val = alpha_inv[m - 1];
@@ -165,13 +166,13 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 #endif // TEST3D
     }
   }
-  // The bits along the edge where only 1 voxel can be crossed
-  for (int m = min_xy_all; m < n; m++) {
+  */
+  // The bits along the edge
+  for (int m = ncom; m < n; m++) {
     const recon_type alpha_val = alpha_inv[m - 1];
     for (int v = min_v_all - 1; v >= 0; v--) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       if (k > 0) {
-	int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
 	pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
@@ -191,12 +192,11 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 	break;
     }
   }
-  for (int m = max_xy_all; m < n; m++) {
+  for (int m = ncom; m < n; m++) {
     const recon_type alpha_val = alpha_inv[m - 1];
     for (int v = max_v_all + 1; v < nv; v++) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       if (k < nzm1) {
-	int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
 	pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
@@ -583,17 +583,6 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 		    << ' ' << zvec[m][v] << ' ' << a << ' ' << h
 		    << ' ' << v << '\n';
       }
-      /*
-      if (std::abs(ln) > epsilon) {
-	if (std::abs(ln - zvec[v]) / ln > 10.0 * epsilon)
-	  std::cerr << "pix wrong " << a << ' ' << h << ' ' << v
-		    << ' ' << ln << ' ' << zvec[v] << ' ' << ln-zvec[v] << '\n';
-      } else if (std::abs(zvec[v]) > epsilon) {
-	if (std::abs(ln - zvec[v]) / zvec[v] > 10.0 * epsilon)
-	  std::cerr << "pix wrong " << a << ' ' << h << ' ' << v
-		    << ' ' << ln << ' ' << zvec[v] << ' ' << ln-zvec[v] << '\n';
-      }
-      */
     }
 #endif // TEST3D
   }    
@@ -650,7 +639,7 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 
   //#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
   for (int a = 0; a < n_angles; a++) {
-    /* rotate source and detector positions by current angle */
+    // rotate source and detector positions by current angle
     real cosa = std::cos(angles[a]);
     real sina = std::sin(angles[a]);
     real p1_x = cosa * source_x - sina * source_y;
@@ -826,62 +815,53 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
     real py = source_x * sphi + source_y * cphi;
     real qx = detector_x * cphi - source_y * sphi;
     real qy = detector_x * sphi + source_y * cphi;
-    real delta_x = x_0 - px;
-    real delta_y = y_0 - py;
-    real t;
+    real y00;
+    real y01;
+    real y10;
+    real y11;
+    real qpx = qx - px;
+    real qpy = qy - py;
+    real delta_x_0 = x_0 - px;
+    real delta_y_0 = y_0 - py;
+    real delta_x_n = x_n - px;
+    real delta_y_n = y_n - py;
+    // Todo - further opt this?
     if (std::abs(sphi) > std::abs(cphi)) {
-      real u = (qy - py + (qx - px) * cphi / sphi) / 
-	(delta_y + delta_x * cphi / sphi);
-      t = (px - qx + u * delta_x) / sphi;
+      real tphi = cphi / sphi;
+      real u = (qpy + qpx * tphi) / (delta_y_0 + delta_x_0 * tphi);
+      real t = (-qpx + u * delta_x_0) / sphi;
+      y00 = source_y - t;
+      u = (qpy + qpx * tphi) / (delta_y_n + delta_x_0 * tphi);
+      t = (-qpx + u * delta_x_0) / sphi;
+      y01 = source_y - t;
+      u = (qpy + qpx * tphi) / (delta_y_0 + delta_x_n * tphi);
+      t = (-qpx + u * delta_x_n) / sphi;
+      y10 = source_y - t;
+      u = (qpy + qpx * tphi) / (delta_y_n + delta_x_n * tphi);
+      t = (-qpx + u * delta_x_n) / sphi;
+      y11 = source_y - t;
     } else {
-      real u = (qx - px + (qy - py) * sphi / cphi) /
-	(delta_x + delta_y * sphi / cphi);
-      t = (qy - py - u * delta_y) / cphi;
+      real tphi = sphi / cphi;
+      real u = (qpx + qpy * tphi) / (delta_x_0 + delta_y_0 * tphi);
+      real t = (qpy - u * delta_y_0) / cphi;
+      y00 = source_y - t;
+      u = (qpx + qpy * tphi) / (delta_x_0 + delta_y_n * tphi);
+      t = (qpy - u * delta_y_n) / cphi;
+      y01 = source_y - t;
+      u = (qpx + qpy * tphi) / (delta_x_n + delta_y_0 * tphi);
+      t = (qpy - u * delta_y_0) / cphi;
+      y10 = source_y - t;
+      u = (qpx + qpy * tphi) / (delta_x_n + delta_y_n * tphi);
+      t = (qpy - u * delta_y_n) / cphi;
+      y11 = source_y - t;
     }
-    real y00 = source_y - t;
     int h00 = int(std::floor((y00 - h_pixels[0]) / pixel_step));
-    delta_x = x_0 - px;
-    delta_y = y_n - py;
-    if (std::abs(sphi) > std::abs(cphi)) {
-      real u = (qy - py + (qx - px) * cphi / sphi) / 
-	(delta_y + delta_x * cphi / sphi);
-      t = (px - qx + u * delta_x) / sphi;
-    } else {
-      real u = (qx - px + (qy - py) * sphi / cphi) /
-	(delta_x + delta_y * sphi / cphi);
-      t = (qy - py - u * delta_y) / cphi;
-    }
-    real y01 = source_y - t;
     int h01 = int(std::floor((y01 - h_pixels[0]) / pixel_step));
     int hmin = std::min(h00, h01);
     int hmax = std::max(h00, h01);
-    delta_x = x_n - px;
-    delta_y = y_0 - py;
-    if (std::abs(sphi) > std::abs(cphi)) {
-      real u = (qy - py + (qx - px) * cphi / sphi) / 
-	(delta_y + delta_x * cphi / sphi);
-      t = (px - qx + u * delta_x) / sphi;
-    } else {
-      real u = (qx - px + (qy - py) * sphi / cphi) /
-	(delta_x + delta_y * sphi / cphi);
-      t = (qy - py - u * delta_y) / cphi;
-    }
-    real y10 = source_y - t;
     int h10 = int(std::floor((y10 - h_pixels[0]) / pixel_step));
     hmin = std::min(hmin, h10);
     hmax = std::max(hmax, h10);
-    delta_x = x_n - px;
-    delta_y = y_n - py;
-    if (std::abs(sphi) > std::abs(cphi)) {
-      real u = (qy - py + (qx - px) * cphi / sphi) / 
-	(delta_y + delta_x * cphi / sphi);
-      t = (px - qx + u * delta_x) / sphi;
-    } else {
-      real u = (qx - px + (qy - py) * sphi / cphi) /
-	(delta_x + delta_y * sphi / cphi);
-      t = (qy - py - u * delta_y) / cphi;
-    }
-    real y11 = source_y - t;
     int h11 = int(std::floor((y11 - h_pixels[0]) / pixel_step));
     hmin = std::max(std::min(hmin, h11), 0);
     hmax = std::min(std::max(hmax, h11), n_h - 1);
@@ -988,7 +968,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	  start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
 	  start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
 	  start[2] = source_z;
-	  /* loop over y values on detector */
+	  // loop over y values on detector
 	  end[0] = cos_curr_angle * detector_x - sin_curr_angle * h_pixels[h];
 	  end[1] = sin_curr_angle * detector_x + cos_curr_angle * h_pixels[h];
 	  recon_type lnk = 0.0;
