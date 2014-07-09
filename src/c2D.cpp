@@ -90,135 +90,120 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     std::cerr << "Min/Max" << min_xy_all << ' ' << max_xy_all << ' '
 	      << a << ' ' << h << '\n';
 #endif // TEST3D
+  pixel_type *const pix = &(pixels[a][h][0]);
   int ncom = std::min(min_xy_all, max_xy_all);
+  recon_type alpha_m0 = alpha_xy[0];
   for (int m = 1; m < ncom; m++) {
+    const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
     const recon_type alpha_val = alpha_inv[m - 1];
+    const recon_type alpha_m1 = alpha_xy[m];
     for (int v = 0; v < midp; v++) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       recon_type alpha_z = vox_z[k] * inv_delz[v];
-      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			  + voxels[i[m]][j[m]][k - 1] * (alpha_xy[m] - min_z));
+      recon_type min_z = std::min(alpha_z, alpha_m1);
+      pix[v] += (vox[k] * (min_z - alpha_m0)
+		 + vox[k - 1] * (alpha_m1 - min_z));
 #ifdef TEST3D
-      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+      zpix[m][v] += (min_z - alpha_m0) + (alpha_m1 - min_z);
 #endif // TEST3D
     }
     for (int v = midp; v < nv; v++) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			  + voxels[i[m]][j[m]][k + 1] * (alpha_xy[m] - min_z));
+      recon_type min_z = std::min(alpha_z, alpha_m1);
+      pix[v] += (vox[k] * (min_z - alpha_m0)
+		 + vox[k + 1] * (alpha_m1 - min_z));
 #ifdef TEST3D
-      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+      zpix[m][v] += (min_z - alpha_m0) + (alpha_m1 - min_z);
 #endif // TEST3D
     }
+    alpha_m0 = alpha_m1;
   }
   // Do the rest where its all inside
   for (int m = ncom; m < n; m++) {
+    const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
     const recon_type alpha_val = alpha_inv[m - 1];
+    const recon_type alpha_m1 = alpha_xy[m];
     for (int v = min_v_all; v < midp; v++) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       recon_type alpha_z = vox_z[k] * inv_delz[v];
-      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			  + voxels[i[m]][j[m]][k - 1] * (alpha_xy[m] - min_z));
+      recon_type min_z = std::min(alpha_z, alpha_m1);
+      pix[v] += (vox[k] * (min_z - alpha_m0)
+		 + vox[k - 1] * (alpha_m1 - min_z));
 #ifdef TEST3D
-      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+      zpix[m][v] += (min_z - alpha_m0) + (alpha_m1 - min_z);
 #endif // TEST3D
     }
     for (int v = midp; v <= max_v_all; v++) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			  + voxels[i[m]][j[m]][k + 1] * (alpha_xy[m] - min_z));
+      recon_type min_z = std::min(alpha_z, alpha_m1);
+      pix[v] += (vox[k] * (min_z - alpha_m0)
+		 + vox[k + 1] * (alpha_m1 - min_z));
 #ifdef TEST3D
-      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+      zpix[m][v] += (min_z - alpha_m0) + (alpha_m1 - min_z);
 #endif // TEST3D
     }
+    alpha_m0 = alpha_m1;
   }
-  /*
-  // Do the upper or lower bit if min_xy != max_xy, unlikely in most cases
-  for (int m = ncom; m < min_xy_all; m++) {
-    const recon_type alpha_val = alpha_inv[m - 1];
-    for (int v = 0; v < midp; v++) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
-      recon_type alpha_z = vox_z[k] * inv_delz[v];
-      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			  + voxels[i[m]][j[m]][k - 1] * (alpha_xy[m] - min_z));
-#ifdef TEST3D
-      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
-#endif // TEST3D
-    }
-  }
-  for (int m = ncom; m < max_xy_all; m++) {
-    const recon_type alpha_val = alpha_inv[m - 1];
-    for (int v = midp; v < nv; v++) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
-      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-      recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-      pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			  + voxels[i[m]][j[m]][k + 1] * (alpha_xy[m] - min_z));
-#ifdef TEST3D
-      zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
-#endif // TEST3D
-    }
-  }
-  */
   // The bits along the edge
+  alpha_m0 = alpha_xy[ncom - 1];
   for (int m = ncom; m < n; m++) {
+    const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
     const recon_type alpha_val = alpha_inv[m - 1];
+    const recon_type alpha_m1 = alpha_xy[m];
     for (int v = min_v_all - 1; v >= 0; v--) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       if (k > 0) {
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			    + voxels[i[m]][j[m]][k - 1]
-			    * (alpha_xy[m] - min_z));
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
 #ifdef TEST3D
-	zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+	zpix[m][v] += (min_z - alpha_m0) + (alpha_m1 - min_z);
 #endif // TEST3D
       } else if (k == 0) {
 	recon_type alpha_z = vox_z[0] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][0] * (min_z - alpha_xy[m - 1]);
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += vox[0] * (min_z - alpha_m0);
 #ifdef TEST3D
-	zpix[m][v] += (min_z - alpha_xy[m - 1]);
+	zpix[m][v] += (min_z - alpha_m0);
 #endif // TEST3D
       } else
 	break;
     }
+    alpha_m0 = alpha_m1;
   }
+  alpha_m0 = alpha_xy[ncom - 1];
   for (int m = ncom; m < n; m++) {
+    const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
     const recon_type alpha_val = alpha_inv[m - 1];
+    const recon_type alpha_m1 = alpha_xy[m];
     for (int v = max_v_all + 1; v < nv; v++) {
       int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
       if (k < nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += (voxels[i[m]][j[m]][k] * (min_z - alpha_xy[m - 1])
-			    + voxels[i[m]][j[m]][k + 1]
-			    * (alpha_xy[m] - min_z));
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
 #ifdef TEST3D
-	zpix[m][v] += (min_z - alpha_xy[m - 1]) + (alpha_xy[m] - min_z);
+	zpix[m][v] += (min_z - alpha_m0) + (alpha_m1 - min_z);
 #endif // TEST3D
       } else if (k == nzm1) {
 	recon_type alpha_z = vox_z[nz] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy[m]);
-	pixels[a][h][v] += voxels[i[m]][j[m]][nzm1] * (min_z - alpha_xy[m - 1]);
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += vox[nzm1] * (min_z - alpha_m0);
 #ifdef TEST3D
-	zpix[m][v] += (min_z - alpha_xy[m - 1]);
+	zpix[m][v] += (min_z - alpha_m0);
 #endif // TEST3D
       } else
 	break;
     }
   }
   // scale
+  const recon_type *const dc = &(d_conv[h][0]);
   for (int v = 0; v < nv; v++)
-    pixels[a][h][v] *= d_conv[h][v];
+    pix[v] *= dc[v];
 #ifdef TEST3D
   for (int m = 1; m < n; m++)
     for (int v = 0; v < nv; v++)
@@ -685,20 +670,23 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
   const int nzm1 = nz - 1;
+  voxel_type *const vox = &(voxels[i][j][0]);
   for (int m = 0; m < n; m++) {
-    const recon_type alpha_inv = alpha_xy_0[m] * inv_dz;
+    const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
+    const recon_type *const dc = &(d_conv[h[m]][0]);
+    const recon_type alpha_m0 = alpha_xy_0[m];
+    const recon_type alpha_m1 = alpha_xy_1[m];
+    const recon_type alpha_inv = alpha_m0 * inv_dz;
     for (int v = midp - 1; v >= 0; v--) {
       int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
       if (k > 0) {
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
-	voxels[i][j][k] += pixels[a[m]][h[m]][v] * (min_z - alpha_xy_0[m])
-	  * d_conv[h[m]][v];
-	voxels[i][j][k - 1] += pixels[a[m]][h[m]][v] * (alpha_xy_1[m] - min_z)
-	  * d_conv[h[m]][v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	vox[k] += pix[v] * (min_z - alpha_m0) * dc[v];
+	vox[k - 1] += pix[v] * (alpha_m1 - min_z) * dc[v];
 #ifdef TEST3D
-	zpix[m][k] += (min_z - alpha_xy_0[m]) * d_conv[h[m]][v];
-	zpix[m][k - 1] += (alpha_xy_1[m] - min_z) * d_conv[h[m]][v];
+	zpix[m][k] += (min_z - alpha_m0) * dc[v];
+	zpix[m][k - 1] += (alpha_m1 - min_z) * dc[v];
 #endif // TEST3D
       } else if (k == 0) {
 #ifdef TEST2D
@@ -706,11 +694,10 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	  std::cerr << "Naughty\n";
 #endif // TEST2D
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
-	voxels[i][j][k] += pixels[a[m]][h[m]][v] * (min_z - alpha_xy_0[m])
-	  * d_conv[h[m]][v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	vox[k] += pix[v] * (min_z - alpha_m0) * dc[v];
 #ifdef TEST3D
-	zpix[m][k] += (min_z - alpha_xy_0[m]) * d_conv[h[m]][v];
+	zpix[m][k] += (min_z - alpha_m0) * dc[v];
 #endif // TEST3D
       } else
 	break;
@@ -719,22 +706,19 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
       int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
       if (k < nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
-	voxels[i][j][k] += pixels[a[m]][h[m]][v] * (min_z - alpha_xy_0[m])
-	  * d_conv[h[m]][v];
-	voxels[i][j][k + 1] += pixels[a[m]][h[m]][v] * (alpha_xy_1[m] - min_z)
-	  * d_conv[h[m]][v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	vox[k] += pix[v] * (min_z - alpha_m0) * dc[v];
+	vox[k + 1] += pix[v] * (alpha_m1 - min_z) * dc[v];
 #ifdef TEST3D
-	zpix[m][k] += (min_z - alpha_xy_0[m]) * d_conv[h[m]][v];
-	zpix[m][k + 1] += (alpha_xy_1[m] - min_z) * d_conv[h[m]][v];
+	zpix[m][k] += (min_z - alpha_m0) * dc[v];
+	zpix[m][k + 1] += (alpha_m1 - min_z) * dc[v];
 #endif // TEST3D
       } else if (k == nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
-	recon_type min_z = std::min(alpha_z, alpha_xy_1[m]);
-	voxels[i][j][k] += pixels[a[m]][h[m]][v] * (min_z - alpha_xy_0[m])
-	  * d_conv[h[m]][v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	vox[k] += pix[v] * (min_z - alpha_m0) * dc[v];
 #ifdef TEST3D
-	zpix[m][k] += (min_z - alpha_xy_0[m]) * d_conv[h[m]][v];
+	zpix[m][k] += (min_z - alpha_m0) * dc[v];
 #endif // TEST3D
       } else
 	break;
