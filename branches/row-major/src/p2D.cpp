@@ -74,11 +74,14 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				    const std::vector<int> &mapping,
 				    const int map_type, recon_2d &zpix)
 {
+  pixel_type *const pix = &(pixels[a][h][0]);
   switch (map_type) {
   case 1:
     for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
+      const recon_type alpha = l_xy[m];
       for (int v = 0; v < nv; v++)
-	pixels[a][h][v] += voxels[i[m]][j[m]][v] * l_xy[m];
+	pix[v] += vox[v] * alpha;
     }
 #ifdef TEST3D
     for (int m = 0; m < n; m++) {
@@ -91,10 +94,12 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v2 = nv / 2;
       for (int m = 0; m < n; m++) {
+	const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
+	const recon_type alpha = l_xy[m];
 	int v = 0;
 	for (int l = 0; l < v2; l++) {
-	  pixels[a][h][v] += voxels[i[m]][j[m]][l] * l_xy[m];
-	  pixels[a][h][v + 1] += voxels[i[m]][j[m]][l] * l_xy[m];
+	  pix[v + 0] += vox[l] * alpha;
+	  pix[v + 1] += vox[l] * alpha;
 	  v += 2;
 	}
       }
@@ -105,7 +110,7 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
       for (int m = 0; m < n; m++) {
 	int v = 0;
 	for (int l = 0; l < v2; l++) {
-	  zpix[m][v] += l_xy[m];
+	  zpix[m][v + 0] += l_xy[m];
 	  zpix[m][v + 1] += l_xy[m];
 	  v += 2;
 	}
@@ -117,12 +122,14 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v4 = nv / 4;
       for (int m = 0; m < n; m++) {
+	const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
+	const recon_type alpha = l_xy[m];
 	int v = 0;
 	for (int l = 0; l < v4; l++) {
-	  pixels[a][h][v] += voxels[i[m]][j[m]][l] * l_xy[m];
-	  pixels[a][h][v + 1] += voxels[i[m]][j[m]][l] * l_xy[m];
-	  pixels[a][h][v + 2] += voxels[i[m]][j[m]][l] * l_xy[m];
-	  pixels[a][h][v + 3] += voxels[i[m]][j[m]][l] * l_xy[m];
+	  pix[v + 0] += vox[l] * alpha;
+	  pix[v + 1] += vox[l] * alpha;
+	  pix[v + 2] += vox[l] * alpha;
+	  pix[v + 3] += vox[l] * alpha;
 	  v += 4;
 	}
       }
@@ -133,7 +140,7 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
       for (int m = 0; m < n; m++) {
 	int v = 0;
 	for (int l = 0; l < v4; l++) {
-	  zpix[m][v] += l_xy[m];
+	  zpix[m][v + 0] += l_xy[m];
 	  zpix[m][v + 1] += l_xy[m];
 	  zpix[m][v + 2] += l_xy[m];
 	  zpix[m][v + 3] += l_xy[m];
@@ -145,8 +152,10 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     break;
   default:
     for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
+      const recon_type alpha = l_xy[m];
       for (int v = 0; v < nv; v++)
-	pixels[a][h][v] += voxels[i[m]][j[m]][mapping[v]] * l_xy[m];
+	pix[v] += vox[mapping[v]] * alpha;
     }
 #ifdef TEST3D
     for (int m = 0; m < n; m++) {
@@ -541,11 +550,14 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				    const std::vector<int> &mapping,
 				    const int map_type, recon_2d &zpix)
 {
+  voxel_type *const vox = &(voxels[i][j][0]);
   switch (map_type) {
   case 1:
     for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
+      const recon_type alpha = l_xy[m];
       for (int v = 0; v < nv; v++)
-	voxels[i][j][v] += pixels[a[m]][h[m]][v] * l_xy[m];
+	vox[v] += pix[v] * alpha;
     }
 #ifdef TEST3D
     for (int m = 0; m < n; m++) {
@@ -558,10 +570,12 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v2 = nv / 2;
       for (int m = 0; m < n; m++) {
+	const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
+	const recon_type alpha = l_xy[m];
 	int v = 0;
 	for (int l = 0; l < v2; l++) {
-	  voxels[i][j][l] += pixels[a[m]][h[m]][v] * l_xy[m];
-	  voxels[i][j][l] += pixels[a[m]][h[m]][v + 1] * l_xy[m];
+	  vox[l] += pix[v + 0] * alpha;
+	  vox[l] += pix[v + 1] * alpha;
 	  v += 2;
 	}
       }
@@ -584,12 +598,14 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v4 = nv / 4;
       for (int m = 0; m < n; m++) {
+	const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
+	const recon_type alpha = l_xy[m];
 	int v = 0;
 	for (int l = 0; l < v4; l++) {
-	  voxels[i][j][l] += pixels[a[m]][h[m]][v] * l_xy[m];
-	  voxels[i][j][l] += pixels[a[m]][h[m]][v + 1] * l_xy[m];
-	  voxels[i][j][l] += pixels[a[m]][h[m]][v + 2] * l_xy[m];
-	  voxels[i][j][l] += pixels[a[m]][h[m]][v + 3] * l_xy[m];
+	  vox[l] += pix[v + 0] * alpha;
+	  vox[l] += pix[v + 1] * alpha;
+	  vox[l] += pix[v + 2] * alpha;
+	  vox[l] += pix[v + 3] * alpha;
 	  v += 4;
 	}
       }
@@ -612,8 +628,10 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     break;
   default:
     for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
+      const recon_type alpha = l_xy[m];
       for (int v = 0; v < nv; v++)
-	voxels[i][j][mapping[v]] += pixels[a[m]][h[m]][v] * l_xy[m];
+	vox[mapping[v]] += pix[v] * alpha;
     }
 #ifdef TEST3D
     for (int m = 0; m < n; m++) {
