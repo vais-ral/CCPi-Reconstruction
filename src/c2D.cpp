@@ -22,6 +22,12 @@ extern bool test_3D(const real start[], const real end[],
 		    const int im_size_x, const int im_size_y,
 		    const int im_size_z, recon_type &length);
 
+#ifdef __AVX__
+static const std::size_t alignsize = 32;
+#else
+static const std::size_t alignsize = sizeof(recon_type);
+#endif // __AVX__
+
 void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy,
 				const std::vector<int> &i,
@@ -90,15 +96,20 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     std::cerr << "Min/Max" << min_xy_all << ' ' << max_xy_all << ' '
 	      << a << ' ' << h << '\n';
 #endif // TEST3D
+  void *alignk;
+  posix_memalign(&alignk, alignsize, nv * sizeof(int));
+  int *kv = (int *)alignk;  
   pixel_type *const pix = &(pixels[a][h][0]);
   int ncom = std::min(min_xy_all, max_xy_all);
   recon_type alpha_m0 = alpha_xy[0];
   for (int m = 1; m < ncom; m++) {
     const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
     const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = 0; v < nv; v++)
+      kv[v] = int(pzbz + alpha_val * delta_z[v]);
     const recon_type alpha_m1 = alpha_xy[m];
     for (int v = 0; v < midp; v++) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      int k = kv[v];
       recon_type alpha_z = vox_z[k] * inv_delz[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
@@ -108,7 +119,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 #endif // TEST3D
     }
     for (int v = midp; v < nv; v++) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      int k = kv[v];
       recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
@@ -123,9 +134,11 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   for (int m = ncom; m < n; m++) {
     const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
     const recon_type alpha_val = alpha_inv[m - 1];
+    for (int v = min_v_all; v <= max_v_all; v++)
+      kv[v] = int(pzbz + alpha_val * delta_z[v]);
     const recon_type alpha_m1 = alpha_xy[m];
     for (int v = min_v_all; v < midp; v++) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      int k = kv[v];
       recon_type alpha_z = vox_z[k] * inv_delz[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
@@ -135,7 +148,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 #endif // TEST3D
     }
     for (int v = midp; v <= max_v_all; v++) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      int k = kv[v];
       recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
@@ -148,12 +161,14 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   }
   // The bits along the edge
   alpha_m0 = alpha_xy[ncom - 1];
+  const recon_type pzbz1 = pzbz + 1.0;
   for (int m = ncom; m < n; m++) {
     const voxel_type *const vox = &(voxels[i[m]][j[m]][0]);
     const recon_type alpha_val = alpha_inv[m - 1];
     const recon_type alpha_m1 = alpha_xy[m];
     for (int v = min_v_all - 1; v >= 0; v--) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      int k = int(pzbz1 + alpha_val * delta_z[v]);
+      k--;
       if (k > 0) {
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
@@ -180,7 +195,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     const recon_type alpha_val = alpha_inv[m - 1];
     const recon_type alpha_m1 = alpha_xy[m];
     for (int v = max_v_all + 1; v < nv; v++) {
-      int k = int(std::floor(pzbz + alpha_val * delta_z[v]));
+      int k = int(pzbz + alpha_val * delta_z[v]);
       if (k < nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
@@ -209,6 +224,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     for (int v = 0; v < nv; v++)
       zpix[m][v] *= d_conv[h][v];
 #endif // TEST3D
+  free(alignk);
 }
 
 void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
@@ -516,9 +532,11 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 #endif // TEST2D
   if (count > 0) {
     recon_2d zvec(boost::extents[count][nv]);
+#ifdef TEST3D
     for (int m = 0; m < count; m++)
       for (int v = 0; v < nv; v++)
 	zvec[m][v] = 0.0;
+#endif // TEST3D
     calc_xy_z(pixels, voxels, alpha_xy, i_arr, j_arr, count, a, h, pzbz,
 	      inv_dz, nv, nz, midp, d_conv, delta_z, inv_delz, vox_z, zvec);
 #ifdef TEST3D
@@ -670,6 +688,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
   const int nzm1 = nz - 1;
+  const recon_type pzbz1 = pzbz + 1.0;
   voxel_type *const vox = &(voxels[i][j][0]);
   for (int m = 0; m < n; m++) {
     const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
@@ -678,7 +697,8 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     const recon_type alpha_m1 = alpha_xy_1[m];
     const recon_type alpha_inv = alpha_m0 * inv_dz;
     for (int v = midp - 1; v >= 0; v--) {
-      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
+      int k = int(pzbz1 + alpha_inv * delta_z[v]);
+      k--;
       if (k > 0) {
 	recon_type alpha_z = vox_z[k] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
@@ -703,7 +723,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	break;
     }
     for (int v = midp; v < nv; v++) {
-      int k = int(std::floor(pzbz + alpha_inv * delta_z[v]));
+      int k = int(pzbz + alpha_inv * delta_z[v]);
       if (k < nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
@@ -933,9 +953,11 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 #endif // TEST2D
   if (count > 0) {
     recon_2d zvec(boost::extents[count][nz]);
+#ifdef TEST3D
     for (int m = 0; m < count; m++)
       for (int k = 0; k < nz; k++)
 	zvec[m][k] = 0.0;
+#endif // TEST3D
     calc_ah_z(pixels, voxels, alpha_xy_0, alpha_xy_1, a_arr, h_arr, count,
 	      i, j, pzbz, inv_dz, n_v, nz, midp, d_conv, delta_z,
 	      inv_delz, vox_z, zvec);
