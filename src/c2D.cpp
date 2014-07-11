@@ -660,6 +660,18 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
   }
 }
 
+/*
+  vox_z[k] = b_z + k * d_z
+  v_pix[v] = v_pix[0] + v * v_step -> v_step = v_pix[1] - v_pix[0]
+  so for a parametric line with z = source_z + alpha * (v_pix[v] - source_z)
+  we can solve for a particular vox_z[k] by
+    vox_z[k] = source_z + alpha * (v_pix[v] - source_z)
+  which ends up as
+    v = (source_z - v_pix[0]) + (vox_z[k] - source_z)
+            -------------        -------------------
+              v_step               alpha * v_step
+*/
+
 // Todo - loop over k and find v? alpha_xy may be the wrong info for this.
 void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy_0,
@@ -671,24 +683,32 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				const int nv, const int nz, const int midp,
 				const recon_2d &d_conv, const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z,
-				recon_2d &zpix)
+				const recon_type pzdv, const recon_type z_1,
+				const recon_type z_nm, recon_2d &zpix)
 {
-  // delta_z[i] = v_pixels[i] - source_z
-  // inv_delz[i] = 1.0 / delta_z[i] = 1.0 / (v_pixels[i] - source_z)
-  // vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z
-  // so alpha_z is intercept of line at voxel[k] position
-  // (vox_origin[2] + k * vox_size[2]) = p1_z + alpha_z * (v_pix[v] - p1_z)
-  // alpha_z = ((vox_origin[2] + k * vox_size[2]) - p1_z) / (v_pix[v] - p1_z)
-  // alpha_z = vox_z[k] / delta_z[v] = vox_z[k] * inv_delz[v]
-  // and for k calc
-  // k = int((p1_z + alpha_xy[m - 1] * (v_pix[v] - p1_z) - b_z) / d_z)
-  // k = int((p1_z + alpha_xy[m - 1] * (p2_z[v] - p1_z) - b_z) / d_z)
-  // k = int((p1_z + alpha_xy[m - 1] * delta_z[v] - b_z) * inv_dz)
-  // k = int((p1_z - b_z) * inv_dz + (alpha_xy[m - 1] * delta_z[v]) * inv_dz)
-  // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
-  // k = int((pzbz + alpha_inv * delta_z[v])
   const int nzm1 = nz - 1;
+  // pzdv = (p1z - vpix[0]) / vpix_step
+  // z_1 = (bz + 1 * dz - p1z) / vpix_step ,
+  // z_nm = (bz + (nz - 1) * dz - p1z) / vpix_step
+  // find safe region where all m stay inside the main block
+  // like min_v_all/max_v_all in calc_xy
+  int min_v = 0;
+  for (int m = 0; m < n; m++) {
+    int v = int(std::ceil(pzdv + z_1 / alpha_xy_0[m]));
+    if (v > min_v)
+      min_v = v;
+  }
+  int max_v = nz;
+  for (int m = 0; m < n; m++) {
+    int v = int(std::floor(pzdv + z_nm / alpha_xy_0[m]));
+    if (v < max_v)
+      max_v = v;
+  }
+  // Todo - is there anything equivalent to min/max_xy in calc_xy
   const recon_type pzbz1 = pzbz + 1.0;
+  void *alignk;
+  posix_memalign(&alignk, alignsize, nv * sizeof(int));
+  int *kv = (int *)alignk;  
   voxel_type *const vox = &(voxels[i][j][0]);
   for (int m = 0; m < n; m++) {
     const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
@@ -696,7 +716,46 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     const recon_type alpha_m0 = alpha_xy_0[m];
     const recon_type alpha_m1 = alpha_xy_1[m];
     const recon_type alpha_inv = alpha_m0 * inv_dz;
-    for (int v = midp - 1; v >= 0; v--) {
+    for (int v = min_v; v < max_v; v++)
+      kv[v] = int(pzbz + alpha_inv * delta_z[v]);
+    for (int v = min_v; v < midp; v++) {
+      int k = kv[v];
+      recon_type alpha_z = vox_z[k] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_m1);
+      vox[k] += pix[v] * (min_z - alpha_m0) * dc[v];
+      vox[k - 1] += pix[v] * (alpha_m1 - min_z) * dc[v];
+#ifdef TEST3D
+      zpix[m][k] += (min_z - alpha_m0) * dc[v];
+      zpix[m][k - 1] += (alpha_m1 - min_z) * dc[v];
+#endif // TEST3D
+#ifdef TEST2D
+      if (k < 1)
+	std::cerr << "Ooops min_v\n";
+#endif // TEST2D
+    }
+    for (int v = midp; v < max_v; v++) {
+      int k = kv[v];
+      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+      recon_type min_z = std::min(alpha_z, alpha_m1);
+      vox[k] += pix[v] * (min_z - alpha_m0) * dc[v];
+      vox[k + 1] += pix[v] * (alpha_m1 - min_z) * dc[v];
+#ifdef TEST3D
+      zpix[m][k] += (min_z - alpha_m0) * dc[v];
+      zpix[m][k + 1] += (alpha_m1 - min_z) * dc[v];
+#endif // TEST3D
+#ifdef TEST2D
+      if (k >= nzm1)
+	std::cerr << "Ooops max_v\n";
+#endif // TEST2D
+    }
+  }
+  for (int m = 0; m < n; m++) {
+    const pixel_type *const pix = &(pixels[a[m]][h[m]][0]);
+    const recon_type *const dc = &(d_conv[h[m]][0]);
+    const recon_type alpha_m0 = alpha_xy_0[m];
+    const recon_type alpha_m1 = alpha_xy_1[m];
+    const recon_type alpha_inv = alpha_m0 * inv_dz;
+    for (int v = min_v - 1; v >= 0; v--) {
       int k = int(pzbz1 + alpha_inv * delta_z[v]);
       k--;
       if (k > 0) {
@@ -722,7 +781,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
       } else
 	break;
     }
-    for (int v = midp; v < nv; v++) {
+    for (int v = max_v; v < nv; v++) {
       int k = int(pzbz + alpha_inv * delta_z[v]);
       if (k < nzm1) {
 	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
@@ -744,6 +803,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	break;
     }
   }
+  free(alignk);
 }
 
 /*
@@ -798,7 +858,9 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const recon_1d &delta_z,
 				  const recon_1d &inv_delz,
 				  const recon_1d &vox_z, const recon_type pzbz,
-				  const recon_type inv_dz)
+				  const recon_type inv_dz,
+				  const recon_type pzdv, const recon_type z_1,
+				  const recon_type z_nm)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
@@ -960,7 +1022,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 #endif // TEST3D
     calc_ah_z(pixels, voxels, alpha_xy_0, alpha_xy_1, a_arr, h_arr, count,
 	      i, j, pzbz, inv_dz, n_v, nz, midp, d_conv, delta_z,
-	      inv_delz, vox_z, zvec);
+	      inv_delz, vox_z, pzdv, z_1, z_nm, zvec);
 #ifdef TEST3D
     real start[3];
     real end[3];
@@ -1066,6 +1128,12 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 
   const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
   const recon_type pzbz = recon_type((source_z - vox_origin[2]) / vox_size[2]);
+  const real v_step = v_pixels[1] - v_pixels[0];
+  const recon_type pzdv = recon_type((source_z - v_pixels[0]) / v_step);
+  const recon_type z_1 = recon_type((vox_origin[2] + vox_size[2]
+				     - source_z) / v_step);
+  const recon_type z_nm = recon_type((vox_origin[2] + real(nz - 1) * vox_size[2]
+				      - source_z) / v_step);
 
   recon_1d delta_z(n_v);
   for (int i = 0; i < n_v; i++)
@@ -1091,7 +1159,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
 		  source_z, n_angles, n_h, n_v, h_pixels, v_pixels, mid,
 		  c_angle, s_angle, d_conv, delta_z, inv_delz, vox_z, pzbz,
-		  inv_dz);
+		  inv_dz, pzdv, z_1, z_nm);
     }
   }      
 }
