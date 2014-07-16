@@ -10,6 +10,9 @@
 #endif // mex
 #include "instruments.hpp"
 #include "ui_calls.hpp"
+#ifdef TEST2D
+#  include <iostream>
+#endif // TEST2D
 
 static const recon_type epsilon = FLT_EPSILON;
 
@@ -440,9 +443,11 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 #endif // TEST2D
   if (count > 0) {
     recon_2d zvec(boost::extents[count][nv]);
+#ifdef TEST3D
     for (int m = 0; m < count; m++)
       for (int v = 0; v < nv; v++)
 	zvec[m][v] = 0.0;
+#endif // TEST3D
     calc_xy_z(pixels, voxels, l_xy, i_arr, j_arr, count, a, h,
 	      nv, nz, mapping, map_type, zvec);
 #ifdef TEST3D
@@ -657,6 +662,10 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 				      const real_1d &v_pixels,
 				      const real_1d &cangle,
 				      const real_1d &sangle,
+				      const real_1d &y_offset,
+				      const real_1d &i_offset,
+				      const real_1d &length,
+				      const real h_pix0, const real ihp_step,
 				      const recon_type d_conv,
 				      const std::vector<int> &mapping,
 				      const int map_type)
@@ -673,7 +682,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   // Todo - in parallel we can probably make a better guess at which 2 corners
   // we need for the upper and lower limits.
-  real pixel_step = h_pixels[1] - h_pixels[0];
+  //real pixel_step = h_pixels[1] - h_pixels[0];
   for (int a = 0; a < n_angles; a++) {
     real cphi = cangle[a];
     real sphi = sangle[a];
@@ -681,11 +690,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
     if (std::abs(cphi) < epsilon) {
       // line is parallel to y, so just find h that is between x_0/x_n
       if (sphi < 0.0) {
-	int hmin = int(std::floor((x_0 - h_pixels[0]) / pixel_step));
+	int hmin = int(std::floor(x_0 * ihp_step - h_pix0));
 	if (hmin < 0)
 	  hmin = 0;
 	// decrease x_n by tol so inside upper boundary, not on it?
-	int hmax = int(std::floor((x_n - epsilon - h_pixels[0]) / pixel_step));
+	int hmax = int(std::floor((x_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
 	for (int h = hmin; h <= hmax; h++) {
@@ -697,11 +706,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	  }
 	}
       } else {
-	int hmin = int(std::ceil((- x_n + epsilon - h_pixels[0])/pixel_step));
+	int hmin = int(std::ceil((- x_n + epsilon) * ihp_step - h_pix0));
 	if (hmin < 0)
 	  hmin = 0;
 	// decrease x_n by tol so inside upper boundary, not on it?
-	int hmax = int(std::ceil((- x_0 - h_pixels[0]) / pixel_step));
+	int hmax = int(std::ceil((- x_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
 	for (int h = hmin; h <= hmax; h++) {
@@ -715,11 +724,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
       }
     } else if (std::abs(sphi) < epsilon) {
       if (cphi < 0.0) {
-	int hmin = int(std::ceil((- y_n + epsilon - h_pixels[0])/pixel_step));
+	int hmin = int(std::ceil((- y_n + epsilon) * ihp_step - h_pix0));
 	if (hmin < 0)
 	  hmin = 0;
 	// decrease y_n by tol so inside upper boundary, not on it?
-	int hmax = int(std::ceil((- y_0 - h_pixels[0]) / pixel_step));
+	int hmax = int(std::ceil((- y_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
 	for (int h = hmin; h <= hmax; h++) {
@@ -731,11 +740,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	  }
 	}
       } else {
-	int hmin = int(std::floor((y_0 - h_pixels[0]) / pixel_step));
+	int hmin = int(std::floor(y_0 * ihp_step - h_pix0));
 	if (hmin < 0)
 	  hmin = 0;
 	// decrease y_n by tol so inside upper boundary, not on it?
-	int hmax = int(std::floor((y_n - epsilon - h_pixels[0]) / pixel_step));
+	int hmax = int(std::floor((y_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
 	for (int h = hmin; h <= hmax; h++) {
@@ -748,152 +757,85 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	}
       }
     } else {
-      // In derivation let initial point for detector line be (dx, 0)
-      real qx = detector_x * cphi; // - source_y * sphi;
-      real qy = detector_x * sphi; // + source_y * cphi;
-      // Then let the initial position of the be (vx, vy) not (px, py)
-      // since we know the angle of all the lines which is (cphi, sphi)
-      // the angle is delta_x/y
-      real qpx_0 = qx - x_0;
-      real qpy_0 = qy - y_0;
-      real qpx_n = qx - x_n;
-      real qpy_n = qy - y_n;
+      int hmin;
+      int hmax;
       /*
-      real y00;
-      real y01;
-      real y10;
-      real y11;
-      if (std::abs(sphi) > std::abs(cphi)) {
-	real tphi = cphi / sphi;
-	real u = (qpy_0 + qpx_0 * tphi) / (sphi + cphi * tphi);
-	real t = (-qpx_0 + u * cphi) / sphi;
-	y00 = - t;
-	u = (qpy_n + qpx_0 * tphi) / (sphi + cphi * tphi);
-	t = (-qpx_0 + u * cphi) / sphi;
-	y01 = - t;
-	u = (qpy_0 + qpx_n * tphi) / (sphi + cphi * tphi);
-	t = (-qpx_n + u * cphi) / sphi;
-	y10 = - t;
-	u = (qpy_n + qpx_n * tphi) / (sphi + cphi * tphi);
-	t = (-qpx_n + u * cphi) / sphi;
-	y11 = - t;
-
-	real u = qpy_0 * sphi + qpx_0 * cphi;
-	y00 = (qpx_0 - u * cphi) / sphi;
-	u = qpy_n * sphi + qpx_0 * cphi;
-	y01 = (qpx_0 - u * cphi) / sphi;
-	u = qpy_0 * sphi + qpx_n * cphi;
-	y10 = (qpx_n - u * cphi) / sphi;
-	u = qpy_n * sphi + qpx_n * cphi;
-	y11 = (qpx_n - u * cphi) / sphi;
-
-	y00 = -qpy_0 * cphi + qpx_0 * sphi;
-	y01 = -qpy_n * cphi + qpx_0 * sphi;
-	y10 = -qpy_0 * cphi + qpx_n * sphi;
-	y11 = -qpy_n * cphi + qpx_n * sphi;
-      } else {
-	real tphi = sphi / cphi;
-	real u = (qpx_0 + qpy_0 * tphi) / (cphi + sphi * tphi);
-	real t = (qpy_0 - u * sphi) / cphi;
-	y00 = - t;
-	u = (qpx_0 + qpy_n * tphi) / (cphi + sphi * tphi);
-	t = (qpy_n - u * sphi) / cphi;
-	y01 = - t;
-	u = (qpx_n + qpy_0 * tphi) / (cphi + sphi * tphi);
-	t = (qpy_0 - u * sphi) / cphi;
-	y10 = - t;
-	u = (qpx_n + qpy_n * tphi) / (cphi + sphi * tphi);
-	t = (qpy_n - u * sphi) / cphi;
-	y11 = - t;
-
-	real u = qpx_0 * cphi + qpy_0 * sphi;
-	y00 = (-qpy_0 + u * sphi) / cphi;
-	u = qpx_0 * cphi + qpy_n * sphi;
-	y01 = (-qpy_n + u * sphi) / cphi;
-	u = qpx_n * cphi + qpy_0 * sphi;
-	y10 = (- qpy_0 + u * sphi) / cphi;
-	u = qpx_n * cphi + qpy_n * sphi;
-	y11 = (-qpy_n + u * sphi) / cphi;
-
-	y00 = qpx_0 * sphi - qpy_0 * cphi;
-	y01 = qpx_0 * sphi - qpy_n * cphi;
-	y10 = qpx_n * sphi - qpy_0 * cphi;
-	y11 = qpx_n * sphi - qpy_n * cphi;
-      }
-      */
       real y00 = qpx_0 * sphi - qpy_0 * cphi;
       real y01 = qpx_0 * sphi - qpy_n * cphi;
       real y10 = qpx_n * sphi - qpy_0 * cphi;
       real y11 = qpx_n * sphi - qpy_n * cphi;
-      int h00 = int(std::floor((y00 - h_pixels[0]) / pixel_step));
-      int h01 = int(std::floor((y01 - h_pixels[0]) / pixel_step));
-      int hmin = std::min(h00, h01);
-      int hmax = std::max(h00, h01);
-      int h10 = int(std::floor((y10 - h_pixels[0]) / pixel_step));
-      hmin = std::min(hmin, h10);
-      hmax = std::max(hmax, h10);
-      int h11 = int(std::floor((y11 - h_pixels[0]) / pixel_step));
-      hmin = std::max(std::min(hmin, h11), 0);
-      hmax = std::min(std::max(hmax, h11), n_h - 1);
-      // If it intercepts voxel then calc length and store
-      /**/
-      // Use an absolute paramteric form from 0 to L, not 0 to 1
-      // I think the min -L, max 0 limits are correct
-      const real delta_x = cphi;
-      const real delta_y = sphi;
-      const real inv_dx = 1.0 / delta_x;
-      const real inv_dy = 1.0 / delta_y;
-      for (int h = hmin; h <= hmax; h++) {
-	const real p2_x = cphi * detector_x - sphi * h_pixels[h];
-	const real p2_y = sphi * detector_x + cphi * h_pixels[h];
-	const real alpha_x_0 = (x_0 - p2_x) * inv_dx;
-	const real alpha_y_0 = (y_0 - p2_y) * inv_dy;
-	const real alpha_x_n = (x_n - p2_x) * inv_dx;
-	const real alpha_y_n = (y_n - p2_y) * inv_dy;
-	const real alpha_x_min = std::min(alpha_x_0, alpha_x_n);
-	const real alpha_x_max = std::max(alpha_x_0, alpha_x_n);
-	const real alpha_y_min = std::min(alpha_y_0, alpha_y_n);
-	const real alpha_y_max = std::max(alpha_y_0, alpha_y_n);
-	const real alpha_min = std::max(std::max(alpha_x_min, alpha_y_min),
-					real(-d_conv));
-	const real alpha_max = std::min(std::min(alpha_x_max, alpha_y_max),
-					real(0.0));
-	if (alpha_min < alpha_max - epsilon) {
-	  l_xy[count] = (alpha_max - alpha_min);
-	  a_arr[count] = a;
-	  h_arr[count] = h;
-	  count++;
+      */
+      real ymin;
+      real ymax;
+      // Todo - pass in arrays of y_0 * cphi etc?
+      if (cphi > 0.0) {
+	if (sphi > 0.0) {
+	  ymin = y_0 * cphi - x_n * sphi; //y10;
+	  ymax = y_n * cphi - x_0 * sphi; //y01;
+	} else {
+	  ymin = y_0 * cphi - x_0 * sphi; //y00;
+	  ymax = y_n * cphi - x_n * sphi; //y11;
+	}
+      } else {
+	if (sphi > 0.0) {
+	  ymin = y_n * cphi - x_n * sphi; //y11;
+	  ymax = y_0 * cphi - x_0 * sphi; //y00;
+	} else {
+	  ymin = y_n * cphi - x_0 * sphi; //y01;
+	  ymax = y_0 * cphi - x_n * sphi; //y10;
 	}
       }
-      /**/
-      /*
+      if (ymin < h_pixels[0])
+	hmin = 0;
+      else
+	hmin = int(std::floor(ymin * ihp_step - h_pix0));
+      //if (ymax >= h_pixels[nh]) Todo
+      hmax = std::min(int(std::floor(ymax * ihp_step - h_pix0)), n_h-1);
+      real ybot = ymin + y_offset[a];
+      real ytop = ymax - y_offset[a];
+      const real l = length[a];
       for (int h = hmin; h <= hmax; h++) {
-	const real p2_x = cphi * detector_x - sphi * h_pixels[h];
-	const real p2_y = sphi * detector_x + cphi * h_pixels[h];
-	const real p1_x = p2_x - real(3.0) * cphi * detector_x;
-	const real p1_y = p2_y - real(3.0) * sphi * detector_x;
-	const real delta_x = p2_x - p1_x; // cphi - Todo
-	const real delta_y = p2_y - p1_y; // sphi - Todo
-	const real inv_dx = 1.0 / delta_x;
-	const real inv_dy = 1.0 / delta_y;
-	const real alpha_x_0 = (x_0 - p1_x) * inv_dx;
-	const real alpha_y_0 = (y_0 - p1_y) * inv_dy;
-	const real alpha_x_n = (x_n - p1_x) * inv_dx;
-	const real alpha_y_n = (y_n - p1_y) * inv_dy;
-	const real alpha_x_min = std::min(alpha_x_0, alpha_x_n);
-	const real alpha_x_max = std::max(alpha_x_0, alpha_x_n);
-	const real alpha_y_min = std::min(alpha_y_0, alpha_y_n);
-	const real alpha_y_max = std::max(alpha_y_0, alpha_y_n);
-	const real alpha_min = std::max(std::max(alpha_x_min, alpha_y_min),
-					real(0.0));
-	const real alpha_max = std::min(std::min(alpha_x_max, alpha_y_max),
-					real(1.0));
-	if (alpha_min < alpha_max - epsilon) {
-	  l_xy[count] = (alpha_max - alpha_min) * d_conv;
-	  a_arr[count] = a;
-	  h_arr[count] = h;
-	  count++;
+	if (h_pixels[h] > ymin + epsilon) {
+	  if (h_pixels[h] < ybot) {
+	    l_xy[count] = l * (h_pixels[h] - ymin) * i_offset[a];
+	    a_arr[count] = a;
+	    h_arr[count] = h;
+	    count++;
+	  } else if (h_pixels[h] <= ytop) {
+	    l_xy[count] = l;
+	    a_arr[count] = a;
+	    h_arr[count] = h;
+	    count++;
+	  } else if (h_pixels[h] < ymax - epsilon) {
+	    l_xy[count] = l * (ymax - h_pixels[h]) * i_offset[a];
+	    a_arr[count] = a;
+	    h_arr[count] = h;
+	    count++;
+	  } else
+	    break;
 	}
+      }
+      /*
+      int h = hmin;
+      for (; h_pixels[h] < ymin + epsilon and h <= hmax; h++)
+	;
+      for (; h_pixels[h] < ybot and h <= hmax; h++) {
+	l_xy[count] = l * (h_pixels[h] - ymin) * i_offset[a];
+	a_arr[count] = a;
+	h_arr[count] = h;
+	count++;
+      }
+      for (; h_pixels[h] <= ytop and h <= hmax; h++) {
+	l_xy[count] = l;
+	a_arr[count] = a;
+	h_arr[count] = h;
+	count++;
+      }
+      for (; h_pixels[h] < ymax - epsilon and h <= hmax; h++) {
+	l_xy[count] = l * (ymax - h_pixels[h]) * i_offset[a];
+	a_arr[count] = a;
+	h_arr[count] = h;
+	count++;
       }
       */
     }
@@ -945,9 +887,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 #endif // TEST2D
   if (count > 0) {
     recon_2d zvec(boost::extents[count][nz]);
+#ifdef TEST3D
     for (int m = 0; m < count; m++)
       for (int k = 0; k < nz; k++)
 	zvec[m][k] = 0.0;
+#endif // TEST3D
     calc_ah_z(pixels, voxels, l_xy, a_arr, h_arr, count,
 	      i, j, n_v, nz, mapping, map_type, zvec);
 #ifdef TEST3D
@@ -1056,6 +1000,104 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
 
+  // rotation of voxel for offsets is same for all voxels
+  real_1d y_offset(n_angles);
+  real_1d i_offset(n_angles);
+  real_1d length(n_angles);
+  for (int a = 0; a < n_angles; a++) {
+    real cphi = c_angle[a];
+    real sphi = s_angle[a];
+    // use values for 0,0 voxel x_0 = b_x, x_1 = b_x + d_x etc
+    real y00 = vox_origin[1] * cphi - vox_origin[0] * sphi;
+    real y01 = (vox_origin[1] + vox_size[1]) * cphi - vox_origin[0] * sphi;
+    real y10 = vox_origin[1] * cphi - (vox_origin[0] + vox_size[0]) * sphi;
+    real y11 = (vox_origin[1] + vox_size[1]) * cphi
+      - (vox_origin[0] + vox_size[0]) * sphi;
+    real ymin;
+    real ybot;
+    if (cphi > 0.0) {
+      if (sphi > 0.0) {
+	ymin = y10;
+	if (y11 < y00) {
+	  ybot = y11;
+	} else {
+	  ybot = y00;
+	}
+      } else {
+	ymin = y00;
+	if (y01 < y10) {
+	  ybot = y01;
+	} else {
+	  ybot = y10;
+	}
+      }
+    } else {
+      if (sphi > 0.0) {
+	ymin = y11;
+	if (y01 < y10) {
+	  ybot = y01;
+	} else {
+	  ybot = y10;
+	}
+      } else {
+	ymin = y01;
+	if (y11 < y00) {
+	  ybot = y11;
+	} else {
+	  ybot = y00;
+	}
+      }
+    }
+    y_offset[a] = ybot - ymin;
+#ifdef TEST2D
+    real ymax;
+    real ytop;
+    if (cphi > 0.0) {
+      if (sphi > 0.0) {
+	ymax = y01;
+	if (y11 < y00) {
+	  ytop = y00;
+	} else {
+	  ytop = y11;
+	}
+      } else {
+	ymax = y11;
+	if (y01 < y10) {
+	  ytop = y10;
+	} else {
+	  ytop = y01;
+	}
+      }
+    } else {
+      if (sphi > 0.0) {
+	ymax = y00;
+	if (y01 < y10) {
+	  ytop = y10;
+	} else {
+	  ytop = y01;
+	}
+      } else {
+	ymax = y10;
+	if (y11 < y00) {
+	  ytop = y00;
+	} else {
+	  ytop = y11;
+	}
+      }
+    }
+    real yx = ymax - ytop;
+    if (std::abs(y_offset[a] - yx) > epsilon)
+      std::cerr << "Offset " << a << ' ' << yx << ' ' << y_offset[a] << '\n';
+#endif // TEST2D
+    i_offset[a] = 1.0 / y_offset[a];
+    if (std::abs(cphi) > std::abs(sphi))
+      length[a] = vox_size[0] / std::abs(cphi);
+    else
+      length[a] = vox_size[1] / std::abs(sphi);
+  }
+  const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+  const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+
   // #pragma
   for (int i = 0; i < nx; i++) {
     const real x_0 = vox_origin[0] + real(i) * vox_size[0];
@@ -1065,7 +1107,8 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
 		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
 		  n_angles, nh_pixels, nv_pixels, h_pixels, v_pixels,
-		  c_angle, s_angle, d_conv, mapping, map_type);
+		  c_angle, s_angle, y_offset, i_offset, length,
+		  h_pix0, ihp_step, d_conv, mapping, map_type);
     }
   }      
 }

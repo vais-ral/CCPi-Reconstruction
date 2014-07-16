@@ -8,6 +8,9 @@
 #include "instruments.hpp"
 #include "timer.hpp"
 #include "ui_calls.hpp"
+#ifdef TEST2D
+#  include <iostream>
+#endif // TEST2D
 
 static const recon_type epsilon = FLT_EPSILON;
 
