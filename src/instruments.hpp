@@ -220,7 +220,15 @@ namespace CCPi {
 		    voxel_data &voxels, const int n_angles, const int n_h,
 		    const int n_v, const real vox_origin[3],
 		    const real vox_size[3], const int nx, const int ny,
-		    const int nz);
+		    const int nz, const recon_2d &d_conv);
+    static void b2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real vox_origin[3],
+		    const real vox_size[3], const int nx, const int ny,
+		    const int nz, const bool limited_memory = false);
   };
 
   class parallel_beam : public instrument {
