@@ -155,17 +155,18 @@ namespace CCPi {
     real detector_x;
 
     static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &alpha_xy, const std::vector<int> &i,
-			  const std::vector<int> &j, const int n, const int a,
-			  const int h, const recon_type pzbz,
-			  const recon_type inv_dz, const int nv, const int nz,
-			  const int midp, const recon_2d &d_conv,
-			  const recon_1d &delta_z, const recon_1d &inv_delz,
-			  const recon_1d &vox_z, recon_2d &zpix);
+			  const recon_1d &alpha_xy, const std::vector<long> &ij,
+			  const int n, const int a, const int h,
+			  const recon_type pzbz, const recon_type inv_dz,
+			  const int nv, const int nz, const int midp,
+			  const recon_2d &d_conv, const recon_1d &delta_z,
+			  const recon_1d &inv_delz, const recon_1d &vox_z,
+			  recon_2d &zpix);
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 			  const recon_1d &alpha_xy_0,
 			  const recon_1d &alpha_xy_1,
-			  const std::vector<int> &a, const std::vector<int> &h,
+			  const std::vector<long> &ah,
+			  const std::vector<int> &h,
 			  const int n, const int i, const int j,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
@@ -253,14 +254,13 @@ namespace CCPi {
 
   private:
     static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy, const std::vector<int> &i,
-			  const std::vector<int> &j, const int n, const int a,
+			  const recon_1d &l_xy, const std::vector<long> &ij,
+			  const int n, const int a,
 			  const int h, const int nv, const int nz,
 			  const std::vector<int> &mapping,
 			  const int map_type, recon_2d &zpix);
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy,
-			  const std::vector<int> &a, const std::vector<int> &h,
+			  const recon_1d &l_xy, const std::vector<long> &ah,
 			  const int n, const int i, const int j,
 			  const int nv, const int nz,
 			  const std::vector<int> &mapping,
