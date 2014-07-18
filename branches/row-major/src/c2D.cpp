@@ -863,7 +863,11 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const recon_1d &vox_z, const recon_type pzbz,
 				  const recon_type inv_dz,
 				  const recon_type pzdv, const recon_type z_1,
-				  const recon_type z_nm)
+				  const recon_type z_nm, const real_1d &p1x,
+				  const real_1d &p1y, const real_1d &cpy,
+				  const real_1d &spy, const real_1d &cdetx,
+				  const real_1d &sdetx, const real_1d &ilcphi,
+				  const real_1d &ilsphi)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
@@ -876,70 +880,93 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   recon_1d alpha_xy_0(2 * pix_per_vox * n_angles);
   recon_1d alpha_xy_1(2 * pix_per_vox * n_angles);
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
-  real pixel_step = h_pixels[1] - h_pixels[0];
+  const real pixel_step = h_pixels[1] - h_pixels[0];
+  const real ipix_step = 1.0 / pixel_step;
+  const real hpix0 = (source_y - h_pixels[0]) / pixel_step;
   for (int a = 0; a < n_angles; a++) {
-    real cphi = cangle[a];
-    real sphi = sangle[a];
-    real px = source_x * cphi - source_y * sphi;
-    real py = source_x * sphi + source_y * cphi;
-    real qx = detector_x * cphi - source_y * sphi;
-    real qy = detector_x * sphi + source_y * cphi;
+    const real cphi = cangle[a];
+    const real sphi = sangle[a];
+    const real p1_x = p1x[a];
+    const real p1_y = p1y[a];
+    //const real qdx = cdetx[a];
+    //const real qdy = sdetx[a];
+    //const real qx = qdx - spy[a];
+    //const real qy = qdy + cpy[a];
     real y00;
     real y01;
     real y10;
     real y11;
-    real qpx = qx - px;
-    real qpy = qy - py;
-    real delta_x_0 = x_0 - px;
-    real delta_y_0 = y_0 - py;
-    real delta_x_n = x_n - px;
-    real delta_y_n = y_n - py;
-    // Todo - further opt this?
+    //const real qpx = qx - p1_x;
+    //const real qpy = qy - p1_y;
+    const real delta_x_0 = x_0 - p1_x;
+    const real delta_y_0 = y_0 - p1_y;
+    const real delta_x_n = x_n - p1_x;
+    const real delta_y_n = y_n - p1_y;
+    const real cx_0 = cphi * x_0 - source_x; // Todo - could pass this in
+    const real cx_n = cphi * x_n - source_x; // cx_0 + cphi * d_x
+    const real sy_0 = sphi * y_0; // Todo could pass in as array
+    const real sy_n = sphi * y_n;
     if (std::abs(sphi) > std::abs(cphi)) {
-      real tphi = cphi / sphi;
-      real u = (qpy + qpx * tphi) / (delta_y_0 + delta_x_0 * tphi);
-      real t = (-qpx + u * delta_x_0) / sphi;
-      y00 = source_y - t;
-      u = (qpy + qpx * tphi) / (delta_y_n + delta_x_0 * tphi);
-      t = (-qpx + u * delta_x_0) / sphi;
-      y01 = source_y - t;
-      u = (qpy + qpx * tphi) / (delta_y_0 + delta_x_n * tphi);
-      t = (-qpx + u * delta_x_n) / sphi;
-      y10 = source_y - t;
-      u = (qpy + qpx * tphi) / (delta_y_n + delta_x_n * tphi);
-      t = (-qpx + u * delta_x_n) / sphi;
-      y11 = source_y - t;
+      const real ilphi = ilsphi[a];
+      //real up = l / (sphi * y_0 + cphi * x_0 - source_x);
+      real u = sy_0 + cx_0;
+      //real tp = (- cphi * l + delta_x_0 * u) /sphi;
+      //real t = (- cphi + delta_x_0 / u) * ilphi;
+      //y00 = source_y - t;
+      y00 = (cphi - delta_x_0 / u) * ilphi;
+      //up = l / (sphi * y_n + cphi * x_0 - source_x);
+      u = sy_n + cx_0;
+      //tp = (- cphi * l + delta_x_0 * u) / sphi;
+      //t = (- cphi + delta_x_0 / u) * ilphi;
+      //y01 = source_y - t;
+      y01 = (cphi - delta_x_0 / u) * ilphi;
+      //up = l / (sphi * y_0 + cphi * x_n - source_x);
+      u = sy_0 + cx_n;
+      //tp = (- cphi * l + delta_x_n * u) / sphi;
+      //t = (- cphi + delta_x_n / u) * ilphi;
+      //y10 = source_y - t;
+      y10 = (cphi - delta_x_n / u) * ilphi;
+      //up = l / (sphi * y_n + cphi * x_n - source_x);
+      u = sy_n + cx_n;
+      //tp = (- cphi * l + delta_x_n * u) / sphi;
+      //t = (- cphi + delta_x_n / u) * ilphi;
+      //y11 = source_y - t;
+      y11 = (cphi - delta_x_n / u) * ilphi;
     } else {
-      real tphi = sphi / cphi;
-      real u = (qpx + qpy * tphi) / (delta_x_0 + delta_y_0 * tphi);
-      real t = (qpy - u * delta_y_0) / cphi;
-      y00 = source_y - t;
-      u = (qpx + qpy * tphi) / (delta_x_0 + delta_y_n * tphi);
-      t = (qpy - u * delta_y_n) / cphi;
-      y01 = source_y - t;
-      u = (qpx + qpy * tphi) / (delta_x_n + delta_y_0 * tphi);
-      t = (qpy - u * delta_y_0) / cphi;
-      y10 = source_y - t;
-      u = (qpx + qpy * tphi) / (delta_x_n + delta_y_n * tphi);
-      t = (qpy - u * delta_y_n) / cphi;
-      y11 = source_y - t;
+      real ilphi = ilcphi[a];
+      //real up = cphi * x_0 + sphi * y_0 - source_x;
+      real u = cx_0 + sy_0;
+      //real tp = (sphi - delta_y_0 / up) * ilphi;
+      //real t = (sphi - delta_y_0 / u) * ilphi;
+      //y00 = source_y - t;
+      y00 = (-sphi + delta_y_0 / u) * ilphi;
+      u = cx_0 + sy_n;
+      //t = (sphi - delta_y_n / u) * ilphi;
+      //y01 = source_y - t;
+      y01 = (-sphi + delta_y_n / u) * ilphi;
+      u = cx_n + sy_0;
+      //t = (sphi - delta_y_0 / u) * ilphi;
+      //y10 = source_y - t;
+      y10 = (-sphi + delta_y_0 / u) * ilphi;
+      u = cx_n + sy_n;
+      //t = (sphi - delta_y_n / u) * ilphi;
+      //y11 = source_y - t;
+      y11 = (-sphi + delta_y_n / u) * ilphi;
     }
-    int h00 = int(std::floor((y00 - h_pixels[0]) / pixel_step));
-    int h01 = int(std::floor((y01 - h_pixels[0]) / pixel_step));
+    int h00 = int(std::floor(y00 * ipix_step + hpix0));
+    int h01 = int(std::floor(y01 * ipix_step + hpix0));
     int hmin = std::min(h00, h01);
     int hmax = std::max(h00, h01);
-    int h10 = int(std::floor((y10 - h_pixels[0]) / pixel_step));
+    int h10 = int(std::floor(y10 * ipix_step + hpix0));
     hmin = std::min(hmin, h10);
     hmax = std::max(hmax, h10);
-    int h11 = int(std::floor((y11 - h_pixels[0]) / pixel_step));
+    int h11 = int(std::floor(y11 * ipix_step + hpix0));
     hmin = std::max(std::min(hmin, h11), 0);
     hmax = std::min(std::max(hmax, h11), n_h - 1);
     // If it intercepts voxel then calc alpha_xy_0, alpha_xy_1 and store
-    const real p1_x = px;
-    const real p1_y = py;
     for (int h = hmin; h <= hmax; h++) {
-      const real p2_x = cphi * detector_x - sphi * h_pixels[h];
-      const real p2_y = sphi * detector_x + cphi * h_pixels[h];
+      const real p2_x = cdetx[a] - sphi * h_pixels[h];
+      const real p2_y = sdetx[a] + cphi * h_pixels[h];
       const real delta_x = p2_x - p1_x;
       const real delta_y = p2_y - p1_y;
       if (std::abs(delta_x) < epsilon) {
@@ -949,10 +976,10 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
       } else {
 	const real inv_dx = 1.0 / delta_x;
 	const real inv_dy = 1.0 / delta_y;
-	const real alpha_x_0 = (x_0 - p1_x) * inv_dx;
-	const real alpha_y_0 = (y_0 - p1_y) * inv_dy;
-	const real alpha_x_n = (x_n - p1_x) * inv_dx;
-	const real alpha_y_n = (y_n - p1_y) * inv_dy;
+	const real alpha_x_0 = delta_x_0 * inv_dx;
+	const real alpha_y_0 = delta_y_0 * inv_dy;
+	const real alpha_x_n = delta_x_n * inv_dx;
+	const real alpha_y_n = delta_y_n * inv_dy;
 	const real alpha_x_min = std::min(alpha_x_0, alpha_x_n);
 	const real alpha_x_max = std::max(alpha_x_0, alpha_x_n);
 	const real alpha_y_min = std::min(alpha_y_0, alpha_y_n);
@@ -1112,11 +1139,28 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 
   real_1d c_angle(n_angles);
   real_1d s_angle(n_angles);
+  real_1d p1x(n_angles);
+  real_1d p1y(n_angles);
+  real_1d cpy(n_angles);
+  real_1d spy(n_angles);
+  real_1d cdetx(n_angles);
+  real_1d sdetx(n_angles);
+  real_1d ilcphi(n_angles);
+  real_1d ilsphi(n_angles);
+  const real l = detector_x - source_x;
   for (int a = 0; a < n_angles; a++) {
     real cos_phi = std::cos(angles[a]);
     real sin_phi = std::sin(angles[a]);
     c_angle[a] = cos_phi;
     s_angle[a] = sin_phi;
+    cpy[a] = cos_phi * source_y;
+    spy[a] = sin_phi * source_y;
+    p1x[a] = cos_phi * source_x - spy[a];
+    p1y[a] = sin_phi * source_x + cpy[a];
+    cdetx[a] = cos_phi * detector_x;
+    sdetx[a] = sin_phi * detector_x;
+    ilcphi[a] = l / cos_phi;
+    ilsphi[a] = l / sin_phi;
   }
   // path length from source to detector is independent of rotation
   recon_2d d_conv(boost::extents[n_h][n_v]);
@@ -1162,7 +1206,8 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
 		  source_z, n_angles, n_h, n_v, h_pixels, v_pixels, mid,
 		  c_angle, s_angle, d_conv, delta_z, inv_delz, vox_z, pzbz,
-		  inv_dz, pzdv, z_1, z_nm);
+		  inv_dz, pzdv, z_1, z_nm, p1x, p1y, cpy, spy, cdetx, sdetx,
+		  ilcphi, ilsphi);
     }
   }      
 }

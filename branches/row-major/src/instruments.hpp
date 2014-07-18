@@ -200,7 +200,11 @@ namespace CCPi {
 			    const recon_1d &delta_z, const recon_1d &inv_delz,
 			    const recon_1d &vox_z, const recon_type pzbz,
 			    const recon_type inv_dz, const recon_type pzdv,
-			    const recon_type z_1, const recon_type z_nm);
+			    const recon_type z_1, const recon_type z_nm,
+			    const real_1d &p1x, const real_1d &p1y,
+			    const real_1d &cpy, const real_1d &spy,
+			    const real_1d &cdetx, const real_1d &sdetx,
+			    const real_1d &ilcphi, const real_1d &ilsphi);
     static void f2D(const real source_x, const real source_y,
 		    const real source_z, const real detector_x,
 		    const real_1d &h_pixels, const real_1d &v_pixels,
