@@ -6,10 +6,12 @@ template <class real_type>
 inline void init_data(boost::multi_array_ref<real_type, 3> &x,
 		      const sl_int nx, const sl_int ny, const sl_int nz)
 {
-  sl_int n = nx * ny * nz;
-#pragma omp parallel for shared(x) firstprivate(n) schedule(dynamic)
-  for (sl_int i = 0; i < n; i++)
-    (x.data())[i] = 0.0;
+  //sl_int n = nx * ny * nz;
+#pragma omp parallel for shared(x) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nz; k++)
+	x[i][j][k] = 0.0;
 }
 
 template <class real_type>
@@ -17,11 +19,12 @@ inline void scal_y(const real beta, boost::multi_array_ref<real_type, 3> &y,
 		   const sl_int nx, const sl_int ny, const sl_int nz)
 {
   // y = beta * y
-  sl_int n = nx * ny * nz;
   real_type b = real_type(beta);
-#pragma omp parallel for shared(y) firstprivate(n, b) schedule(dynamic)
-  for (sl_int i = 0; i < n; i++)
-    (y.data())[i] = b * (y.data())[i];
+#pragma omp parallel for shared(y) firstprivate(nx, ny, nz, b) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nz; k++)
+	y[i][j][k] *= b;
 }
 
 inline voxel_type norm_voxels(const voxel_data &v, const sl_int nx,
@@ -105,11 +108,12 @@ inline void sum_axpy(const real alpha,
 		     const sl_int ny, const sl_int nz)
 {
   // y += alpha * x
-  sl_int n = nx * ny * nz;
   real_type a = real_type(alpha);
-#pragma omp parallel for shared(x, y) firstprivate(n, a) schedule(dynamic)
-  for (sl_int i = 0; i < n; i++)
-    (y.data())[i] += a * (x.data())[i];
+#pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz, a) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nz; k++)
+	y[i][j][k] += a * x[i][j][k];
 }
 
 template <class real_type>
@@ -120,11 +124,10 @@ inline void sum_axpy(const pixel_1d &alpha,
 {
   // y += alpha * x
 #pragma omp parallel for shared(x, y, alpha) firstprivate(nx, ny, nz) schedule(dynamic)
-  for (sl_int i = 0; i < nx; i++) {
+  for (sl_int i = 0; i < nx; i++)
     for (sl_int j = 0; j < ny; j++)
       for (sl_int k = 0; k < nz; k++)
 	y[i][j][k] += alpha[k] * x[i][j][k];
-  }
 }
 
 template <class real_type>
@@ -148,11 +151,12 @@ inline void scal_xby(const boost::multi_array_ref<real_type, 3> &x,
 		     const sl_int nx, const sl_int ny, const sl_int nz)
 {
   // y = x + beta * y
-  sl_int n = nx * ny * nz;
   real_type b = real_type(beta);
-#pragma omp parallel for shared(x, y) firstprivate(n, b) schedule(dynamic)
-  for (sl_int i = 0; i < n; i++)
-    (y.data())[i] = b * (y.data())[i] + (x.data())[i];
+#pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz, b) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nz; k++)
+	y[i][j][k] = b * y[i][j][k] + x[i][j][k];
 }
 
 template <class real_type>
@@ -163,11 +167,10 @@ inline void scal_xby(const boost::multi_array_ref<real_type, 3> &x,
 {
   // y = x + beta * y
 #pragma omp parallel for shared(x, y, beta) firstprivate(nx, ny, nz) schedule(dynamic)
-  for (sl_int i = 0; i < nx; i++) {
+  for (sl_int i = 0; i < nx; i++)
     for (sl_int j = 0; j < ny; j++)
       for (sl_int k = 0; k < nz; k++)
 	y[i][j][k] = beta[k] * y[i][j][k] + x[i][j][k];
-  }
 }
 
 template <class real_type>
@@ -178,11 +181,12 @@ inline void sum_xbyz(const boost::multi_array_ref<real_type, 3> &x,
 		     const sl_int nx, const sl_int ny, const sl_int nz)
 {
   // z = x + b * y
-  sl_int n = nx * ny * nz;
   real_type b = real_type(beta);
-#pragma omp parallel for shared(x, y) firstprivate(n, b) schedule(dynamic)
-  for (sl_int i = 0; i < n; i++)
-    (z.data())[i] = (x.data())[i] + b * (y.data())[i];
+#pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz, b) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nz; k++)
+	z[i][j][k] = b * y[i][j][k] + x[i][j][k];
 }
 
 template <class real_type>
@@ -224,11 +228,12 @@ inline void copy(const boost::multi_array_ref<real_type, 3> &x,
 		 boost::multi_array_ref<real_type, 3> &y,
 		 const sl_int nx, const sl_int ny, const sl_int nz)
 {
-  // z = x - y
-  sl_int n = nx * ny * nz;
-#pragma omp parallel for shared(x, y) firstprivate(n) schedule(dynamic)
-  for (sl_int i = 0; i < n; i++)
-    (y.data())[i] = (x.data())[i];
+  // y = x
+#pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int k = 0; k < nz; k++)
+	y[i][j][k] = x[i][j][k];
 }
 
 #if defined(MKL_ILP64)

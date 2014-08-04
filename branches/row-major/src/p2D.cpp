@@ -542,13 +542,13 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
   
-  //#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, map_type) schedule(dynamic)
   for (int a = 0; a < n_angles; a++) {
-    // rotate source and detector positions by current angle
-    real cosa = std::cos(angles[a]);
-    real sina = std::sin(angles[a]);
-
     for (int h = 0; h < nh_pixels; h++) {
+      // rotate source and detector positions by current angle
+      real cosa = std::cos(angles[a]);
+      real sina = std::sin(angles[a]);
+
       real p2_x = cosa * detector_x - sina * h_pixels[h];
       real p2_y = sina * detector_x + cosa * h_pixels[h];
       real p1_x = p2_x - real(3.0) * cosa * detector_x;
@@ -1094,11 +1094,11 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
   const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
   const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
 
-  // #pragma
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, yvals, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, source_x, y_offset, i_offset, length, h_pix0, ihp_step, c_angle, s_angle, map_type) schedule(dynamic)
   for (int i = 0; i < nx; i++) {
-    const real x_0 = vox_origin[0] + real(i) * vox_size[0];
-    const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
     for (int j = 0; j < ny; j++) {
+      const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+      const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
       bproject_ah(source_x, detector_x, pixels, voxels,
 		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,

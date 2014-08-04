@@ -650,15 +650,15 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
   for (int i = 0; i <= nz_voxels; i++)
     vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
 
-  //#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels) schedule(dynamic)
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels, pzbz, inv_dz) schedule(dynamic)
   for (int a = 0; a < n_angles; a++) {
-    // rotate source and detector positions by current angle
-    real cosa = std::cos(angles[a]);
-    real sina = std::sin(angles[a]);
-    real p1_x = cosa * source_x - sina * source_y;
-    real p1_y = sina * source_x + cosa * source_y;
-
     for (int h = 0; h < n_h; h++) {
+      // rotate source and detector positions by current angle
+      real cosa = std::cos(angles[a]);
+      real sina = std::sin(angles[a]);
+      real p1_x = cosa * source_x - sina * source_y;
+      real p1_y = sina * source_x + cosa * source_y;
+
       real p2_x = cosa * detector_x - sina * h_pixels[h];
       real p2_y = sina * detector_x + cosa * h_pixels[h];
       fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, grid_offset[0],
@@ -1198,11 +1198,11 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
   for (int j = 0; j <= ny; j++)
     yvals[j] = vox_origin[1] + real(j) * vox_size[1];
 
-  // #pragma
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cpy, spy, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, inv_dz, pzdv, z_1, z_nm) schedule(dynamic)
   for (int i = 0; i < nx; i++) {
-    const real x_0 = vox_origin[0] + real(i) * vox_size[0];
-    const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
     for (int j = 0; j < ny; j++) {
+      const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+      const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
       bproject_ah(source_x, source_y, detector_x, pixels, voxels,
 		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
@@ -1229,7 +1229,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
   if (limited_memory) {
     recon_2d id_conv(boost::extents[n_h][n_v]);
     real x2 = (detector_x - source_x) * (detector_x - source_x);
-    // Todo # pragma
+#pragma omp parallel for shared(h_pixels, v_pixels) firstprivate(x2, n_h, n_v, source_y, source_z) schedule(dynamic)
     for (int i = 0; i < n_h; i++) {
       real xy2 = x2 + (h_pixels[i] - source_y) * (h_pixels[i] - source_y);
       for (int j = 0; j < n_v; j++) {
@@ -1239,7 +1239,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 	id_conv[i][j] = real(1.0) / x3;
       }
     }
-    //Todo #pragma or blas.hpp version
+#pragma omp parallel for shared(pixels, d_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
     for (int a = 0; a < n_angles; a++)
       for (int h = 0; h < n_h; h++)
 	for (int v = 0; v < n_v; v++)
@@ -1248,14 +1248,14 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 	angles, pixels, voxels, n_angles, n_h, n_v, vox_origin, vox_size,
 	nx, ny, nz, d_conv);
     // This will have some numerical noise.
-    //Todo #pragma or blas.hpp version
+#pragma omp parallel for shared(pixels, id_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
     for (int a = 0; a < n_angles; a++)
       for (int h = 0; h < n_h; h++)
 	for (int v = 0; v < n_v; v++)
 	  pixels[a][h][v] *= id_conv[h][v];
   } else {
     real x2 = (detector_x - source_x) * (detector_x - source_x);
-    //Todo #pragma or blas.hpp version
+#pragma omp parallel for shared(h_pixels, v_pixels) firstprivate(x2, n_h, n_v, source_y, source_z) schedule(dynamic)
     for (int i = 0; i < n_h; i++) {
       real xy2 = x2 + (h_pixels[i] - source_y) * (h_pixels[i] - source_y);
       for (int j = 0; j < n_v; j++) {
@@ -1264,7 +1264,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
       }
     }
     pixel_data dpixels(boost::extents[n_angles][n_h][n_v]);
-    //Todo #pragma or blas.hpp version
+#pragma omp parallel for shared(dpixels, pixels, d_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
     for (int a = 0; a < n_angles; a++)
       for (int h = 0; h < n_h; h++)
 	for (int v = 0; v < n_v; v++)
