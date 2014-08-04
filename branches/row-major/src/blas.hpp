@@ -45,17 +45,19 @@ inline voxel_type norm_voxels(const voxel_data &v, const sl_int nx,
 inline void norm_voxels(const voxel_data &v, const sl_int nx, const sl_int ny,
 			const sl_int nz, voxel_1d &norm)
 {
-  // Todo - improve perf
-#pragma omp parallel for shared(v) firstprivate(nx, ny, nz) schedule(dynamic)
-  for (sl_int i = 0; i < nz; i++) {
-    voxel_type n1 = 0.0;
+  for (int k = 0; k < nz; k++)
+    norm[k] = 0.0;
+#pragma omp parallel for shared(v, norm) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    voxel_1d n2(nz);
+    for (sl_int k = 0; k < nz; k++)
+      n2[k] = 0.0;
     for (sl_int j = 0; j < ny; j++) {
-      voxel_type n2 = 0.0;
-      for (sl_int k = 0; k < nx; k++)
-	n2 += v[k][j][i] * v[k][j][i];
-      n1 += n2;
+      for (sl_int k = 0; k < nz; k++)
+	n2[k] += v[i][j][k] * v[i][j][k];
     }
-    norm[i] = n1;
+    for (sl_int k = 0; k < nz; k++)
+      norm[k] += n2[k];
   }
 }
 
@@ -80,17 +82,19 @@ inline pixel_type norm_pixels(const pixel_data &p, const sl_int na,
 inline void norm_pixels(const pixel_data &p, const sl_int na, const sl_int nv,
 			const sl_int nh, pixel_1d &norm)
 {
-  // Todo - improve perf
-#pragma omp parallel for shared(p) firstprivate(na, nv, nh) schedule(dynamic)
-  for (sl_int j = 0; j < nv; j++) {
-    pixel_type n1 = 0.0;
-    for (sl_int i = 0; i < na; i++) {
-      pixel_type n2 = 0.0;
-      for (sl_int k = 0; k < nh; k++)
-	n2 += p[i][k][j] * p[i][k][j];
-      n1 += n2;
+  for (int k = 0; k < nv; k++)
+    norm[k] = 0.0;
+#pragma omp parallel for shared(p, norm) firstprivate(na, nh, nv) schedule(dynamic)
+  for (sl_int i = 0; i < na; i++) {
+    voxel_1d n2(nv);
+    for (sl_int k = 0; k < nv; k++)
+      n2[k] = 0.0;
+    for (sl_int j = 0; j < nh; j++) {
+      for (sl_int k = 0; k < nv; k++)
+	n2[k] += p[i][j][k] * p[i][j][k];
     }
-    norm[j] = n1;
+    for (sl_int k = 0; k < nv; k++)
+      norm[k] += n2[k];
   }
 }
 
