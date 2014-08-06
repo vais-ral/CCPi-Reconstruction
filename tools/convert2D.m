@@ -9,7 +9,7 @@ function [b geom] = convert2D(data, geom)
 %c_slice = geom.dets.nz/2 + 1;
 c_slice = floor(geom.dets.nz/2 + 1);
 
-b = squeeze(data(:,c_slice,:));
+b = squeeze(data(c_slice,:,:));
 
 geom.dets.z = geom.dets.z(c_slice);
 
