@@ -125,10 +125,10 @@ end
 close(h)
 
 % reshape array
-data = permute(data,[2 1 3]);
+%data = permute(data,[2 1 3]);
 
 % image pixels go down, whereas our z voxel ordering goes up
-data = flipdim(data, 2);
+data = flipdim(data, 1);
 % does the detector x also need flipping?
 
 % convert to single precision

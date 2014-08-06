@@ -10,6 +10,7 @@ function geom = centre_geom(data, geom)
 if geom.dets.nz ~= 1
     [data tmp_geom] = convert2D(data, geom);
 else
+    data = permute(data, [2 1]);
     tmp_geom = geom;
 end
 
