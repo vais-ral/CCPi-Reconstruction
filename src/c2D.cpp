@@ -1270,7 +1270,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 				 * (v_pixels[j] - source_z));
       }
     }
-    pixel_data dpixels(boost::extents[n_angles][n_h][n_v]);
+    pixel_3d dpixels(boost::extents[n_angles][n_h][n_v]);
 #pragma omp parallel for shared(dpixels, pixels, d_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
     for (int a = 0; a < n_angles; a++)
       for (int h = 0; h < n_h; h++)

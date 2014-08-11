@@ -18,8 +18,8 @@
 #include <omp.h>
 #include "mex_types.hpp"
 #include "instruments.hpp"
-#include "project_line.hpp"
-#include "cone_f.hpp"
+//#include "project_line.hpp"
+//#include "cone_f.hpp"
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -93,10 +93,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for (int i = 0; i < n_angles; i++)
       v_angles[i] = angles[i];
 
+    /*
   CCPi::instrument::forward_project(*source_x, *source_y, *source_z, *det_x,
 				    y_pix, z_pix, v_angles, px, vx,
 				    n_angles, n_rays_y, n_rays_z,
 				    grid_offset, voxel_size,
 				    im_size_matlab[0], im_size_matlab[1],
 				    im_size_matlab[2]);
+    */
+
+    CCPi::cone_beam::f2D(*source_x, *source_y, *source_z, *det_x,
+			 y_pix, z_pix, v_angles, px, vx,
+			 n_angles, n_rays_y, n_rays_z,
+			 grid_offset, voxel_size,
+			 im_size_matlab[0], im_size_matlab[1],
+			 im_size_matlab[2]);
 }

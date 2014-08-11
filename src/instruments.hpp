@@ -133,6 +133,22 @@ namespace CCPi {
     void set_params(const real sx, const real sy, const real sz, const real dx,
 		    real dy[], real dz[], real ang[], const int ny,
 		    const int nz, const int nang);
+    static void f2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real grid_offset[3],
+		    const real voxel_size[3], const int nx_voxels,
+		    const int ny_voxels, const int nz_voxels);
+    static void b2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real vox_origin[3],
+		    const real vox_size[3], const int nx, const int ny,
+		    const int nz, const bool limited_memory = false);
 
   protected:
     real get_source_x() const;
@@ -206,14 +222,6 @@ namespace CCPi {
 			    const real_1d &cpy, const real_1d &spy,
 			    const real_1d &cdetx, const real_1d &sdetx,
 			    const real_1d &ilcphi, const real_1d &ilsphi);
-    static void f2D(const real source_x, const real source_y,
-		    const real source_z, const real detector_x,
-		    const real_1d &h_pixels, const real_1d &v_pixels,
-		    const real_1d &angles, pixel_data &pixels,
-		    voxel_data &voxels, const int n_angles, const int n_h,
-		    const int n_v, const real grid_offset[3],
-		    const real voxel_size[3], const int nx_voxels,
-		    const int ny_voxels, const int nz_voxels);
     static void b2D(const real source_x, const real source_y,
 		    const real source_z, const real detector_x,
 		    const real_1d &h_pixels, const real_1d &v_pixels,
@@ -222,14 +230,6 @@ namespace CCPi {
 		    const int n_v, const real vox_origin[3],
 		    const real vox_size[3], const int nx, const int ny,
 		    const int nz, const recon_2d &d_conv);
-    static void b2D(const real source_x, const real source_y,
-		    const real source_z, const real detector_x,
-		    const real_1d &h_pixels, const real_1d &v_pixels,
-		    const real_1d &angles, pixel_data &pixels,
-		    voxel_data &voxels, const int n_angles, const int n_h,
-		    const int n_v, const real vox_origin[3],
-		    const real vox_size[3], const int nx, const int ny,
-		    const int nz, const bool limited_memory = false);
   };
 
   class parallel_beam : public instrument {
@@ -246,6 +246,21 @@ namespace CCPi {
 
     bool supports_distributed_memory() const;
     bool supports_blocks() const;
+
+    // for matlab interface
+    static void f2D(const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, const int n_angles,
+		    const int nh_pixels, const int nv_pixels,
+		    const real vox_origin[3], const real vox_size[3],
+		    const int nx, const int ny, const int nz,
+		    pixel_data &pixels, voxel_data &voxels);
+    static void b2D(const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels,
+		    const int n_angles, const int nh_pixels,
+		    const int nv_pixels, const real grid_offset[3],
+		    const real voxel_size[3], const int nx_voxels,
+		    const int ny_voxels, const int nz_voxels);
 
   protected:
     void safe_forward_project(pixel_data &pixels, voxel_data &voxels,
@@ -292,19 +307,6 @@ namespace CCPi {
 			    const real ihp_step, const recon_type d_conv,
 			    const std::vector<int> &mapping,
 			    const int map_type);
-    static void f2D(const real_1d &h_pixels, const real_1d &v_pixels,
-		    const real_1d &angles, const int n_angles,
-		    const int nh_pixels, const int nv_pixels,
-		    const real vox_origin[3], const real vox_size[3],
-		    const int nx, const int ny, const int nz,
-		    pixel_data &pixels, voxel_data &voxels);
-    static void b2D(const real_1d &h_pixels, const real_1d &v_pixels,
-		    const real_1d &angles, pixel_data &pixels,
-		    voxel_data &voxels,
-		    const int n_angles, const int nh_pixels,
-		    const int nv_pixels, const real grid_offset[3],
-		    const real voxel_size[3], const int nx_voxels,
-		    const int ny_voxels, const int nz_voxels);
     static void gen_mapping(std::vector<int> &mapping, int &map_type,
 			    const real_1d &v_pixels, const real vox_z,
 			    const real size_z, const int nv);
