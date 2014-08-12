@@ -714,7 +714,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     if (v > min_v)
       min_v = v;
   }
-  int max_v = nz;
+  int max_v = nv;
   for (int m = 0; m < n; m++) {
     int v = int(std::floor(pzdv + z_nm / alpha_xy_0[m]));
     if (v < max_v)
