@@ -201,12 +201,12 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   pixel_2d f_dark(boost::extents[nh][nv]);
   pixel_2d i_bright(boost::extents[nh][nv]);
   pixel_2d f_bright(boost::extents[nh][nv]);
-  for (sl_int j = 0; j < nh; j++) {
-    for (sl_int i = 0; i < nv; i++) {
-      i_dark[j][i] = 0.0;
-      f_dark[j][i] = 0.0;
-      i_bright[j][i] = 0.0;
-      f_bright[j][i] = 0.0;
+  for (sl_int i = 0; i < nh; i++) {
+    for (sl_int j = 0; j < nv; j++) {
+      i_dark[i][j] = 0.0;
+      f_dark[i][j] = 0.0;
+      i_bright[i][j] = 0.0;
+      f_bright[i][j] = 0.0;
     }
   }
 #ifdef HAS_NEXUS
@@ -222,8 +222,8 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
     // linear interpolate bright/dark frames. Todo - something else?
     // Todo, also use initial final bright/dark angles? rather than assuming
     // initial/final sample angles?
-    pixel_2d dark(boost::extents[nv][nh]);
-    pixel_2d bright(boost::extents[nv][nh]);
+    pixel_2d dark(boost::extents[nh][nv]);
+    pixel_2d bright(boost::extents[nh][nv]);
     for (int i = 0; i < nangles; i++) {
       // Based on fbp code, interpolate bright/dark
       // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
