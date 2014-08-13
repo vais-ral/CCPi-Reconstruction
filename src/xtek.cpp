@@ -358,8 +358,8 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     real max_v = real(65535.0);
     // scale and take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < get_num_angles(); i++) {
-      for (int j = 0; j < get_num_v_pixels(); j++) {
-	for (int k = 0; k < get_num_h_pixels(); k++) {
+      for (int j = 0; j < get_num_h_pixels(); j++) {
+	for (int k = 0; k < get_num_v_pixels(); k++) {
 	  if (pixels[i][j][k] < real(1.0))
 	    pixels[i][j][k] = - std::log(real(0.00001) / max_v);
 	  else
@@ -399,16 +399,16 @@ pixel_type angles_linear(const int ph1, const real_1d &h, const int v_slice,
       break;
   }
   if (angles[pa1] == new_angle) {
-    return data[pa1][v_slice][ph1];
+    return data[pa1][ph1][v_slice];
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
       return linear(angles[pa1], angles[0] + real(2.0 * M_PI),
-		    data[pa1][v_slice][ph1], data[0][v_slice][ph1],
+		    data[pa1][ph1][v_slice], data[0][ph1][v_slice],
 		    new_angle);
     else
       return linear(angles[pa1], angles[pa1 + 1],
-		    data[pa1][v_slice][ph1], data[pa1 + 1][v_slice][ph1],
+		    data[pa1][ph1][v_slice], data[pa1 + 1][ph1][v_slice],
 		    new_angle);
   }
 }
@@ -556,7 +556,7 @@ void CCPi::Nikon_XTek::apply_beam_hardening()
   // Todo - does this belong in the base class?
   pixel_data &pixels = get_pixel_data();
   for (sl_int i = 0; i < get_num_angles(); i++)
-    for (sl_int j = 0; j < get_num_v_pixels(); j++)
-      for (sl_int k = 0; k < get_num_h_pixels(); k++)
+    for (sl_int j = 0; j < get_num_h_pixels(); j++)
+      for (sl_int k = 0; k < get_num_v_pixels(); k++)
 	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
 }

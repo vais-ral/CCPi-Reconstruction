@@ -883,8 +883,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
-  // Todo - check how to calculate this
-  const int pix_per_vox = n_v / (nx - 1);
+  const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be
   int count = 0;
   std::vector<long> ah_arr(2 * pix_per_vox * n_angles);
