@@ -219,6 +219,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
       } else
 	break;
     }
+    alpha_m0 = alpha_m1;
   }
   // scale
   const recon_type *const dc = &(d_conv[h][0]);
