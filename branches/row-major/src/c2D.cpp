@@ -65,16 +65,30 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   int min_xy_all = n;
   for (int m = 1; m < n; m++) {
     int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[0]));
-    if (k == 0) {
-      min_xy_all = m;
+    if (k <= 0) {
+      if (k == 0)
+	min_xy_all = m;
+      else {
+	min_xy_all = 0;
+#ifdef TEST2D
+	std::cerr << "Lower miss " << a << ' ' << h << '\n';
+#endif // TEST2D
+      }
       break;
     }
   }
   int max_xy_all = n;
   for (int m = 1; m < n; m++) {
     int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[nzm1]));
-    if (k == nzm1) {
-      max_xy_all = m;
+    if (k >= nzm1) {
+      if (k == nzm1)
+	max_xy_all = m;
+      else {
+	max_xy_all = 0;
+#ifdef TEST2D
+	std::cerr << "Upper miss " << a << ' ' << h << '\n';
+#endif // TEST2D
+      }
       break;
     }
   }
