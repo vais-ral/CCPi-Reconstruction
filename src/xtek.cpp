@@ -35,6 +35,7 @@ static pixel_type interpolate2D(const real_1d &h, const int v_slice,
 
 bool CCPi::Nikon_XTek::setup_experimental_geometry(const std::string path,
 						   const std::string file,
+						   const real rotation_centre,
 						   const bool phantom)
 {
   if (phantom)
@@ -79,6 +80,11 @@ bool CCPi::Nikon_XTek::create_phantom()
   real step = 2.0 * M_PI / real(nangles);
   for (int i = 0; i < nangles; i++)
     pangles[i] = real(i) * step;
+  //const real_1d &h_pixels = get_h_pixels();
+  int n_h_pixels = get_num_h_pixels();
+  mask_radius = -get_source_x()
+    * std::sin(std::atan(h_pixels[n_h_pixels - 1] /
+			 (get_detector_x() - get_source_x())));
   return true;
 }
 
@@ -235,20 +241,6 @@ bool CCPi::Nikon_XTek::finish_voxel_geometry(real voxel_origin[3],
   voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0) + offset[0];
   voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0) + offset[1];
   voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0) + offset[2];
-  return true;
-}
-
-bool CCPi::Nikon_XTek::read_data_size(const std::string path,
-				      const bool phantom)
-{
-  // phantom already done by setup
-  if (phantom) {
-    const real_1d &h_pixels = get_h_pixels();
-    int n_h_pixels = get_num_h_pixels();
-    mask_radius = -get_source_x()
-      * std::sin(std::atan(h_pixels[n_h_pixels - 1] /
-			   (get_detector_x() - get_source_x())));
-  } // else already done by read_config_file
   return true;
 }
 
@@ -549,6 +541,14 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
   real y_centre = midpoint * get_source_x() / distance;
   set_source(get_source_x(), get_source_y() + y_centre, get_source_z());
   adjust_h_pixels(y_centre);
+}
+
+void CCPi::Nikon_XTek::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
+{
+  nx = get_num_h_pixels() / pixels_per_voxel;
+  if (get_num_h_pixels() % pixels_per_voxel != 0)
+    nx++;
+  ny = nx;
 }
 
 void CCPi::Nikon_XTek::apply_beam_hardening()

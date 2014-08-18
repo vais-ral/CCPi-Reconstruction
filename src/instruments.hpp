@@ -21,12 +21,11 @@ namespace CCPi {
   public:
     virtual bool setup_experimental_geometry(const std::string path,
 					     const std::string file,
+					     const real rotation_centre,
 					     const bool phantom = false) = 0;
     virtual bool read_scans(const std::string path, const int offset,
 			    const int block_size, const bool first,
 			    const bool phantom = false) = 0;
-    virtual bool read_data_size(const std::string path,
-				const bool phantom = false) = 0;
     int get_num_h_pixels() const;
     int get_num_v_pixels() const;
     int total_num_v_pixels() const;
@@ -34,6 +33,7 @@ namespace CCPi {
     virtual bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 				       const int nx, const int ny,
 				       const int nz) const = 0;
+    virtual void get_xy_size(int &nx, int &ny, const int pixels_per_voxel) = 0;
     virtual void apply_beam_hardening() = 0;
     virtual void forward_project(pixel_data &pixels, voxel_data &voxels,
 				 const real origin[3], const real width[3],
@@ -314,19 +314,23 @@ namespace CCPi {
   public:
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
+				     const real rotation_centre,
 				     const bool phantom);
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
-    bool read_data_size(const std::string path, const bool phantom);
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 			       const int nx, const int ny, const int nz) const;
+    void get_xy_size(int &nx, int &ny, const int pixels_per_voxel);
     void apply_beam_hardening();
 
   private:
     std::string name;
+    real h_vox_size;
+    real v_vox_size;
 
     bool create_phantom();
     bool build_phantom(const int offset, const int block_size);
+    bool read_data_size(const std::string path, const real rotation_centre);
     bool read_data(const std::string path, const int offset,
 		   const int block_size, const bool first);
   };
@@ -335,12 +339,13 @@ namespace CCPi {
   public:
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
+				     const real rotation_centre,
 				     const bool phantom);
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
-    bool read_data_size(const std::string path, const bool phantom);
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 			       const int nx, const int ny, const int nz) const;
+    void get_xy_size(int &nx, int &ny, const int pixels_per_voxel);
     void apply_beam_hardening();
 
   private:
