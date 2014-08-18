@@ -15,10 +15,10 @@ bool CCPi::tv_regularization::reconstruct(instrument *device,
   int n_angles = device->get_num_angles();
   int n_h = device->get_num_h_pixels();
   int n_v = device->get_num_v_pixels();
-  pixel_data b = pixel_data(boost::extents[n_angles][n_v][n_h]);
+  pixel_data b = pixel_data(boost::extents[n_angles][n_h][n_v]);
   for (sl_int i = 0; i < n_angles; i++)
-    for (sl_int j = 0; j < n_v; j++)
-      for (sl_int k = 0; k < n_h; k++)
+    for (sl_int j = 0; j < n_h; j++)
+      for (sl_int k = 0; k < n_v; k++)
 	b[i][j][k] = p[i][j][k];
   cgls_3d cgls(5);
   bool ok = cgls.reconstruct(device, voxels, origin, voxel_size);

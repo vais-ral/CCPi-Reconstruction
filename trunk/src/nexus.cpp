@@ -176,15 +176,51 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 	    input.openGroup(data_name, "NXdetector");
 	    // Todo - get distance?
 	    // pixel sizes - Todo calibrate scale um/mm/m...
-	    input.openData("x_pixel_size");
-	    std::vector<double> tmp(1);
-	    input.getDataCoerce(tmp);
-	    hsize = tmp[0];
-	    input.closeData();
-	    input.openData("y_pixel_size");
-	    input.getDataCoerce(tmp);
-	    vsize = tmp[0];
-	    input.closeData();
+	    bool has_size = true;
+	    hsize = 1.0;
+	    try {
+	      input.openData("x_pixel_size");
+	    }
+	    catch (...) {
+	      has_size = false;
+	    }
+	    if (has_size) {
+	      if (info.type != NeXus::CHAR) {
+		std::vector<double> tmp(1);
+		try {
+		  input.getDataCoerce(tmp);
+		}
+		catch (NeXus::Exception) {
+		  has_size = false;
+		}
+		if (has_size)
+		  hsize = tmp[0];
+	      }
+	      input.closeData();
+	    }
+	    has_size = true;
+	    vsize = 1.0;
+	    try {
+	      input.openData("y_pixel_size");
+	    }
+	    catch (...) {
+	      has_size = false;
+	    }
+	    if (has_size) {
+	      if (info.type != NeXus::CHAR) {
+		std::vector<double> tmp(1);
+		try {
+		  input.getDataCoerce(tmp);
+		}
+		catch (NeXus::Exception) {
+		  has_size = false;
+		}
+		if (has_size)
+		  vsize = tmp[0];
+	      }
+	      input.closeData();
+	    } else
+	      vsize = 1.0;
 	    // get keys to data scans
 	    input.openData("image_key");
 	    std::vector<double> keys;
@@ -232,7 +268,7 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		  if (read_data) {
 		    for (sl_int k = 0; k < sizes[1]; k++) {
 		      for (sl_int j = 0; j < sizes[2]; j++) {
-			pixels[n_angles][(block_size - k - 1)][j] =
+			pixels[n_angles][j][(block_size - k - 1)] =
 			  pixel_type(ptr[k * sizes[2] + j]);
 		      }
 		    }
@@ -249,10 +285,11 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_fbright++;
 		    } else
 		      n_ibright++;
-		    for (sl_int k = 0; k < sizes[1]; k++) {
-		      for (sl_int j = 0; j < sizes[2]; j++) {
-			bptr[(block_size - k - 1) * sizes[2] + j] +=
-			  pixel_type(ptr[k * sizes[2] + j]);
+		    sl_int j = 0;
+		    for (int h = 0; h < sizes[2]; h++) {
+		      for (int v = 0; v < sizes[1]; v++) {
+			bptr[j] += pixel_type(ptr[v * sizes[2] + h]);
+			j++;
 		      }
 		    }
 		  }
@@ -265,10 +302,11 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_fdark++;
 		    } else
 		      n_idark++;
-		    for (sl_int k = 0; k < sizes[1]; k++) {
-		      for (sl_int j = 0; j < sizes[2]; j++) {
-			dptr[(block_size - k - 1) * sizes[2] + j] +=
-			  pixel_type(ptr[k * sizes[2] + j]);
+		    sl_int j = 0;
+		    for (int h = 0; h < sizes[2]; h++) {
+		      for (int v = 0; v < sizes[1]; v++) {
+			dptr[j] += pixel_type(ptr[v * sizes[2] + h]);
+			j++;
 		      }
 		    }
 		  }
@@ -292,17 +330,17 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
     ldtime.accumulate();
     ldtime.output("NeXus load");
     // Average bright/dark frames - Todo, something else? outside here?
-    for (int i = 0; i < nv_pixels; i++)
-      for (int j = 0; j < nh_pixels; j++)
+    for (int i = 0; i < nh_pixels; i++)
+      for (int j = 0; j < nv_pixels; j++)
 	i_dark[i][j] /= pixel_type(n_idark);
-    for (int i = 0; i < nv_pixels; i++)
-      for (int j = 0; j < nh_pixels; j++)
+    for (int i = 0; i < nh_pixels; i++)
+      for (int j = 0; j < nv_pixels; j++)
 	f_dark[i][j] /= pixel_type(n_fdark);
-    for (int i = 0; i < nv_pixels; i++)
-      for (int j = 0; j < nh_pixels; j++)
+    for (int i = 0; i < nh_pixels; i++)
+      for (int j = 0; j < nv_pixels; j++)
 	i_bright[i][j] /= pixel_type(n_ibright);
-    for (int i = 0; i < nv_pixels; i++)
-      for (int j = 0; j < nh_pixels; j++)
+    for (int i = 0; i < nh_pixels; i++)
+      for (int j = 0; j < nv_pixels; j++)
 	f_bright[i][j] /= pixel_type(n_fbright);
     // destructor closes file
   }

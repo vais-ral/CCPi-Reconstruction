@@ -18,8 +18,8 @@
 #include <omp.h>
 #include "mex_types.hpp"
 #include "instruments.hpp"
-#include "project_line.hpp"
-#include "cone_b.hpp"
+//#include "project_line.hpp"
+//#include "cone_b.hpp"
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -81,7 +81,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     plhs[0] = mxCreateNumericMatrix(im_size_matlab[0]*im_size_matlab[1]*im_size_matlab[2], 1, mxSINGLE_CLASS, mxREAL);
     vol_data = (float *) mxGetData(plhs[0]);
     voxel_data
-      vx(vol_data, boost::extents[im_size_matlab[0]][im_size_matlab[1]][im_size_matlab[2]], boost::fortran_storage_order());
+      vx(vol_data, boost::extents[im_size_matlab[0]][im_size_matlab[1]][im_size_matlab[2]], boost::c_storage_order());
 
     std::vector<real> y_pix(n_rays_y);
     for (int i = 0; i < n_rays_y; i++)
@@ -93,10 +93,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for (int i = 0; i < n_angles; i++)
       v_angles[i] = angles[i];
 
+    /*
     CCPi::instrument::backward_project(*source_x, *source_y, *source_z, *det_x,
 				       y_pix, z_pix, v_angles, px, vx,
 				       n_angles, n_rays_y, n_rays_z,
 				       grid_offset, voxel_size,
 				       im_size_matlab[0], im_size_matlab[1],
 				       im_size_matlab[2]);
+    */
+    CCPi::cone_beam::b2D(*source_x, *source_y, *source_z, *det_x,
+			 y_pix, z_pix, v_angles, px, vx,
+			 n_angles, n_rays_y, n_rays_z,
+			 grid_offset, voxel_size,
+			 im_size_matlab[0], im_size_matlab[1],
+			 im_size_matlab[2], true);
 }
