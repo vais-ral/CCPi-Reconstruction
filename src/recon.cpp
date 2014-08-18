@@ -21,9 +21,8 @@ int main()
     - ?
   */
   // Todo - usage messages if started up wrong?
-  bool phantom = false;
+  bool phantom = true;
   bool beam_harden = false;
-  bool fast_projection = false;
   int niterations = 5;
   CCPi::devices device = CCPi::dev_Nikon_XTek;
   //CCPi::devices device = CCPi::dev_Diamond_I12;
@@ -35,7 +34,7 @@ int main()
   std::string output_name = "phantom";
   std::string data_file =
     "/home/bgs/scratch/ccpi/Bird_skull/Bird_skull_2001.xtekct";
-  const int pixels_per_voxel = 1;
+  const int pixels_per_voxel = 2;
   // vertical size to break data up into for processing
   const int blocking_factor = 0;
   // number of GPUs etc if using accelerated code
@@ -155,7 +154,7 @@ int main()
 	      if (instrument->read_scans(path, z_data_offset,
 					 z_data_size, first, phantom)) {
 		voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
-				  boost::fortran_storage_order());
+				  boost::c_storage_order());
 		for (int i = 0; i < nz_voxels; i++) {
 		  for (int j = 0; j < ny_voxels; j++) {
 		    for (int k = 0; k < nx_voxels; k++) {
@@ -165,10 +164,6 @@ int main()
 		}
 		if (beam_harden)
 		  instrument->apply_beam_hardening();
-		if (fast_projection and first)
-		  instrument->setup_projection_matrix(voxel_origin, voxel_size,
-						      nx_voxels, ny_voxels,
-						      nz_voxels);
 		ok = recon_algorithm->reconstruct(instrument, voxels,
 						  voxel_origin, voxel_size);
 		if (ok)

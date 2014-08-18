@@ -45,11 +45,6 @@ namespace CCPi {
 				  const real origin[3], const real width[3],
 				  const int nx, const int ny, const int nz) = 0;
 
-    virtual void setup_projection_matrix(const real origin[3],
-					 const real width[3],
-					 const int nx, const int ny,
-					 const int nz) = 0;
-
     virtual bool supports_distributed_memory() const = 0;
     virtual bool supports_blocks() const = 0;
     void set_v_block(const int size);
@@ -131,10 +126,6 @@ namespace CCPi {
 			  const real origin[3], const real width[3],
 			  const int nx, const int ny, const int nz);
 
-    void setup_projection_matrix(const real origin[3], const real width[3],
-				 const int nx, const int ny,
-				 const int nz);
-
     bool supports_distributed_memory() const;
     bool supports_blocks() const;
 
@@ -142,6 +133,22 @@ namespace CCPi {
     void set_params(const real sx, const real sy, const real sz, const real dx,
 		    real dy[], real dz[], real ang[], const int ny,
 		    const int nz, const int nang);
+    static void f2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real grid_offset[3],
+		    const real voxel_size[3], const int nx_voxels,
+		    const int ny_voxels, const int nz_voxels);
+    static void b2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real vox_origin[3],
+		    const real vox_size[3], const int nx, const int ny,
+		    const int nz, const bool limited_memory = false);
 
   protected:
     real get_source_x() const;
@@ -152,18 +159,81 @@ namespace CCPi {
     void set_source(const real x, const real y, const real z);
     void set_detector(const real x);
 
+    void safe_forward_project(pixel_data &pixels, voxel_data &voxels,
+			      const real origin[3], const real width[3],
+			      const int nx, const int ny, const int nz);
+
   private:
     real source_x;
     real source_y;
     real source_z;
     // Todo - does this need further generalisation?
     real detector_x;
+
+    static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
+			  const recon_1d &alpha_xy, const std::vector<long> &ij,
+			  const int n, const int a, const int h,
+			  const recon_type pzbz, const recon_type inv_dz,
+			  const int nv, const int nz, const int midp,
+			  const recon_2d &d_conv, const recon_1d &delta_z,
+			  const recon_1d &inv_delz, const recon_1d &vox_z,
+			  recon_2d &zpix);
+    static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
+			  const recon_1d &alpha_xy_0,
+			  const recon_1d &alpha_xy_1,
+			  const std::vector<long> &ah,
+			  const std::vector<int> &h,
+			  const int n, const int i, const int j,
+			  const recon_type pzbz, const recon_type inv_dz,
+			  const int nv, const int nz, const int midp,
+			  const recon_2d &d_conv, const recon_1d &delta_z,
+			  const recon_1d &inv_delz, const recon_1d &vox_z,
+			  const recon_type pzdv, const recon_type z_1,
+			  const recon_type z_nm, recon_2d &zpix);
+    static void fproject_xy(const real p1_x, const real p1_y, const real p2_x,
+			    const real p2_y, pixel_data &pixels,
+			    voxel_data &voxels, const real b_x, const real b_y,
+			    const real b_z, const real d_x, const real d_y,
+			    const real d_z, const int nx, const int ny,
+			    const int nz, const int a, const int h,
+			    const real source_z, const int nv, const int midp,
+			    const recon_2d &d_conv, const recon_1d &delta_z,
+			    const recon_1d &inv_delz, const recon_1d &vox_z,
+			    const real_1d &v_pixels, const recon_type pzbz,
+			    const recon_type inv_dz);
+    static void bproject_ah(const real source_x, const real source_y,
+			    const real detector_x, pixel_data &pixels,
+			    voxel_data &voxels, const real x_0,
+			    const real y_0, const real x_n,
+			    const real y_n, const real b_z,
+			    const real d_x, const real d_y,
+			    const real d_z, const int nx, const int ny,
+			    const int nz, const int i, const int j,
+			    const real source_z, const int n_angles,
+			    const int n_h, const int n_v,
+			    const real_1d &h_pixels, const real_1d &v_pixels,
+			    const int midp, const real_1d &cangle,
+			    const real_1d &sangle, const recon_2d &d_conv,
+			    const recon_1d &delta_z, const recon_1d &inv_delz,
+			    const recon_1d &vox_z, const recon_type pzbz,
+			    const recon_type inv_dz, const recon_type pzdv,
+			    const recon_type z_1, const recon_type z_nm,
+			    const real_1d &p1x, const real_1d &p1y,
+			    const real_1d &cpy, const real_1d &spy,
+			    const real_1d &cdetx, const real_1d &sdetx,
+			    const real_1d &ilcphi, const real_1d &ilsphi);
+    static void b2D(const real source_x, const real source_y,
+		    const real source_z, const real detector_x,
+		    const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels, const int n_angles, const int n_h,
+		    const int n_v, const real vox_origin[3],
+		    const real vox_size[3], const int nx, const int ny,
+		    const int nz, const recon_2d &d_conv);
   };
 
   class parallel_beam : public instrument {
   public:
-    parallel_beam();
-
     void forward_project(pixel_data &pixels, voxel_data &voxels,
 			 const real origin[3], const real width[3],
 			 const int nx, const int ny, const int nz);
@@ -174,49 +244,72 @@ namespace CCPi {
 			  const real origin[3], const real width[3],
 			  const int nx, const int ny, const int nz);
 
-    void setup_projection_matrix(const real origin[3], const real width[3],
-				 const int nx, const int ny,
-				 const int nz);
-
     bool supports_distributed_memory() const;
     bool supports_blocks() const;
 
-  private:
-    bool has_projection_matrix;
-    sl_int matrix_size;
-    std::vector<real> forward_matrix;
-    std::vector<sl_int> forward_cols;
-    std::vector<sl_int> forward_rows;
-    std::vector<real> backward_matrix;
-    std::vector<sl_int> backward_cols;
-    std::vector<sl_int> backward_rowb;
-    std::vector<sl_int> backward_rowe;
+    // for matlab interface
+    static void f2D(const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, const int n_angles,
+		    const int nh_pixels, const int nv_pixels,
+		    const real vox_origin[3], const real vox_size[3],
+		    const int nx, const int ny, const int nz,
+		    pixel_data &pixels, voxel_data &voxels);
+    static void b2D(const real_1d &h_pixels, const real_1d &v_pixels,
+		    const real_1d &angles, pixel_data &pixels,
+		    voxel_data &voxels,
+		    const int n_angles, const int nh_pixels,
+		    const int nv_pixels, const real grid_offset[3],
+		    const real voxel_size[3], const int nx_voxels,
+		    const int ny_voxels, const int nz_voxels);
 
-    static void map_2Dprojection(const real start[], const real end[],
-				 const real b_x, const real b_y,
-				 const real b_z, const real d_x,
-				 const real d_y, const real d_z,
-				 const int im_size_x, const int im_size_y,
-				 const int im_size_z, const sl_int z_offset,
-				 projection_map &map);
-    void setup_2D_matrix(const real_1d &det_y, const real_1d &phi,
-			 const int n_angles, const int n_rays_z,
-			 const int n_rays_y, const real grid_offset[3],
-			 const real voxel_size[3], const int nx_voxels,
-			 const int ny_voxels, const int nz_voxels);
-    void forward_project_matrix(const real_1d &det_z, pixel_data &ray_data,
-				voxel_data &vol_data, const int n_angles,
-				const int n_rays_y, const int n_rays_z,
-				const real grid_offset[3],
-				const real voxel_size[3], const int nx_voxels,
-				const int ny_voxels, const int nz_voxels) const;
-    void backward_project_matrix(const real_1d &det_z, pixel_data &ray_data,
-				 voxel_data &vol_data, const int n_angles,
-				 const int n_rays_y, const int n_rays_z,
-				 const real grid_offset[3],
-				 const real voxel_size[3], const int nx_voxels,
-				 const int ny_voxels,
-				 const int nz_voxels) const;
+  protected:
+    void safe_forward_project(pixel_data &pixels, voxel_data &voxels,
+			      const real origin[3], const real width[3],
+			      const int nx, const int ny, const int nz);
+
+  private:
+    static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
+			  const recon_1d &l_xy, const std::vector<long> &ij,
+			  const int n, const int a,
+			  const int h, const int nv, const int nz,
+			  const std::vector<int> &mapping,
+			  const int map_type, recon_2d &zpix);
+    static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
+			  const recon_1d &l_xy, const std::vector<long> &ah,
+			  const int n, const int i, const int j,
+			  const int nv, const int nz,
+			  const std::vector<int> &mapping,
+			  const int map_type, recon_2d &zpix);
+    static void fproject_xy(const real p1_x, const real p1_y, const real p2_x,
+			    const real p2_y, pixel_data &pixels,
+			    voxel_data &voxels, const real b_x, const real b_y,
+			    const real b_z, const real d_x, const real d_y,
+			    const real d_z, const int nx, const int ny,
+			    const int nz, const int a, const int h,
+			    const int nv, const recon_type d_conv,
+			    const real_1d &v_pixels,
+			    const real cphi, const real sphi,
+			    const std::vector<int> &mapping,
+			    const int map_type);
+    static void bproject_ah(const real source_x,
+			    const real detector_x, pixel_data &pixels,
+			    voxel_data &voxels, const real x_0,
+			    const real y_0, const real x_n,
+			    const real y_n, const real b_z,
+			    const real d_x, const real d_y,
+			    const real d_z, const int nx, const int ny,
+			    const int nz, const int i, const int j,
+			    const int n_angles, const int n_h, const int n_v,
+			    const real_1d &h_pixels, const real_1d &v_pixels,
+			    const real_1d &cangle, const real_1d &sangle,
+			    const real_1d &y_offset, const real_1d &i_offset,
+			    const real_1d &length, const real h_pix0,
+			    const real ihp_step, const recon_type d_conv,
+			    const std::vector<int> &mapping,
+			    const int map_type);
+    static void gen_mapping(std::vector<int> &mapping, int &map_type,
+			    const real_1d &v_pixels, const real vox_z,
+			    const real size_z, const int nv);
   };
 
   class Diamond : public parallel_beam {
@@ -395,13 +488,6 @@ inline void CCPi::cone_beam::set_source(const real x, const real y,
 inline void CCPi::cone_beam::set_detector(const real x)
 {
   detector_x = x;
-}
-
-inline CCPi::parallel_beam::parallel_beam()
-  : has_projection_matrix(false), matrix_size(0), forward_matrix(0),
-    forward_cols(0), forward_rows(0), backward_matrix(0), backward_cols(0),
-    backward_rowb(0), backward_rowe(0)
-{
 }
 
 #endif // CCPI_RECON_INSTRUMENTS

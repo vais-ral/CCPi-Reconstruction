@@ -13,11 +13,6 @@
 #include "parallel_f.hpp"
 #include "timer.hpp"
 
-#ifdef MKL_ILP64
-#  define MKL_INT long
-#  include "mkl_spblas.h"
-#endif // MKL_ILP64
-
 #ifndef USE_TIMER
 #  define USE_TIMER false
 #endif // USE_TIMER
@@ -32,6 +27,22 @@ bool CCPi::parallel_beam::supports_blocks() const
   return true;
 }
 
+void CCPi::parallel_beam::safe_forward_project(pixel_data &pixels,
+					       voxel_data &voxels,
+					       const real origin[3],
+					       const real width[3],
+					       const int nx, const int ny,
+					       const int nz)
+{
+  timer fptime(USE_TIMER);
+  instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
+			      pixels, voxels, get_num_angles(),
+			      get_num_h_pixels(), get_num_v_pixels(), origin,
+			      width, nx, ny, nz);
+  fptime.accumulate();
+  fptime.output(" forward projection");
+}
+
 void CCPi::parallel_beam::backward_project(pixel_data &pixels,
 					   voxel_data &voxels,
 					   const real origin[3],
@@ -39,15 +50,17 @@ void CCPi::parallel_beam::backward_project(pixel_data &pixels,
 					   const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
-  if (has_projection_matrix)
-    backward_project_matrix(get_v_pixels(), pixels, voxels, get_num_angles(),
-			    get_num_h_pixels(), get_num_v_pixels(), origin,
-			    width, nx, ny, nz);
-  else
+    /*
     instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				 pixels, voxels, get_num_angles(),
 				 get_num_h_pixels(), get_num_v_pixels(), origin,
 				 width, nx, ny, nz);
+    */ /**/
+  b2D(get_h_pixels(), get_v_pixels(), get_phi(),
+      pixels, voxels, get_num_angles(),
+      get_num_h_pixels(), get_num_v_pixels(), origin,
+      width, nx, ny, nz);
+  /**/
   bptime.accumulate();
   bptime.output("backward projection");
 }
@@ -58,15 +71,17 @@ void CCPi::parallel_beam::backward_project(voxel_data &voxels,
 					   const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
-  if (has_projection_matrix)
-    backward_project_matrix(get_v_pixels(), get_pixel_data(), voxels,
-			    get_num_angles(), get_num_h_pixels(),
-			    get_num_v_pixels(), origin, width, nx, ny, nz);
-  else
+    /*
     instrument::backward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				 get_pixel_data(), voxels,
 				 get_num_angles(), get_num_h_pixels(),
 				 get_num_v_pixels(), origin, width, nx, ny, nz);
+    */ /**/
+  b2D(get_h_pixels(), get_v_pixels(), get_phi(),
+      get_pixel_data(), voxels,
+      get_num_angles(), get_num_h_pixels(),
+      get_num_v_pixels(), origin, width, nx, ny, nz);
+  /**/
   bptime.accumulate();
   bptime.output("backward projection");
 }
@@ -78,124 +93,16 @@ void CCPi::parallel_beam::forward_project(pixel_data &pixels,
 					  const int ny, const int nz)
 {
   timer fptime(USE_TIMER);
-  if (has_projection_matrix)
-    forward_project_matrix(get_v_pixels(), pixels, voxels, get_num_angles(),
-			   get_num_h_pixels(), get_num_v_pixels(), origin,
-			   width, nx, ny, nz);
-  else
+  /**/
+  f2D(get_h_pixels(), get_v_pixels(), get_phi(), get_num_angles(),
+      get_num_h_pixels(), get_num_v_pixels(), origin, width, nx, ny, nz,
+      pixels, voxels);
+  /**/ /*
     instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				pixels, voxels, get_num_angles(),
 				get_num_h_pixels(), get_num_v_pixels(), origin,
 				width, nx, ny, nz);
+  */
   fptime.accumulate();
   fptime.output(" forward projection");
-}
-
-void CCPi::parallel_beam::setup_projection_matrix(const real origin[3],
-						  const real width[3],
-						  const int nx, const int ny,
-						  const int nz)
-{
-  // Should really check that the sizes are the same.
-  if (has_projection_matrix)
-    return;
-  timer ptime(USE_TIMER);
-  // assumes 2D slices which makes the storage practical.
-  setup_2D_matrix(get_h_pixels(), get_phi(), get_num_angles(),
-		  get_num_v_pixels(), get_num_h_pixels(), origin, width,
-		  nx, ny, nz);
-  has_projection_matrix = true;
-  ptime.accumulate();
-  ptime.output("projection map");
-}
-
-void CCPi::parallel_beam::forward_project_matrix(const real_1d &det_z,
-						 pixel_data &ray_data,
-						 voxel_data &vol_data,
-						 const int n_angles,
-						 const int n_rays_y,
-						 const int n_rays_z,
-						 const real grid_offset[3],
-						 const real voxel_size[3],
-						 const int nx_voxels,
-						 const int ny_voxels,
-						 const int nz_voxels) const
-{
-#pragma omp parallel for shared(det_z, ray_data) schedule(dynamic)
-  for (sl_int curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
-    //real z = det_z[curr_ray_z];
-    sl_int k = (sl_int)std::floor((det_z[curr_ray_z]
-			       - grid_offset[2]) / voxel_size[2]);
-    if (k < 0 or k >= nz_voxels)
-      continue;
-
-    for (sl_int i = 0; i < matrix_size; i++)
-      ray_data[forward_rows[i] / (n_rays_z * n_rays_y)][curr_ray_z][forward_rows[i] % n_rays_y] += 
-	forward_matrix[i] * vol_data[forward_cols[i]][curr_ray_z][k];
-    /*
-    char desc[6];
-    desc[0] = 'G';
-    desc[3] = 'C';
-    sl_int n_rays = sl_int(n_angles) * sl_int(n_rays_z) * sl_int(n_rays_y);
-    sl_int n_vox = sl_int(nx_voxels) * sl_int(ny_voxels) * sl_int(nz_voxels);
-    real alpha = 1.0;
-    real beta = 1.0;
-    sl_int sz = matrix_size;
-    mkl_dcoomv("N", &n_rays, &n_vox, &alpha, desc, forward_matrix,
-	       forward_rows, forward_cols, &sz, &vol_data[k_offset],
-	       &beta, &ray_data[z_offset]);
-    */
-  }
-}
-
-void CCPi::parallel_beam::backward_project_matrix(const real_1d &det_z,
-						  pixel_data &ray_data,
-						  voxel_data &vol_data,
-						  const int n_angles,
-						  const int n_rays_y,
-						  const int n_rays_z,
-						  const real grid_offset[3],
-						  const real voxel_size[3],
-						  const int nx_voxels,
-						  const int ny_voxels,
-						  const int nz_voxels) const
-{
-#pragma omp parallel for shared(det_z, ray_data) schedule(dynamic)
-  for (sl_int k = 0; k < nz_voxels; k++) {
-    //sl_int k_offset = k * nx_voxels * ny_voxels;
-    sl_int z_min = -1;
-    sl_int z_max = -1;
-    // Todo - calculate range rather than looping
-    for (sl_int curr_ray_z = 0; curr_ray_z < n_rays_z; curr_ray_z++) {
-      sl_int kz = (sl_int)std::floor((det_z[curr_ray_z]
-				  - grid_offset[2]) / voxel_size[2]);
-      if (kz == k) {
-	if (z_min == -1)
-	  z_min = curr_ray_z;
-	z_max = curr_ray_z;
-      } else if (kz > k)
-	break;
-    }
-
-    sl_int size = nx_voxels * ny_voxels;
-    for (sl_int curr_ray_z = z_min; curr_ray_z <= z_max; curr_ray_z++) {
-      for (sl_int i = 0; i < size; i++) {
-	for (sl_int j = backward_rowb[i]; j < backward_rowe[i]; j++) {
-	  vol_data[i][curr_ray_z][k] += backward_matrix[j] *
-	    ray_data[forward_cols[i] / (n_rays_z * n_rays_y)][curr_ray_z][forward_cols[i] % n_rays_y];
-	}
-      }
-      /*
-      char desc[6];
-      desc[0] = 'G';
-      desc[3] = 'C';
-      sl_int n_rays = sl_int(n_angles) * sl_int(n_rays_z) * sl_int(n_rays_y);
-      real alpha = 1.0;
-      real beta = 1.0;
-      mkl_dcsrmv("N", &size, &n_rays, &alpha, desc, backward_matrix,
-		 backward_cols, backward_rowb, backward_rowe,
-		 &ray_data[z_offset], &beta, &vol_data[k_offset]);
-      */
-    }
-  }
 }
