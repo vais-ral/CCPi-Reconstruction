@@ -7,13 +7,14 @@
 
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
+						const real rotation_centre,
 						const bool phantom)
 {
   if (phantom)
     return create_phantom();
   else {
     name = file;
-    return true;
+    return read_data_size(path, rotation_centre);
   }
 }
 
@@ -57,47 +58,49 @@ bool CCPi::Diamond::create_phantom()
 }
 
 bool CCPi::Diamond::read_data_size(const std::string path,
-				   const bool phantom)
+				   const real rotation_centre)
 {
-  // phantom already done by setup
-  if (phantom)
-    return true;
-  else {
-    bool ok = false;
-    std::string fullname;
-    combine_path_and_name(path, name,fullname);
-    pixel_data pixels(boost::extents[1][1][1]);
-    int nh_pixels = 0;
-    int nv_pixels = 0;
-    std::vector<real> angles;
-    int nangles = 0;
-    real hsize = 0.0;
-    real vsize = 0.0;
-    pixel_2d i_dark(boost::extents[1][1]);
-    pixel_2d f_dark(boost::extents[1][1]);
-    pixel_2d i_bright(boost::extents[1][1]);
-    pixel_2d f_bright(boost::extents[1][1]);
+  bool ok = false;
+  std::string fullname;
+  combine_path_and_name(path, name,fullname);
+  pixel_data pixels(boost::extents[1][1][1]);
+  int nh_pixels = 0;
+  int nv_pixels = 0;
+  std::vector<real> angles;
+  int nangles = 0;
+  real hsize = 0.0;
+  real vsize = 0.0;
+  pixel_2d i_dark(boost::extents[1][1]);
+  pixel_2d f_dark(boost::extents[1][1]);
+  pixel_2d i_bright(boost::extents[1][1]);
+  pixel_2d f_bright(boost::extents[1][1]);
 #ifdef HAS_NEXUS
-    ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
-		    nv_pixels, angles, nangles, hsize, vsize, fullname,
-		    false, false, 0, 10000);
+  ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
+		  nv_pixels, angles, nangles, hsize, vsize, fullname,
+		  false, false, 0, 10000);
 #endif // HAS_NEXUS
-    if (ok) {
-      // store data in class
-      real_1d &h_pixels = set_h_pixels(nh_pixels);
-      h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0);
-      for (int i = 1; i < nh_pixels; i++)
-	h_pixels[i] = h_pixels[0] + real(i) * hsize;
-      real_1d &v_pixels = set_v_pixels(nv_pixels);
-      v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
-      for (int i = 1; i < nv_pixels; i++)
-	v_pixels[i] = v_pixels[0] + real(i) * vsize;
-      real_1d &phi = set_phi(nangles);
-      for (int i = 0; i < nangles; i++)
-	phi[i] = angles[i];
+  if (ok) {
+    real shift = 0.0;
+    if (rotation_centre > 0.0) {
+      // shift h_pixels
+      // if 4 pixels and centre = 2.0 nothing happens
+      real pixel_shift = rotation_centre - real(nh_pixels) / 2.0;
+      shift = hsize * pixel_shift;
     }
-    return ok;
+    // store data in class
+    real_1d &h_pixels = set_h_pixels(nh_pixels);
+    h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0) - shift;
+    for (int i = 1; i < nh_pixels; i++)
+      h_pixels[i] = h_pixels[0] + real(i) * hsize;
+    real_1d &v_pixels = set_v_pixels(nv_pixels);
+    v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
+    for (int i = 1; i < nv_pixels; i++)
+      v_pixels[i] = v_pixels[0] + real(i) * vsize;
+    real_1d &phi = set_phi(nangles);
+    for (int i = 0; i < nangles; i++)
+      phi[i] = angles[i];
   }
+  return ok;
 }
 
 bool CCPi::Diamond::read_scans(const std::string path, const int offset,
@@ -269,6 +272,7 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
 					  real voxel_size[3], const int nx,
 					  const int ny, const int nz) const
 {
+  /*
   const real_1d &h_pixels = get_h_pixels();
   const real_1d &v_pixels = get_all_v_pixels();
   int nh = get_num_h_pixels();
@@ -280,13 +284,38 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
   int hs = std::min(nx, ny);
   hsize *= (real(nh) / real(hs));
   vsize *= (real(nv) / nz);
-  voxel_size[0] = hsize;
-  voxel_size[1] = hsize;
-  voxel_size[2] = vsize;
+  */
+  voxel_size[0] = h_vox_size;
+  voxel_size[1] = h_vox_size;
+  voxel_size[2] = v_vox_size;
   voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0); // + offset[0];
   voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0); // + offset[1];
   voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0); // + offset[2];
   return true;
+}
+
+void CCPi::Diamond::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
+{
+  const real_1d &h_pixels = get_h_pixels();
+  int nh = get_num_h_pixels();
+  real hrange = h_pixels[1] - h_pixels[0];
+  real hmax = std::max(std::abs(h_pixels[0]), std::abs(h_pixels[nh - 1]));
+  int n = int(std::ceil((2.0 * hmax) / hrange));
+  nx = n / pixels_per_voxel;
+  if (n % pixels_per_voxel != 0)
+    nx++;
+  h_vox_size = hrange * real(pixels_per_voxel);
+  // check that we've covered a big enough region
+  real xmin = -h_vox_size * real(nx) / real(2.0);
+  real xmax =  h_vox_size * real(nx) / real(2.0);
+  while (xmin >= h_pixels[0] or xmax <= h_pixels[nh - 1]) {
+    nx++;
+    xmin = -h_vox_size * real(nx) / real(2.0);
+    xmax =  h_vox_size * real(nx) / real(2.0);
+  }
+  ny = nx;
+  const real_1d &v_pixels = get_all_v_pixels();
+  v_vox_size = (v_pixels[1] - v_pixels[0]) * real(pixels_per_voxel);
 }
 
 void CCPi::Diamond::apply_beam_hardening()
