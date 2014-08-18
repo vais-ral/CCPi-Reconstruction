@@ -74,7 +74,7 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				    const int n, const int a, const int h,
 				    const int nv, const int nz,
 				    const std::vector<int> &mapping,
-				    const int map_type, recon_2d &zpix)
+				    const int map_type)
 {
   pixel_type *const pix = &(pixels[a][h][0]);
   switch (map_type) {
@@ -85,12 +85,6 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
       for (int v = 0; v < nv; v++)
 	pix[v] += vox[v] * alpha;
     }
-#ifdef TEST3D
-    for (int m = 0; m < n; m++) {
-      for (int v = 0; v < nv; v++)
-	zpix[m][v] += l_xy[m];
-    }
-#endif // TEST3D
     break;
   case 2:
     {
@@ -106,19 +100,6 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 	}
       }
     }
-#ifdef TEST3D
-    {
-      int v2 = nv / 2;
-      for (int m = 0; m < n; m++) {
-	int v = 0;
-	for (int l = 0; l < v2; l++) {
-	  zpix[m][v + 0] += l_xy[m];
-	  zpix[m][v + 1] += l_xy[m];
-	  v += 2;
-	}
-      }
-    }
-#endif // TEST3D
     break;
   case 4:
     {
@@ -136,21 +117,6 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 	}
       }
     }
-#ifdef TEST3D
-    {
-      int v4 = nv / 4;
-      for (int m = 0; m < n; m++) {
-	int v = 0;
-	for (int l = 0; l < v4; l++) {
-	  zpix[m][v + 0] += l_xy[m];
-	  zpix[m][v + 1] += l_xy[m];
-	  zpix[m][v + 2] += l_xy[m];
-	  zpix[m][v + 3] += l_xy[m];
-	  v += 4;
-	}
-      }
-    }
-#endif // TEST3D
     break;
   default:
     for (int m = 0; m < n; m++) {
@@ -159,12 +125,6 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
       for (int v = 0; v < nv; v++)
 	pix[v] += vox[mapping[v]] * alpha;
     }
-#ifdef TEST3D
-    for (int m = 0; m < n; m++) {
-      for (int v = 0; v < nv; v++)
-	zpix[m][v] += l_xy[m];
-    }
-#endif // TEST3D
     break;
   }
 }
@@ -457,63 +417,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
   }
 #endif // TEST2D
   if (count > 0) {
-    recon_2d zvec(boost::extents[count][nv]);
-#ifdef TEST3D
-    for (int m = 0; m < count; m++)
-      for (int v = 0; v < nv; v++)
-	zvec[m][v] = 0.0;
-#endif // TEST3D
     calc_xy_z(pixels, voxels, l_xy, ij_arr, count, a, h,
-	      nv, nz, mapping, map_type, zvec);
-#ifdef TEST3D
-    real start[3];
-    real end[3];
-    start[0] = p1_x;
-    start[1] = p1_y;
-    end[0] = p2_x;
-    end[1] = p2_y;
-    for (int v = 0; v < nv; v++) {
-      start[2] = v_pixels[v];
-      end[2] = v_pixels[v];
-      recon_type ln = 0.0;
-      for (int i = 0; i < nx; i++) {
-	real x_0 = b_x + real(i) * d_x;
-	for (int j = 0; j < ny; j++) {
-	  real y_0 = b_y + real(j) * d_y;
-	  recon_type lnk = 0.0;
-	  for (int k = 0; k < nz; k++) {
-	    real z_0 = b_z + real(k) * d_z;
-	    recon_type val = 0.0;
-	    if (test_3D(start, end, x_0, y_0, z_0, d_x, d_y, d_z,
-			1, 1, 1, val)) {
-	      ln += val;
-	      lnk += val;
-	    }
-	  }
-	  int m;
-	  for (m = 0; m < count; m++) {
-	    if (ij_arr[m] == long(i) * nyz + long(j) * long(nz)) {
-	      if (std::abs(zvec[m][v] - lnk) > epsilon)
-		std::cerr << "pix wrong " << a << ' ' << h << ' ' << v
-			  << ' ' << lnk << ' ' << zvec[m][v] << ' '
-			  << lnk-zvec[m][v] << ' ' << i << ' ' << j << '\n';
-	      zvec[m][v] = -1.0;
-	      break;
-	    }
-	  }
-	  if (m == count and lnk > epsilon)
-	    std::cerr << "pix missed " << a << ' ' << h << ' ' << v
-		      << ' ' << lnk << ' ' << i << ' ' << j << '\n';
-	}
-      }
-      for (int m = 0; m < count; m++) {
-	if (zvec[m][v] > epsilon)
-	  std::cerr << "pix extra " << ij_arr[m] << ' ' << ij_arr[m] 
-		    << ' ' << zvec[m][v] << ' ' << a << ' ' << h
-		    << ' ' << v << '\n';
-      }
-    }
-#endif // TEST3D
+	      nv, nz, mapping, map_type);
   }    
 }
 
@@ -567,7 +472,7 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				    const int n, const int i, const int j,
 				    const int nv, const int nz,
 				    const std::vector<int> &mapping,
-				    const int map_type, recon_2d &zpix)
+				    const int map_type)
 {
   voxel_type *const vox = &(voxels[i][j][0]);
   switch (map_type) {
@@ -578,12 +483,6 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
       for (int v = 0; v < nv; v++)
 	vox[v] += pix[v] * alpha;
     }
-#ifdef TEST3D
-    for (int m = 0; m < n; m++) {
-      for (int v = 0; v < nv; v++)
-	zpix[m][v] += l_xy[m];
-    }
-#endif // TEST3D
     break;
   case 2:
     {
@@ -599,19 +498,6 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	}
       }
     }
-#ifdef TEST3D
-    {
-      int v2 = nv / 2;
-      for (int m = 0; m < n; m++) {
-	int v = 0;
-	for (int l = 0; l < v2; l++) {
-	  zpix[m][l] += l_xy[m];
-	  zpix[m][l] += l_xy[m];
-	  v += 2;
-	}
-      }
-    }
-#endif // TEST3D
     break;
   case 4:
     {
@@ -629,21 +515,6 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	}
       }
     }
-#ifdef TEST3D
-    {
-      int v4 = nv / 4;
-      for (int m = 0; m < n; m++) {
-	int v = 0;
-	for (int l = 0; l < v4; l++) {
-	  zpix[m][l] += l_xy[m];
-	  zpix[m][l] += l_xy[m];
-	  zpix[m][l] += l_xy[m];
-	  zpix[m][l] += l_xy[m];
-	  v += 4;
-	}
-      }
-    }
-#endif // TEST3D
     break;
   default:
     for (int m = 0; m < n; m++) {
@@ -652,12 +523,6 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
       for (int v = 0; v < nv; v++)
 	vox[mapping[v]] += pix[v] * alpha;
     }
-#ifdef TEST3D
-    for (int m = 0; m < n; m++) {
-      for (int v = 0; v < nv; v++)
-	zpix[m][mapping[v]] += l_xy[m];
-    }
-#endif // TEST3D
     break;
   }
 }
@@ -881,65 +746,8 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
   }
 #endif // TEST2D
   if (count > 0) {
-    recon_2d zvec(boost::extents[count][nz]);
-#ifdef TEST3D
-    for (int m = 0; m < count; m++)
-      for (int k = 0; k < nz; k++)
-	zvec[m][k] = 0.0;
-#endif // TEST3D
     calc_ah_z(pixels, voxels, l_xy, ah_arr, count,
-	      i, j, n_v, nz, mapping, map_type, zvec);
-#ifdef TEST3D
-    real start[3];
-    real end[3];
-    for (int k = 0; k < nz; k++) {
-      real z_0 = b_z + real(k) * d_z;
-      recon_type ln = 0.0;
-      for (int a = 0; a < n_angles; a++) {
-	for (int h = 0; h < n_h; h++) {
-	  real cos_curr_angle = cangle[a];
-	  real sin_curr_angle = sangle[a];
-	  end[0] = cos_curr_angle * detector_x - sin_curr_angle * h_pixels[h];
-	  end[1] = sin_curr_angle * detector_x + cos_curr_angle * h_pixels[h];
-	  start[0] = end[0] - real(3.0) * cos_curr_angle * detector_x;
-	  start[1] = end[1] - real(3.0) * sin_curr_angle * detector_x;
-	  recon_type lnk = 0.0;
-	  for (int v = 0; v < n_v; v++) {
-	    start[2] = v_pixels[v];
-	    end[2] = v_pixels[v];
-	    recon_type val = 0.0;
-	    if (test_3D(start, end, x_0, y_0, z_0, d_x, d_y, d_z,
-			1, 1, 1, val)) {
-	      ln += val;
-	      lnk += val;
-	    }
-	  }
-	  int m;
-	  for (m = 0; m < count; m++) {
-	    if (ah_arr[m] == long(a) * nah + long(h) * long(n_v)) {
-	      if (std::abs(zvec[m][k] - lnk) > epsilon)
-		std::cerr << "vox wrong " << a << ' ' << h
-			  << ' ' << lnk << ' ' << zvec[m][k] << ' '
-			  << lnk-zvec[m][k] << ' ' << i << ' ' << j
-			  << ' ' << k << '\n';
-	      zvec[m][k] = -1.0;
-	      break;
-	    }
-	  }
-	  if (m == count and lnk > epsilon)
-	    std::cerr << "vox missed " << a << ' ' << h
-		      << ' ' << lnk << ' ' << ' ' << i << ' ' << j
-		      << ' ' << k << '\n';
-	}
-      }
-      for (int m = 0; m < count; m++) {
-	if (zvec[m][k] > epsilon)
-	  std::cerr << "vox extra " << ah_arr[m] << ' ' << ah_arr[m] 
-		    << ' ' << zvec[m][k] << ' ' << i << ' ' << j
-		    << ' ' << k << '\n';
-      }
-    }
-#endif // TEST3D
+	      i, j, n_v, nz, mapping, map_type);
   }
 }
 
