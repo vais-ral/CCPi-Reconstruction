@@ -618,7 +618,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				const int n, const int i, const int j,
 				const recon_type pzbz, const recon_type inv_dz,
 				const int nv, const int nz, const int midp,
-				const recon_2d &d_conv, const recon_1d &delta_z,
+				const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z,
 				const recon_type pzdv, const recon_type z_1,
 				const recon_type z_nm)
@@ -771,7 +771,6 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const real_1d &h_pixels,
 				  const real_1d &v_pixels, const int midp,
 				  const real_1d &cangle, const real_1d &sangle,
-				  const recon_2d &d_conv,
 				  const recon_1d &delta_z,
 				  const recon_1d &inv_delz,
 				  const recon_1d &vox_z, const recon_type pzbz,
@@ -962,7 +961,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 #endif // TEST2D
   if (count > 0) {
     calc_ah_z(pixels, voxels, alpha_xy_0, alpha_xy_1, ah_arr, count,
-	      i, j, pzbz, inv_dz, n_v, nz, midp, d_conv, delta_z,
+	      i, j, pzbz, inv_dz, n_v, nz, midp, delta_z,
 	      inv_delz, vox_z, pzdv, z_1, z_nm);
   }
 }
@@ -1035,7 +1034,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
   for (int j = 0; j <= ny; j++)
     yvals[j] = vox_origin[1] + real(j) * vox_size[1];
 
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cpy, spy, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, inv_dz, pzdv, z_1, z_nm) schedule(dynamic)
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cpy, spy, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, inv_dz, pzdv, z_1, z_nm) schedule(dynamic)
   for (int i = 0; i < nx; i++) {
     for (int j = 0; j < ny; j++) {
       const real x_0 = vox_origin[0] + real(i) * vox_size[0];
@@ -1044,7 +1043,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
 		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
 		  source_z, n_angles, n_h, n_v, h_pixels, v_pixels, mid,
-		  c_angle, s_angle, d_conv, delta_z, inv_delz, vox_z, pzbz,
+		  c_angle, s_angle, delta_z, inv_delz, vox_z, pzbz,
 		  inv_dz, pzdv, z_1, z_nm, p1x, p1y, cpy, spy, cdetx, sdetx,
 		  ilcphi, ilsphi);
     }

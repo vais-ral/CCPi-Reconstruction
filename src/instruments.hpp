@@ -184,7 +184,7 @@ namespace CCPi {
 			  const int n, const int i, const int j,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
-			  const recon_2d &d_conv, const recon_1d &delta_z,
+			  const recon_1d &delta_z,
 			  const recon_1d &inv_delz, const recon_1d &vox_z,
 			  const recon_type pzdv, const recon_type z_1,
 			  const recon_type z_nm);
@@ -211,7 +211,7 @@ namespace CCPi {
 			    const int n_h, const int n_v,
 			    const real_1d &h_pixels, const real_1d &v_pixels,
 			    const int midp, const real_1d &cangle,
-			    const real_1d &sangle, const recon_2d &d_conv,
+			    const real_1d &sangle,
 			    const recon_1d &delta_z, const recon_1d &inv_delz,
 			    const recon_1d &vox_z, const recon_type pzbz,
 			    const recon_type inv_dz, const recon_type pzdv,
