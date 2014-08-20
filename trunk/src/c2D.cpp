@@ -78,7 +78,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   }
   int max_xy_all = n;
   for (int m = 1; m < n; m++) {
-    int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[nzm1]));
+    int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[nv - 1]));
     if (k >= nzm1) {
       if (k == nzm1)
 	max_xy_all = m;
