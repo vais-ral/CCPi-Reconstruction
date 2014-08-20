@@ -349,10 +349,11 @@ namespace CCPi {
     void apply_beam_hardening();
 
   private:
-    real offset[3];
     real mask_radius;
     real white_level;
     std::string basename;
+    real h_vox_size;
+    real v_vox_size;
 
     bool create_phantom();
     bool build_phantom();

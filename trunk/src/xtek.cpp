@@ -234,13 +234,13 @@ bool CCPi::Nikon_XTek::finish_voxel_geometry(real voxel_origin[3],
 					     const int ny, const int nz) const
 {
   //const voxel_data::size_type *s = voxels.shape();
-  real size = real(2.0) * mask_radius / real(nx);
-  voxel_size[0] = size;
-  voxel_size[1] = size;
-  voxel_size[2] = size;
-  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0) + offset[0];
-  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0) + offset[1];
-  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0) + offset[2];
+  //real size = real(2.0) * mask_radius / real(nx);
+  voxel_size[0] = h_vox_size;
+  voxel_size[1] = h_vox_size;
+  voxel_size[2] = v_vox_size;
+  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0);
+  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0);
+  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0);
   return true;
 }
 
@@ -315,9 +315,9 @@ bool CCPi::Nikon_XTek::build_phantom()
   safe_forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   //delete [] x;
   // Todo - could do with adding noise.
-  offset[0] = 0.0;
-  offset[1] = 0.0;
-  offset[2] = 0.0;
+  //offset[0] = 0.0;
+  //offset[1] = 0.0;
+  //offset[2] = 0.0;
   return true;
 }
 
@@ -545,10 +545,42 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 
 void CCPi::Nikon_XTek::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
 {
-  nx = get_num_h_pixels() / pixels_per_voxel;
+  // Use the mask radius as an estimate of the x/y extent -> voxel size
+  // Then adjust this to make sure it intercepts the full vertical range
+  // of rays - derived from original finish_geometry
+  int n = get_num_h_pixels() / pixels_per_voxel;
   if (get_num_h_pixels() % pixels_per_voxel != 0)
-    nx++;
-  ny = nx;
+    n++;
+  real vsize = real(2.0) * mask_radius / real(n);
+  real vox_x = vsize * real(n) / 2.0;
+  int nv = get_num_v_pixels();
+  int nz = nv / pixels_per_voxel;
+  if (nv % pixels_per_voxel != 0)
+    nz++;
+  // Todo - get v_range[] at vox_x pos not detector pos
+  real max_z = vsize * real(nz) / 2.0;
+  const real_1d &v_range = get_v_pixels();
+  real v_pos = v_range[nv - 1];
+  // Get vpixel height at vox_x position
+  v_pos *= (vox_x - get_source_x()) / (get_detector_x() - get_source_x());
+  if (max_z < v_pos) {
+    // attempt to solve for new value, vsize must be > this
+    vsize = -2.0 * get_source_x() * v_range[nv - 1] /
+      (nz * (get_detector_x() - get_source_x()) - n * v_range[nv - 1]);
+    // so scale by a little bit
+    vsize *= (1.0 + 1.0 / real(nv));
+    // check
+    vox_x = vsize * real(n) / 2.0;
+    v_pos = v_range[nv - 1] * (vox_x - get_source_x()) /
+      (get_detector_x() - get_source_x());
+    max_z = vsize * real(nz) / 2.0;
+    if (max_z < v_pos)
+      report_error("Voxel size error");
+  }
+  h_vox_size = vsize;
+  v_vox_size = vsize;
+  nx = n;
+  ny = n;
 }
 
 void CCPi::Nikon_XTek::apply_beam_hardening()
