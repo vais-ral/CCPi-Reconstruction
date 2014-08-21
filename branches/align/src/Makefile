@@ -21,7 +21,7 @@ recon: $(OBJECTS)
 clean:
 	rm recon *.o
 
-$(OBJECTS): base_types.hpp
+$(OBJECTS): base_types.hpp allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \

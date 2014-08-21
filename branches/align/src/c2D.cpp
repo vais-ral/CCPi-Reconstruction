@@ -35,7 +35,7 @@ static const std::size_t alignsize = 16;
 
 void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy,
-				const std::vector<long> &ij, const int n,
+				const long_1d &ij, const int n,
 				const int a, const int h,
 				const recon_type pzbz, const recon_type inv_dz,
 				const int nv, const int nz, const int midp,
@@ -108,10 +108,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
       break;
     }
   }
-  //void *alignk = 0;
-  //posix_memalign(&alignk, alignsize, nv * sizeof(int));
-  //int *kv = (int *)alignk;  
-  std::vector<int> kv(nv);
+  int_1d kv(nv);
   pixel_type *const pix = &(pixels[a][h][0]);
   int ncom = std::min(min_xy_all, max_xy_all);
   recon_type alpha_m0 = alpha_xy[0];
@@ -209,7 +206,6 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   const recon_type *const dc = &(d_conv[h][0]);
   for (int v = 0; v < nv; v++)
     pix[v] *= dc[v];
-  //free(alignk);
 }
 
 void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
@@ -247,7 +243,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 
   int max_n = std::max(nx, ny);
   recon_1d alpha_xy(2 * max_n);
-  std::vector<long> ij_arr(2 * max_n + 1);
+  long_1d ij_arr(2 * max_n + 1);
   long nyz = long(ny) * long(nz);
   int count = 0;
   if (std::abs(delta_x) < epsilon) {
@@ -613,8 +609,7 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 // Todo - loop over k and find v? alpha_xy may be the wrong info for this.
 void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy_0,
-				const recon_1d &alpha_xy_1,
-				const std::vector<long> &ah,
+				const recon_1d &alpha_xy_1, const long_1d &ah,
 				const int n, const int i, const int j,
 				const recon_type pzbz, const recon_type inv_dz,
 				const int nv, const int nz, const int midp,
@@ -646,10 +641,7 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   }
   // Todo - is there anything equivalent to min/max_xy in calc_xy
   const recon_type pzbz1 = pzbz + 1.0;
-  //void *alignk = 0;
-  //posix_memalign(&alignk, alignsize, nv * sizeof(int));
-  //int *kv = (int *)alignk;
-  std::vector<int> kv(nv);
+  int_1d kv(nv);
   voxel_type *const vox = &(voxels[i][j][0]);
   for (int m = 0; m < n; m++) {
     const pixel_type *const pix = &(pixels.data()[ah[m]]);
@@ -720,7 +712,6 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 	break;
     }
   }
-  //free(alignk);
 }
 
 /*
@@ -787,8 +778,8 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be
   int count = 0;
-  std::vector<long> ah_arr(2 * pix_per_vox * n_angles);
-  std::vector<int> h_arr(2 * pix_per_vox * n_angles);
+  long_1d ah_arr(2 * pix_per_vox * n_angles);
+  //int_1d h_arr(2 * pix_per_vox * n_angles);
   recon_1d alpha_xy_0(2 * pix_per_vox * n_angles);
   recon_1d alpha_xy_1(2 * pix_per_vox * n_angles);
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
