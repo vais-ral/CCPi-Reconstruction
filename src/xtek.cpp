@@ -36,6 +36,7 @@ static pixel_type interpolate2D(const real_1d &h, const int v_slice,
 
 bool CCPi::Nikon_XTek::setup_experimental_geometry(const std::string path,
 						   const std::string file,
+						   const real rotation_centre,
 						   const bool phantom)
 {
   if (phantom)
@@ -80,6 +81,11 @@ bool CCPi::Nikon_XTek::create_phantom()
   real step = 2.0 * M_PI / real(nangles);
   for (int i = 0; i < nangles; i++)
     pangles[i] = real(i) * step;
+  //const real_1d &h_pixels = get_h_pixels();
+  int n_h_pixels = get_num_h_pixels();
+  mask_radius = -get_source_x()
+    * std::sin(std::atan(h_pixels[n_h_pixels - 1] /
+			 (get_detector_x() - get_source_x())));
   return true;
 }
 
@@ -229,27 +235,13 @@ bool CCPi::Nikon_XTek::finish_voxel_geometry(real voxel_origin[3],
 					     const int ny, const int nz) const
 {
   //const voxel_data::size_type *s = voxels.shape();
-  real size = real(2.0) * mask_radius / real(nx);
-  voxel_size[0] = size;
-  voxel_size[1] = size;
-  voxel_size[2] = size;
-  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0) + offset[0];
-  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0) + offset[1];
-  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0) + offset[2];
-  return true;
-}
-
-bool CCPi::Nikon_XTek::read_data_size(const std::string path,
-				      const bool phantom)
-{
-  // phantom already done by setup
-  if (phantom) {
-    const real_1d &h_pixels = get_h_pixels();
-    int n_h_pixels = get_num_h_pixels();
-    mask_radius = -get_source_x()
-      * std::sin(std::atan(h_pixels[n_h_pixels - 1] /
-			   (get_detector_x() - get_source_x())));
-  } // else already done by read_config_file
+  //real size = real(2.0) * mask_radius / real(nx);
+  voxel_size[0] = h_vox_size;
+  voxel_size[1] = h_vox_size;
+  voxel_size[2] = v_vox_size;
+  voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0);
+  voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0);
+  voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0);
   return true;
 }
 
@@ -289,11 +281,11 @@ bool CCPi::Nikon_XTek::build_phantom()
   image_offset[2] = -image_vol[2] / 2;
 
   // set up phantom volume
-  voxel_data x(boost::extents[nx][ny][nz], boost::fortran_storage_order());
+  voxel_data x(boost::extents[nx][ny][nz], boost::c_storage_order());
   //sl_int n_vox = nx * ny * nz;
-  for (sl_int i = 0; i < nz; i++)
+  for (sl_int k = 0; k < nx; k++)
     for (sl_int j = 0; j < ny; j++)
-      for (sl_int k = 0; k < nx; k++)
+      for (sl_int i = 0; i < nz; i++)
 	x[k][j][i] = 0.0;
 
   // add cubes - column major
@@ -321,12 +313,12 @@ bool CCPi::Nikon_XTek::build_phantom()
 
   pixel_data &pixels = create_pixel_data();
   // perform projection step
-  forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
+  safe_forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   //delete [] x;
   // Todo - could do with adding noise.
-  offset[0] = 0.0;
-  offset[1] = 0.0;
-  offset[2] = 0.0;
+  //offset[0] = 0.0;
+  //offset[1] = 0.0;
+  //offset[2] = 0.0;
   return true;
 }
 
@@ -359,8 +351,8 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     real max_v = real(65535.0);
     // scale and take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < get_num_angles(); i++) {
-      for (int j = 0; j < get_num_v_pixels(); j++) {
-	for (int k = 0; k < get_num_h_pixels(); k++) {
+      for (int j = 0; j < get_num_h_pixels(); j++) {
+	for (int k = 0; k < get_num_v_pixels(); k++) {
 	  if (pixels[i][j][k] < real(1.0))
 	    pixels[i][j][k] = - std::log(real(0.00001) / max_v);
 	  else
@@ -400,16 +392,16 @@ pixel_type angles_linear(const int ph1, const real_1d &h, const int v_slice,
       break;
   }
   if (angles[pa1] == new_angle) {
-    return data[pa1][v_slice][ph1];
+    return data[pa1][ph1][v_slice];
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
       return linear(angles[pa1], angles[0] + real(2.0 * M_PI),
-		    data[pa1][v_slice][ph1], data[0][v_slice][ph1],
+		    data[pa1][ph1][v_slice], data[0][ph1][v_slice],
 		    new_angle);
     else
       return linear(angles[pa1], angles[pa1 + 1],
-		    data[pa1][v_slice][ph1], data[pa1 + 1][v_slice][ph1],
+		    data[pa1][ph1][v_slice], data[pa1 + 1][ph1][v_slice],
 		    new_angle);
   }
 }
@@ -426,20 +418,20 @@ pixel_type angles_bilinear(const int ph1, const real_1d &h, const int v_slice,
   }
   if (angles[pa1] == new_angle) {
     return linear(h[ph1], h[ph1 + 1],
-		  data[pa1][v_slice][ph1], data[pa1][v_slice][ph1 + 1], new_h);
+		  data[pa1][ph1][v_slice], data[pa1][ph1 + 1][v_slice], new_h);
   } else {
     // interp pa1 to pa1 + 1
     if (pa1 == na - 1)
       return bilinear(h[ph1], h[ph1 + 1], angles[pa1],
 		      angles[0] + real(2.0 * M_PI),
-		      data[pa1][v_slice][ph1], data[0][v_slice][ph1],
-		      data[pa1][v_slice][ph1 + 1], data[0][v_slice][ph1 + 1],
+		      data[pa1][ph1][v_slice], data[0][ph1][v_slice],
+		      data[pa1][ph1 + 1][v_slice], data[0][ph1 + 1][v_slice],
 		      new_h, new_angle);
     else
       return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[pa1 + 1],
-		      data[pa1][v_slice][ph1], data[pa1 + 1][v_slice][ph1],
-		      data[pa1][v_slice][ph1 + 1],
-		      data[pa1 + 1][v_slice][ph1 + 1],
+		      data[pa1][ph1][v_slice], data[pa1 + 1][ph1][v_slice],
+		      data[pa1][ph1 + 1][v_slice],
+		      data[pa1 + 1][ph1 + 1][v_slice],
 		      new_h, new_angle);
   }
 }
@@ -516,7 +508,7 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 	    pixel_type p = interpolate2D(h_pixels, v_slice, ph, px,
 					 s2[k], alpha_beta, nh, na, nv);
 	    // if (p > 0.0) { ?
-	    pixel_type t = px[a][v_slice][k] - p;
+	    pixel_type t = px[a][k][v_slice] - p;
 	    sum += t * t;
 	    count++;
 	    //} ?
@@ -552,12 +544,52 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
   adjust_h_pixels(y_centre);
 }
 
+void CCPi::Nikon_XTek::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
+{
+  // Use the mask radius as an estimate of the x/y extent -> voxel size
+  // Then adjust this to make sure it intercepts the full vertical range
+  // of rays - derived from original finish_geometry
+  int n = get_num_h_pixels() / pixels_per_voxel;
+  if (get_num_h_pixels() % pixels_per_voxel != 0)
+    n++;
+  real vsize = real(2.0) * mask_radius / real(n);
+  real vox_x = vsize * real(n) / 2.0;
+  int nv = get_num_v_pixels();
+  int nz = nv / pixels_per_voxel;
+  if (nv % pixels_per_voxel != 0)
+    nz++;
+  // Todo - get v_range[] at vox_x pos not detector pos
+  real max_z = vsize * real(nz) / 2.0;
+  const real_1d &v_range = get_v_pixels();
+  real v_pos = v_range[nv - 1];
+  // Get vpixel height at vox_x position
+  v_pos *= (vox_x - get_source_x()) / (get_detector_x() - get_source_x());
+  if (max_z < v_pos) {
+    // attempt to solve for new value, vsize must be > this
+    vsize = -2.0 * get_source_x() * v_range[nv - 1] /
+      (nz * (get_detector_x() - get_source_x()) - n * v_range[nv - 1]);
+    // so scale by a little bit
+    vsize *= (1.0 + 1.0 / real(nv));
+    // check
+    vox_x = vsize * real(n) / 2.0;
+    v_pos = v_range[nv - 1] * (vox_x - get_source_x()) /
+      (get_detector_x() - get_source_x());
+    max_z = vsize * real(nz) / 2.0;
+    if (max_z < v_pos)
+      report_error("Voxel size error");
+  }
+  h_vox_size = vsize;
+  v_vox_size = vsize;
+  nx = n;
+  ny = n;
+}
+
 void CCPi::Nikon_XTek::apply_beam_hardening()
 {
   // Todo - does this belong in the base class?
   pixel_data &pixels = get_pixel_data();
   for (sl_int i = 0; i < get_num_angles(); i++)
-    for (sl_int j = 0; j < get_num_v_pixels(); j++)
-      for (sl_int k = 0; k < get_num_h_pixels(); k++)
+    for (sl_int j = 0; j < get_num_h_pixels(); j++)
+      for (sl_int k = 0; k < get_num_v_pixels(); k++)
 	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
 }

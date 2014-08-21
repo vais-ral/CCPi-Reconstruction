@@ -96,9 +96,6 @@ void CCPi::instrument::backward_project(const real source_x,
 	    start[0] = cos_curr_angle * source_x - sin_curr_angle * source_y;
 	    start[1] = sin_curr_angle * source_x + cos_curr_angle * source_y;
 
-	    //ray_offset = curr_angle * sl_int(n_rays_y) * sl_int(n_rays_z)
-	    //+ curr_ray_z * sl_int(n_rays_y);
-
 	    /* loop over y values on detector */
 	    for(curr_ray_y = 0; curr_ray_y < n_rays_y; curr_ray_y++) {
 	      end[0] = cos_curr_angle * det_x
@@ -108,11 +105,11 @@ void CCPi::instrument::backward_project(const real source_x,
 
 	      /* loop over z values on detector */
 	      project_singledata<pixel_type, true>(start, end,
-				 ray_data[curr_angle][curr_ray_z][curr_ray_y],
+				 ray_data[curr_angle][curr_ray_y][curr_ray_z],
 				 vol_data, grid_offset[0], grid_offset[1],
 				 b_z, voxel_size[0], voxel_size[1],
 				 voxel_size[2], nx_voxels, ny_voxels,
-				 nz_step, nz_offset);
+				 nz_voxels, nz_step, nz_offset);
 	    }
 	  }
 	}

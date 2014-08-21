@@ -8,6 +8,8 @@
 #include "instruments.hpp"
 #include "algorithms.hpp"
 #include "results.hpp"
+#include "voxels.hpp"
+#include "blas.hpp"
 
 int main()
 {
@@ -24,7 +26,6 @@ int main()
   // Todo - usage messages if started up wrong?
   bool phantom = true;
   bool beam_harden = false;
-  bool fast_projection = false;
   int niterations = 10;
   //CCPi::devices device = CCPi::dev_Nikon_XTek;
   CCPi::devices device = CCPi::dev_Diamond_I12;
@@ -37,6 +38,7 @@ int main()
   std::string output_name = "phantom";
   std::string data_file =
     "/home/bgs/scratch/ccpi/Bird_skull/Bird_skull_2001.xtekct";
+  real rotation_centre = -1.0;
   const int pixels_per_voxel = 1;
   // vertical size to break data up into for processing
   const int blocking_factor = 0;
@@ -93,101 +95,64 @@ int main()
       std::string path;
       std::string filename;
       CCPi::split_path_and_name(data_file, path, filename);
-      if (instrument->setup_experimental_geometry(path, filename, phantom)) {
-	if (instrument->read_data_size(path, phantom)) {
-	  // calculate blocks
-	  if (instrument->get_num_h_pixels() % pixels_per_voxel != 0)
-	    std::cerr << "Number of horizontal pixels doesn't match voxels "
-		      << instrument->get_num_h_pixels() << '\n';
-	  int nx_voxels = instrument->get_num_h_pixels() / pixels_per_voxel;
-	  int ny_voxels = nx_voxels;
-	  if (instrument->get_num_v_pixels() % pixels_per_voxel != 0)
-	    std::cerr << "Number of vertical pixels doesn't match voxels "
-		      << instrument->get_num_v_pixels() << '\n';
-	  int maxz_voxels = instrument->get_num_v_pixels() / pixels_per_voxel;
-	  int nz_voxels = 0;
-	  int block_size = 0;
-	  int block_step = 0;
-	  if (blocking_factor == 0 and num_processors == 1) {
-	    nz_voxels = instrument->get_num_v_pixels() / pixels_per_voxel;
-	    block_size = nz_voxels;
-	    block_step = nz_voxels;
-	  } else if (instrument->supports_blocks() and
-		     recon_algorithm->supports_blocks()) {
-	    int sz = 1;
-	    if (blocking_factor > 0)
-	      sz = blocking_factor;
-	    int n_vox = instrument->get_num_v_pixels() / pixels_per_voxel;
-	    if (n_vox / (sz * num_processors) < 1)
-	      std::cerr << "Reduce blocking factor or number of processors\n";
-	    block_size = sz;
-	    block_step = block_size * num_processors;
+      if (instrument->setup_experimental_geometry(path, filename,
+						  rotation_centre, phantom)) {
+	int nx_voxels = 0;
+	int ny_voxels = 0;
+	int maxz_voxels = 0;
+	int nz_voxels = 0;
+	int block_size = 0;
+	int block_step = 0;
+	calculate_block_sizes(nx_voxels, ny_voxels, nz_voxels, maxz_voxels,
+			      block_size, block_step, num_processors,
+			      blocking_factor, pixels_per_voxel,
+			      instrument, recon_algorithm->supports_blocks());
+	int z_data_size = block_size * pixels_per_voxel;
+	int z_data_step = block_step * pixels_per_voxel;
+	instrument->set_v_block(z_data_size);
+	int block_offset = machine::get_processor_id() * block_size;
+	int z_data_offset = block_offset * pixels_per_voxel;
+	real full_vox_origin[3];
+	real voxel_size[3];
+	if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
+					      nx_voxels, ny_voxels,
+					      maxz_voxels)) {
+	  // can modify offsets and end if parallel beam to solve subregion
+	  int end_value = instrument->total_num_v_pixels();
+	  bool ok = false;
+	  bool first = true;
+	  do {
+	    ok = false;
+	    if (block_offset + block_size > maxz_voxels)
+	      block_size = maxz_voxels - block_offset;
+	    if (z_data_offset + z_data_size > end_value) {
+	      z_data_size = end_value - z_data_offset;
+	      instrument->set_v_block(z_data_size);
+	    }
 	    nz_voxels = block_size;
-	  } else if (num_processors == 1) {
-	    std::cerr << "Ignoring blocking factor - not supported by device\n";
-	    nz_voxels = instrument->get_num_v_pixels() / pixels_per_voxel;
-	    block_size = nz_voxels;
-	    block_step = nz_voxels;
-	  }
-	  int z_data_size = block_size * pixels_per_voxel;
-	  int z_data_step = block_step * pixels_per_voxel;
-	  instrument->set_v_block(z_data_size);
-	  int block_offset = machine::get_processor_id() * block_size;
-	  int z_data_offset = block_offset * pixels_per_voxel;
-	  real full_vox_origin[3];
-	  real voxel_size[3];
-	  if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
-						nx_voxels, ny_voxels,
-						maxz_voxels)) {
-	    // can modify offsets and end if parallel beam to solve subregion
-	    // xTodo - if v_pixels % pix_pe_vox != 0 will this cause problems?
-	    int end_value = instrument->total_num_v_pixels();
-	    bool ok = false;
-	    bool first = true;
-	    do {
+	    real voxel_origin[3];
+	    voxel_origin[0] = full_vox_origin[0];
+	    voxel_origin[1] = full_vox_origin[1];
+	    voxel_origin[2] = full_vox_origin[2]
+	      + block_offset * voxel_size[2];
+	    if (instrument->read_scans(path, z_data_offset,
+				       z_data_size, first, phantom)) {
+	      voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
+	      init_data(voxels, nx_voxels, ny_voxels, nz_voxels);
+	      if (beam_harden)
+		instrument->apply_beam_hardening();
+	      ok = recon_algorithm->reconstruct(instrument, voxels,
+						voxel_origin, voxel_size);
+	      if (ok)
+		CCPi::write_results(output_name, voxels, full_vox_origin,
+				    voxel_size, block_offset, maxz_voxels,
+				    write_format, clamp_output);
+	    } else
 	      ok = false;
-	      if (block_offset + block_size > maxz_voxels)
-		block_size = maxz_voxels - block_offset;
-	      if (z_data_offset + z_data_size > end_value) {
-		z_data_size = end_value - z_data_offset;
-		instrument->set_v_block(z_data_size);
-	      }
-	      nz_voxels = block_size;
-	      real voxel_origin[3];
-	      voxel_origin[0] = full_vox_origin[0];
-	      voxel_origin[1] = full_vox_origin[1];
-	      voxel_origin[2] = full_vox_origin[2]
-		+ block_offset * voxel_size[2];
-	      if (instrument->read_scans(path, z_data_offset,
-					 z_data_size, first, phantom)) {
-		voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
-				  boost::fortran_storage_order());
-		for (int i = 0; i < nz_voxels; i++) {
-		  for (int j = 0; j < ny_voxels; j++) {
-		    for (int k = 0; k < nx_voxels; k++) {
-		      voxels[k][j][i] = 0.0;
-		    }
-		  }
-		}
-		if (beam_harden)
-		  instrument->apply_beam_hardening();
-		if (fast_projection and first)
-		  instrument->setup_projection_matrix(voxel_origin, voxel_size,
-						      nx_voxels, ny_voxels,
-						      nz_voxels);
-		ok = recon_algorithm->reconstruct(instrument, voxels,
-						  voxel_origin, voxel_size);
-		if (ok)
-		  CCPi::write_results(output_name, voxels, full_vox_origin,
-				      voxel_size, block_offset, maxz_voxels,
-				      write_format, clamp_output);
-	      } else
-		ok = false;
-	      first = false;
-	      block_offset += block_step;
-	      z_data_offset += z_data_step;
-	    } while (ok and z_data_offset < end_value);
-	  }
+	    first = false;
+	    block_offset += block_step;
+	    z_data_offset += z_data_step;
+	  } while (ok and z_data_offset < end_value);
 	}
       }
     } else

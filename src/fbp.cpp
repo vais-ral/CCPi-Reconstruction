@@ -518,12 +518,12 @@ void transform_sinogram(pixel_3d &mapping, const pixel_data &pixels,
   // This is for shape point with no missing angles
   for (int j = 0; j < nangles; j++) {
     for (int i = 0; i < nh; i++)
-      vtb[i + 3][j] = pixels[j][z][i];
+      vtb[i + 3][j] = pixels[j][i][z];
   }
   for (int j = 0; j < nangles; j++) {
     std::cerr << "loop " << j << '\n';
     for (int i = 0; i < nh; i++)
-      std::cerr << j * nh + i << ' ' << pixels[j][z][i] << '\n';
+      std::cerr << j * nh + i << ' ' << pixels[j][i][z] << '\n';
   }
   // no missed stuff so skip next if
   int extrapolation_pixels = 10; // Todo

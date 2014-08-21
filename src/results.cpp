@@ -70,9 +70,9 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
     voxel_type vmin = +1e10;
     if (!clamp) {
       // find range to scale
-      for (int k = 0; k < (int)s[2]; k++) {
+      for (int i = 0; i < (int)s[0]; i++) {
 	for (int j = 0; j < (int)s[1]; j++) {
-	  for (int i = 0; i < (int)s[0]; i++) {
+	  for (int k = 0; k < (int)s[2]; k++) {
 	    if (vmax < voxels[i][j][k])
 	      vmax = voxels[i][j][k];
 	    if (vmin > voxels[i][j][k])
@@ -189,19 +189,22 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
       fprintf(file, "0.0 0.0 %12.6f\n", voxel_size[2]);
       fprintf(file, "Image\n");
     }
-    if (sizeof(voxel_type) == sizeof(float)) {
-      fwrite(voxels.data(), sizeof(voxel_type), n, file);
-    } else {
-      float *x = new float[n];
-      for (std::size_t i = 0; i < n; i++)
-	x[i] = (float)((voxels.data())[i]);
-      // would need use to store an offset for end of header block to work
-      //std::size_t o = s[0] * s[1] * std::size_t(offset);
-      //fseek(file, o, SEEK_CUR);
-      //fseek(file, 0, SEEK_END); achieved by fopen("a")
-      fwrite(x, sizeof(float), n, file);
-      delete [] x;
+    float *x = new float[n];
+    sl_int l = 0;
+    for (std::size_t k = 0; k < s[2]; k++) {
+      for (std::size_t j = 0; j < s[1]; j++) {
+	for (std::size_t i = 0; i < s[0]; i++) {
+	  x[l] = (float)voxels[i][j][k];
+	  l++;
+	}
+      }
     }
+    // would need use to store an offset for end of header block to work
+    //std::size_t o = s[0] * s[1] * std::size_t(offset);
+    //fseek(file, o, SEEK_CUR);
+    //fseek(file, 0, SEEK_END); achieved by fopen("a")
+    fwrite(x, sizeof(float), n, file);
+    delete [] x;
     fclose(file);
   }
   //std::cout << "end dump\n";

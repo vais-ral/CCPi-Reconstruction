@@ -88,22 +88,22 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   const voxel_data::size_type *sz = xkp1.shape();
   //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
   voxel_3d Nablafyk(boost::extents[sz[0]][sz[1]][sz[2]],
-		    boost::fortran_storage_order());
+		    boost::c_storage_order());
   voxel_3d Nablafxkp1(boost::extents[sz[0]][sz[1]][sz[2]],
-		      boost::fortran_storage_order());
+		      boost::c_storage_order());
   voxel_3d yk(boost::extents[sz[0]][sz[1]][sz[2]],
-	      boost::fortran_storage_order());
+	      boost::c_storage_order());
   voxel_3d xk(boost::extents[sz[0]][sz[1]][sz[2]],
-	      boost::fortran_storage_order());
+	      boost::c_storage_order());
   voxel_3d temp(boost::extents[sz[0]][sz[1]][sz[2]],
-		boost::fortran_storage_order());
+		boost::c_storage_order());
   sl_int nx = sl_int(sz[0]);
   sl_int ny = sl_int(sz[1]);
   sl_int nz = sl_int(sz[2]);
 
   /*temp vectors */
   voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
-	      boost::fortran_storage_order());
+	      boost::c_storage_order());
   pixel_3d tv2(boost::extents[n_angles][n_v][n_h]);
   std::vector<real> uijl(Ddim);
 
