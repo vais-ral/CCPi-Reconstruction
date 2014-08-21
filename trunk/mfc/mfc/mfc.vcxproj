@@ -167,6 +167,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -194,6 +195,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\algorithms.hpp" />
     <ClInclude Include="..\..\src\base_types.hpp" />
+    <ClInclude Include="..\..\src\blas.hpp" />
     <ClInclude Include="..\..\src\cone_b.hpp" />
     <ClInclude Include="..\..\src\cone_f.hpp" />
     <ClInclude Include="..\..\src\instruments.hpp" />
@@ -206,6 +208,7 @@
     <ClInclude Include="..\..\src\timer.hpp" />
     <ClInclude Include="..\..\src\ui_calls.hpp" />
     <ClInclude Include="..\..\src\utils.hpp" />
+    <ClInclude Include="..\..\src\voxels.hpp" />
     <ClInclude Include="CGLSWizard.h" />
     <ClInclude Include="CGLS_params.h" />
     <ClInclude Include="ChildView.h" />
@@ -221,12 +224,13 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\c2D.cpp" />
     <ClCompile Include="..\..\src\cgls.cpp" />
     <ClCompile Include="..\..\src\cone.cpp" />
     <ClCompile Include="..\..\src\diamond.cpp" />
     <ClCompile Include="..\..\src\instruments.cpp" />
-    <ClCompile Include="..\..\src\matrix2D.cpp" />
     <ClCompile Include="..\..\src\mpi.cpp" />
+    <ClCompile Include="..\..\src\p2D.cpp" />
     <ClCompile Include="..\..\src\parallel.cpp" />
     <ClCompile Include="..\..\src\results.cpp" />
     <ClCompile Include="..\..\src\tiff.cpp" />
@@ -234,6 +238,7 @@
     <ClCompile Include="..\..\src\tv_core.cpp" />
     <ClCompile Include="..\..\src\tv_reg.cpp" />
     <ClCompile Include="..\..\src\utils.cpp" />
+    <ClCompile Include="..\..\src\voxels.cpp" />
     <ClCompile Include="..\..\src\xtek.cpp" />
     <ClCompile Include="CGLSWizard.cpp" />
     <ClCompile Include="CGLS_params.cpp" />

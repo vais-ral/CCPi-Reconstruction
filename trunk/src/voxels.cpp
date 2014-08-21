@@ -3,6 +3,7 @@
 #include "utils.hpp"
 #include "instruments.hpp"
 #include "voxels.hpp"
+#include "ui_calls.hpp"
 
 void calculate_block_sizes(int &nx_voxels, int &ny_voxels, int &nz_voxels,
 			   int &maxz_voxels, int &block_size, int &block_step,
@@ -28,12 +29,12 @@ void calculate_block_sizes(int &nx_voxels, int &ny_voxels, int &nz_voxels,
     if (blocking_factor > 0)
       sz = blocking_factor;
     if (maxz_voxels / (sz * num_processors) < 1)
-      std::cerr << "Reduce blocking factor or number of processors\n";
+      report_error("Reduce blocking factor or number of processors");
     block_size = sz;
     block_step = block_size * num_processors;
     nz_voxels = block_size;
   } else if (num_processors == 1) {
-    std::cerr << "Ignoring blocking factor - not supported by device\n";
+    report_error("Ignoring blocking factor - not supported by device");
     nz_voxels = maxz_voxels;
     block_size = nz_voxels;
     block_step = nz_voxels;

@@ -8,6 +8,7 @@
 #include "algorithms.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
+#include "blas.hpp"
 
 int main()
 {
@@ -130,15 +131,8 @@ int main()
 	      + block_offset * voxel_size[2];
 	    if (instrument->read_scans(path, z_data_offset,
 				       z_data_size, first, phantom)) {
-	      voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels],
-				boost::c_storage_order());
-	      for (int i = 0; i < nz_voxels; i++) {
-		for (int j = 0; j < ny_voxels; j++) {
-		  for (int k = 0; k < nx_voxels; k++) {
-		    voxels[k][j][i] = 0.0;
-		  }
-		}
-	      }
+	      voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
+	      init_data(voxels, nx_voxels, ny_voxels, nz_voxels);
 	      if (beam_harden)
 		instrument->apply_beam_hardening();
 	      ok = recon_algorithm->reconstruct(instrument, voxels,
