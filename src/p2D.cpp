@@ -27,7 +27,7 @@ extern bool test_3D(const real start[], const real end[],
 		    const int im_size_x, const int im_size_y,
 		    const int im_size_z, recon_type &length);
 
-void CCPi::parallel_beam::gen_mapping(std::vector<int> &mapping, int &map_type,
+void CCPi::parallel_beam::gen_mapping(int_1d &mapping, int &map_type,
 				      const real_1d &v_pixels, const real vox_z,
 				      const real size_z, const int nv)
 {
@@ -69,12 +69,10 @@ void CCPi::parallel_beam::gen_mapping(std::vector<int> &mapping, int &map_type,
 }
 
 void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-				    const recon_1d &l_xy,
-				    const std::vector<long> &ij,
+				    const recon_1d &l_xy, const long_1d &ij,
 				    const int n, const int a, const int h,
 				    const int nv, const int nz,
-				    const std::vector<int> &mapping,
-				    const int map_type)
+				    const int_1d &mapping, const int map_type)
 {
   pixel_type *const pix = &(pixels[a][h][0]);
   switch (map_type) {
@@ -140,14 +138,14 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 				      const int nv, const recon_type d_conv,
 				      const real_1d &v_pixels,
 				      const real cphi, const real sphi,
-				      const std::vector<int> &mapping,
+				      const int_1d &mapping,
 				      const int map_type)
 {
   // Todo? In parallel beam some of this should be common in a since
   // all h within a have same angle to voxels.
   int max_n = std::max(nx, ny);
   recon_1d l_xy(2 * max_n);
-  std::vector<long> ij_arr(2 * max_n + 1);
+  long_1d ij_arr(2 * max_n + 1);
   int count = 0;
   long nyz = long(ny) * long(nz);
   if (std::abs(cphi) < epsilon) {
@@ -442,7 +440,7 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   // path length from source to detector is independent of rotation
   recon_type d_conv = recon_type(3.0 * detector_x);
 
-  std::vector<int> mapping(nv_pixels);
+  int_1d mapping(nv_pixels);
   int map_type = 0;
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
@@ -467,12 +465,10 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
 }
 
 void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
-				    const recon_1d &l_xy,
-				    const std::vector<long> &ah,
+				    const recon_1d &l_xy, const long_1d &ah,
 				    const int n, const int i, const int j,
 				    const int nv, const int nz,
-				    const std::vector<int> &mapping,
-				    const int map_type)
+				    const int_1d &mapping, const int map_type)
 {
   voxel_type *const vox = &(voxels[i][j][0]);
   switch (map_type) {
@@ -546,15 +542,14 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 				      const real_1d &length,
 				      const real h_pix0, const real ihp_step,
 				      const recon_type d_conv,
-				      const std::vector<int> &mapping,
-				      const int map_type)
+				      const int_1d &mapping, const int map_type)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
   const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be - Todo - use mapping for pix_per_vox?
   int count = 0;
-  std::vector<long> ah_arr(2 * pix_per_vox * n_angles);
+  long_1d ah_arr(2 * pix_per_vox * n_angles);
   recon_1d l_xy(2 * pix_per_vox * n_angles);
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   // Todo - in parallel we can probably make a better guess at which 2 corners
@@ -798,7 +793,7 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
   for (int j = 0; j <= ny; j++)
     yvals[j] = vox_origin[1] + real(j) * vox_size[1];
 
-  std::vector<int> mapping(nv_pixels);
+  int_1d mapping(nv_pixels);
   int map_type = 0;
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);

@@ -171,7 +171,7 @@ namespace CCPi {
     real detector_x;
 
     static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &alpha_xy, const std::vector<long> &ij,
+			  const recon_1d &alpha_xy, const long_1d &ij,
 			  const int n, const int a, const int h,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
@@ -179,8 +179,7 @@ namespace CCPi {
 			  const recon_1d &inv_delz, const recon_1d &vox_z);
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 			  const recon_1d &alpha_xy_0,
-			  const recon_1d &alpha_xy_1,
-			  const std::vector<long> &ah,
+			  const recon_1d &alpha_xy_1, const long_1d &ah,
 			  const int n, const int i, const int j,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
@@ -267,17 +266,15 @@ namespace CCPi {
 
   private:
     static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy, const std::vector<long> &ij,
+			  const recon_1d &l_xy, const long_1d &ij,
 			  const int n, const int a,
 			  const int h, const int nv, const int nz,
-			  const std::vector<int> &mapping,
-			  const int map_type);
+			  const int_1d &mapping, const int map_type);
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy, const std::vector<long> &ah,
+			  const recon_1d &l_xy, const long_1d &ah,
 			  const int n, const int i, const int j,
 			  const int nv, const int nz,
-			  const std::vector<int> &mapping,
-			  const int map_type);
+			  const int_1d &mapping, const int map_type);
     static void fproject_xy(const real p1_x, const real p1_y, const real p2_x,
 			    const real p2_y, pixel_data &pixels,
 			    voxel_data &voxels, const real b_x, const real b_y,
@@ -287,8 +284,7 @@ namespace CCPi {
 			    const int nv, const recon_type d_conv,
 			    const real_1d &v_pixels,
 			    const real cphi, const real sphi,
-			    const std::vector<int> &mapping,
-			    const int map_type);
+			    const int_1d &mapping, const int map_type);
     static void bproject_ah(const real source_x,
 			    const real detector_x, pixel_data &pixels,
 			    voxel_data &voxels, const real x_0,
@@ -303,9 +299,8 @@ namespace CCPi {
 			    const real_1d &y_offset, const real_1d &i_offset,
 			    const real_1d &length, const real h_pix0,
 			    const real ihp_step, const recon_type d_conv,
-			    const std::vector<int> &mapping,
-			    const int map_type);
-    static void gen_mapping(std::vector<int> &mapping, int &map_type,
+			    const int_1d &mapping, const int map_type);
+    static void gen_mapping(int_1d &mapping, int &map_type,
 			    const real_1d &v_pixels, const real vox_z,
 			    const real size_z, const int nv);
   };
