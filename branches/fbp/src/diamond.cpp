@@ -8,13 +8,14 @@
 
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
+						const real rotation_centre,
 						const bool phantom)
 {
   if (phantom)
     return create_phantom();
   else {
     name = file;
-    return true;
+    return read_data_size(path, rotation_centre);
   }
 }
 
@@ -58,47 +59,49 @@ bool CCPi::Diamond::create_phantom()
 }
 
 bool CCPi::Diamond::read_data_size(const std::string path,
-				   const bool phantom)
+				   const real rotation_centre)
 {
-  // phantom already done by setup
-  if (phantom)
-    return true;
-  else {
-    bool ok = false;
-    std::string fullname;
-    combine_path_and_name(path, name,fullname);
-    pixel_data pixels(boost::extents[1][1][1]);
-    int nh_pixels = 0;
-    int nv_pixels = 0;
-    std::vector<real> angles;
-    int nangles = 0;
-    real hsize = 0.0;
-    real vsize = 0.0;
-    pixel_2d i_dark(boost::extents[1][1]);
-    pixel_2d f_dark(boost::extents[1][1]);
-    pixel_2d i_bright(boost::extents[1][1]);
-    pixel_2d f_bright(boost::extents[1][1]);
+  bool ok = false;
+  std::string fullname;
+  combine_path_and_name(path, name,fullname);
+  pixel_data pixels(boost::extents[1][1][1]);
+  int nh_pixels = 0;
+  int nv_pixels = 0;
+  std::vector<real> angles;
+  int nangles = 0;
+  real hsize = 0.0;
+  real vsize = 0.0;
+  pixel_2d i_dark(boost::extents[1][1]);
+  pixel_2d f_dark(boost::extents[1][1]);
+  pixel_2d i_bright(boost::extents[1][1]);
+  pixel_2d f_bright(boost::extents[1][1]);
 #ifdef HAS_NEXUS
-    ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
-		    nv_pixels, angles, nangles, hsize, vsize, fullname,
-		    false, false, 0, 10000);
+  ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
+		  nv_pixels, angles, nangles, hsize, vsize, fullname,
+		  false, false, 0, 10000);
 #endif // HAS_NEXUS
-    if (ok) {
-      // store data in class
-      real_1d &h_pixels = set_h_pixels(nh_pixels);
-      h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0);
-      for (int i = 1; i < nh_pixels; i++)
-	h_pixels[i] = h_pixels[0] + real(i) * hsize;
-      real_1d &v_pixels = set_v_pixels(nv_pixels);
-      v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
-      for (int i = 1; i < nv_pixels; i++)
-	v_pixels[i] = v_pixels[0] + real(i) * vsize;
-      real_1d &phi = set_phi(nangles);
-      for (int i = 0; i < nangles; i++)
-	phi[i] = angles[i];
+  if (ok) {
+    real shift = 0.0;
+    if (rotation_centre > 0.0) {
+      // shift h_pixels
+      // if 4 pixels and centre = 2.0 nothing happens
+      real pixel_shift = rotation_centre - real(nh_pixels) / 2.0;
+      shift = hsize * pixel_shift;
     }
-    return ok;
+    // store data in class
+    real_1d &h_pixels = set_h_pixels(nh_pixels);
+    h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0) - shift;
+    for (int i = 1; i < nh_pixels; i++)
+      h_pixels[i] = h_pixels[0] + real(i) * hsize;
+    real_1d &v_pixels = set_v_pixels(nv_pixels);
+    v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
+    for (int i = 1; i < nv_pixels; i++)
+      v_pixels[i] = v_pixels[0] + real(i) * vsize;
+    real_1d &phi = set_phi(nangles);
+    for (int i = 0; i < nangles; i++)
+      phi[i] = angles[i];
   }
+  return ok;
 }
 
 bool CCPi::Diamond::read_scans(const std::string path, const int offset,
@@ -143,11 +146,11 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   image_offset[2] = -image_vol[2] / 2;
 
   // set up phantom volume
-  voxel_data x(boost::extents[nx][ny][nz], boost::fortran_storage_order());
+  voxel_data x(boost::extents[nx][ny][nz], boost::c_storage_order());
   //sl_int n_vox = nx * ny * nz;
-  for (sl_int i = 0; i < nz; i++)
+  for (sl_int k = 0; k < nx; k++)
     for (sl_int j = 0; j < ny; j++)
-      for (sl_int k = 0; k < nx; k++)
+      for (sl_int i = 0; i < nz; i++)
 	x[k][j][i] = 0.0;
 
   // add cubes - column major
@@ -176,7 +179,7 @@ bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
   set_v_offset(offset);
   pixel_data &pixels = create_pixel_data();
   // perform projection step
-  forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
+  safe_forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
   //delete [] x;
   return true;
 }
@@ -198,12 +201,12 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   if (first)
     (void) create_pixel_data();
   pixel_data &pixels = get_pixel_data();
-  pixel_2d i_dark(boost::extents[nv][nh]);
-  pixel_2d f_dark(boost::extents[nv][nh]);
-  pixel_2d i_bright(boost::extents[nv][nh]);
-  pixel_2d f_bright(boost::extents[nv][nh]);
-  for (sl_int i = 0; i < nv; i++) {
-    for (sl_int j = 0; j < nh; j++) {
+  pixel_2d i_dark(boost::extents[nh][nv]);
+  pixel_2d f_dark(boost::extents[nh][nv]);
+  pixel_2d i_bright(boost::extents[nh][nv]);
+  pixel_2d f_bright(boost::extents[nh][nv]);
+  for (sl_int i = 0; i < nh; i++) {
+    for (sl_int j = 0; j < nv; j++) {
       i_dark[i][j] = 0.0;
       f_dark[i][j] = 0.0;
       i_bright[i][j] = 0.0;
@@ -223,44 +226,44 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
     // linear interpolate bright/dark frames. Todo - something else?
     // Todo, also use initial final bright/dark angles? rather than assuming
     // initial/final sample angles?
-    pixel_2d dark(boost::extents[nv][nh]);
-    pixel_2d bright(boost::extents[nv][nh]);
+    pixel_2d dark(boost::extents[nh][nv]);
+    pixel_2d bright(boost::extents[nh][nv]);
     for (int i = 0; i < nangles; i++) {
       // Based on fbp code, interpolate bright/dark
       // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
       real w = angles[i] / angles[nangles - 1];
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  dark[j][k] = i_dark[j][k] * (real(1.0) - w) + f_dark[j][k] * w;
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  bright[j][k] = i_bright[j][k] * (real(1.0) - w) + f_bright[j][k] * w;
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  dark[k][j] = i_dark[k][j] * (real(1.0) - w) + f_dark[k][j] * w;
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  bright[k][j] = i_bright[k][j] * (real(1.0) - w) + f_bright[k][j] * w;
       // subtract dark from data/bright
       // and clamp min data/bright value to 0.1
-      for (sl_int j = 0; j < nv; j++) {
-	for (sl_int k = 0; k < nh; k++) {
-	  bright[j][k] -= dark[j][k];
-	  if (bright[j][k] < real(0.1))
-	    bright[j][k] = 0.1;
+      for (sl_int k = 0; k < nh; k++) {
+	for (sl_int j = 0; j < nv; j++) {
+	  bright[k][j] -= dark[k][j];
+	  if (bright[k][j] < real(0.1))
+	    bright[k][j] = 0.1;
 	}
       }
-      for (sl_int j = 0; j < nv; j++) {
-	for (sl_int k = 0; k < nh; k++) {
-	  pixels[i][j][k] -= dark[j][k];
-	  if (pixels[i][j][k] < real(0.1))
-	    pixels[i][j][k] = 0.1;
+      for (sl_int k = 0; k < nh; k++) {
+	for (sl_int j = 0; j < nv; j++) {
+	  pixels[i][k][j] -= dark[k][j];
+	  if (pixels[i][k][j] < real(0.1))
+	    pixels[i][k][j] = 0.1;
 	}
       }
       // scale each data pixel by bright pixel
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  pixels[i][j][k] /= bright[j][k];
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  pixels[i][k][j] /= bright[k][j];
     }
     // take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < nangles; i++)
-      for (sl_int j = 0; j < nv; j++)
-	for (sl_int k = 0; k < nh; k++)
-	  pixels[i][j][k] = - std::log(pixels[i][j][k]);
+      for (sl_int k = 0; k < nh; k++)
+	for (sl_int j = 0; j < nv; j++)
+	  pixels[i][k][j] = - std::log(pixels[i][k][j]);
     //find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;
@@ -270,6 +273,7 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
 					  real voxel_size[3], const int nx,
 					  const int ny, const int nz) const
 {
+  /*
   const real_1d &h_pixels = get_h_pixels();
   const real_1d &v_pixels = get_all_v_pixels();
   int nh = get_num_h_pixels();
@@ -281,13 +285,38 @@ bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],
   int hs = std::min(nx, ny);
   hsize *= (real(nh) / real(hs));
   vsize *= (real(nv) / nz);
-  voxel_size[0] = hsize;
-  voxel_size[1] = hsize;
-  voxel_size[2] = vsize;
+  */
+  voxel_size[0] = h_vox_size;
+  voxel_size[1] = h_vox_size;
+  voxel_size[2] = v_vox_size;
   voxel_origin[0] = -voxel_size[0] * real(nx) / real(2.0); // + offset[0];
   voxel_origin[1] = -voxel_size[1] * real(ny) / real(2.0); // + offset[1];
   voxel_origin[2] = -voxel_size[2] * real(nz) / real(2.0); // + offset[2];
   return true;
+}
+
+void CCPi::Diamond::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
+{
+  const real_1d &h_pixels = get_h_pixels();
+  int nh = get_num_h_pixels();
+  real hrange = h_pixels[1] - h_pixels[0];
+  real hmax = std::max(std::abs(h_pixels[0]), std::abs(h_pixels[nh - 1]));
+  int n = int(std::ceil((2.0 * hmax) / hrange));
+  nx = n / pixels_per_voxel;
+  if (n % pixels_per_voxel != 0)
+    nx++;
+  h_vox_size = hrange * real(pixels_per_voxel);
+  // check that we've covered a big enough region
+  real xmin = -h_vox_size * real(nx) / real(2.0);
+  real xmax =  h_vox_size * real(nx) / real(2.0);
+  while (xmin >= h_pixels[0] or xmax <= h_pixels[nh - 1]) {
+    nx++;
+    xmin = -h_vox_size * real(nx) / real(2.0);
+    xmax =  h_vox_size * real(nx) / real(2.0);
+  }
+  ny = nx;
+  const real_1d &v_pixels = get_all_v_pixels();
+  v_vox_size = (v_pixels[1] - v_pixels[0]) * real(pixels_per_voxel);
 }
 
 void CCPi::Diamond::apply_beam_hardening()
@@ -295,7 +324,7 @@ void CCPi::Diamond::apply_beam_hardening()
   // Todo - does this belong in the base class?
   pixel_data &pixels = get_pixel_data();
   for (sl_int i = 0; i < get_num_angles(); i++)
-    for (sl_int j = 0; j < get_num_v_pixels(); j++)
-      for (sl_int k = 0; k < get_num_h_pixels(); k++)
-	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
+    for (sl_int k = 0; k < get_num_h_pixels(); k++)
+      for (sl_int j = 0; j < get_num_v_pixels(); j++)
+	pixels[i][k][j] = pixels[i][k][j] * pixels[i][k][j];
 }

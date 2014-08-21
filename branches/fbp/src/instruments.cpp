@@ -23,6 +23,6 @@ pixel_3d &CCPi::instrument::get_pixel_data()
 
 pixel_3d &CCPi::instrument::create_pixel_data()
 {
-  pixels = new pixel_3d(boost::extents[n_angles][n_vertical_pixels][n_horizontal_pixels]);
+  pixels = new pixel_3d(boost::extents[n_angles][n_horizontal_pixels][n_vertical_pixels]);
   return *pixels;
 }

@@ -5,15 +5,15 @@ TIFFINC =
 TIFFLIB = -ltiff
 NXINC = -I/usr/local/nexus/include/nexus -DHAS_NEXUS
 NXLIB = -L/usr/local/nexus/lib -lNeXusCPP
-CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(MKLINC)
+CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(MKLINC) -DTEST2D
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
 MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_gf_ilp64.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a
 LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB) 
 
 OBJECTS = recon.o results.o instruments.o parallel.o cone.o diamond.o xtek.o\
-	cgls.o fbp.o tv_reg.o tv_core.o matrix2D.o nexus.o tiff.o \
-	timer.o utils.o ui_calls.o mpi.o
+	cgls.o fbp.o p2D.o tv_reg.o tv_core.o nexus.o tiff.o timer.o utils.o \
+	ui_calls.o mpi.o point.o c2D.o voxels.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -25,7 +25,7 @@ $(OBJECTS): base_types.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
-	mpi.hpp fbp.hpp
+	mpi.hpp voxels.hpp fbp.hpp blas.hpp
 
 cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp fbp.hpp blas.hpp \
 	ui_calls.hpp
@@ -35,8 +35,7 @@ instruments.o: instruments.cpp instruments.hpp ui_calls.hpp
 parallel.o: parallel.cpp instruments.hpp parallel_f.hpp parallel_b.hpp \
 	project_line.hpp fbp.hpp timer.hpp
 
-cone.o: cone.cpp instruments.hpp cone_b.hpp cone_f.hpp \
-	project_line.hpp fbp.hpp timer.hpp ui_calls.hpp
+cone.o: cone.cpp instruments.hpp cone_f.hpp project_line.hpp timer.hpp fbp.hpp
 
 diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
 
@@ -51,7 +50,9 @@ tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
 fbp.o: fbp.cpp fft.hpp instruments.hpp algorithms.hpp fbp.hpp timer.hpp \
 	ui_calls.hpp
 
-matrix2D.o: matrix2D.cpp instruments.hpp ui_calls.hpp
+p2D.o: p2D.cpp instruments.hpp ui_calls.hpp fbp.hpp
+
+c2D.o: c2D.cpp instruments.hpp ui_calls.hpp fbp.hpp
 
 tiff.o: tiff.cpp tiff.hpp timer.hpp ui_calls.hpp
 
@@ -64,3 +65,7 @@ utils.o: utils.cpp utils.hpp
 ui_calls.o: ui_calls.cpp ui_calls.hpp
 
 mpi.o: mpi.cpp mpi.hpp
+
+voxels.o: voxels.cpp instruments.hpp utils.hpp voxels.hpp fbp.hpp
+
+point.o: point.cpp

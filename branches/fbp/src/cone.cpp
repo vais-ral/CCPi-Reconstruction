@@ -14,7 +14,6 @@
 #include "cone_b.hpp"
 #include "cone_f.hpp"
 #include "timer.hpp"
-#include "ui_calls.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -48,11 +47,12 @@ void CCPi::cone_beam::set_params(const real sx, const real sy, const real sz,
     phi[i] = ang[i];
 }
 
-void CCPi::cone_beam::forward_project(pixel_data &pixels,
-				      voxel_data &voxels,
-				      const real origin[3],
-				      const real width[3], const int nx,
-				      const int ny, const int nz)
+void CCPi::cone_beam::safe_forward_project(pixel_data &pixels,
+					   voxel_data &voxels,
+					   const real origin[3],
+					   const real width[3],
+					   const int nx, const int ny,
+					   const int nz)
 {
   timer fptime(USE_TIMER);
   instrument::forward_project(source_x, source_y, source_z, detector_x,
@@ -64,6 +64,27 @@ void CCPi::cone_beam::forward_project(pixel_data &pixels,
   fptime.output(" forward projection");
 }
 
+void CCPi::cone_beam::forward_project(pixel_data &pixels,
+				      voxel_data &voxels,
+				      const real origin[3],
+				      const real width[3], const int nx,
+				      const int ny, const int nz)
+{
+  timer fptime(USE_TIMER);
+  /*
+  instrument::forward_project(source_x, source_y, source_z, detector_x,
+			      get_h_pixels(), get_v_pixels(), get_phi(),
+			      pixels, voxels, get_num_angles(),
+			      get_num_h_pixels(), get_num_v_pixels(), origin,
+			      width, nx, ny, nz);
+  */
+  f2D(source_x, source_y, source_z, detector_x, get_h_pixels(), get_v_pixels(),
+      get_phi(), pixels, voxels, get_num_angles(), get_num_h_pixels(),
+      get_num_v_pixels(), origin, width, nx, ny, nz);
+  fptime.accumulate();
+  fptime.output(" forward projection");
+}
+
 void CCPi::cone_beam::backward_project(pixel_data &pixels,
 				       voxel_data &voxels,
 				       const real origin[3],
@@ -71,11 +92,16 @@ void CCPi::cone_beam::backward_project(pixel_data &pixels,
 				       const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
+  /*
   instrument::backward_project(source_x, source_y, source_z, detector_x,
 			       get_h_pixels(), get_v_pixels(), get_phi(),
 			       pixels, voxels, get_num_angles(),
 			       get_num_h_pixels(), get_num_v_pixels(), origin,
 			       width, nx, ny, nz);
+  */
+  b2D(source_x, source_y, source_z, detector_x, get_h_pixels(), get_v_pixels(),
+      get_phi(), pixels, voxels, get_num_angles(), get_num_h_pixels(),
+      get_num_v_pixels(), origin, width, nx, ny, nz);
   bptime.accumulate();
   bptime.output("backward projection");
 }
@@ -86,19 +112,16 @@ void CCPi::cone_beam::backward_project(voxel_data &voxels,
 				       const int ny, const int nz)
 {
   timer bptime(USE_TIMER);
+  /*
   instrument::backward_project(source_x, source_y, source_z, detector_x,
 			       get_h_pixels(), get_v_pixels(), get_phi(),
 			       get_pixel_data(), voxels,
 			       get_num_angles(), get_num_h_pixels(),
 			       get_num_v_pixels(), origin, width, nx, ny, nz);
+  */
+  b2D(source_x, source_y, source_z, detector_x, get_h_pixels(), get_v_pixels(),
+      get_phi(), get_pixel_data(), voxels, get_num_angles(), get_num_h_pixels(),
+      get_num_v_pixels(), origin, width, nx, ny, nz);
   bptime.accumulate();
   bptime.output("backward projection");
-}
-
-void CCPi::cone_beam::setup_projection_matrix(const real origin[3],
-					      const real width[3],
-					      const int nx, const int ny,
-					      const int nz)
-{
-  report_error("Projection matrix not implemented");
 }
