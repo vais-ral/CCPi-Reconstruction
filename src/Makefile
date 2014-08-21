@@ -25,7 +25,7 @@ $(OBJECTS): base_types.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
-	mpi.hpp voxels.hpp
+	mpi.hpp voxels.hpp blas.hpp
 
 cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp blas.hpp
 
