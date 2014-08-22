@@ -197,7 +197,8 @@ namespace CCPi {
 			    const recon_2d &d_conv, const recon_1d &delta_z,
 			    const recon_1d &inv_delz, const recon_1d &vox_z,
 			    const real_1d &v_pixels, const recon_type pzbz,
-			    const recon_type inv_dz);
+			    const recon_type inv_dz, const long ij_base,
+			    const long nyz);
     static void bproject_ah(const real source_x, const real source_y,
 			    const real detector_x, pixel_data &pixels,
 			    voxel_data &voxels, const real x_0,
@@ -218,7 +219,8 @@ namespace CCPi {
 			    const real_1d &p1x, const real_1d &p1y,
 			    const real_1d &cpy, const real_1d &spy,
 			    const real_1d &cdetx, const real_1d &sdetx,
-			    const real_1d &ilcphi, const real_1d &ilsphi);
+			    const real_1d &ilcphi, const real_1d &ilsphi,
+			    const int a_off);
     static void b2D(const real source_x, const real source_y,
 		    const real source_z, const real detector_x,
 		    const real_1d &h_pixels, const real_1d &v_pixels,
@@ -284,6 +286,7 @@ namespace CCPi {
 			    const int nv, const recon_type d_conv,
 			    const real_1d &v_pixels,
 			    const real cphi, const real sphi,
+			    const long ij_base, const long nyz,
 			    const int_1d &mapping, const int map_type);
     static void bproject_ah(const real source_x,
 			    const real detector_x, pixel_data &pixels,
@@ -299,7 +302,8 @@ namespace CCPi {
 			    const real_1d &y_offset, const real_1d &i_offset,
 			    const real_1d &length, const real h_pix0,
 			    const real ihp_step, const recon_type d_conv,
-			    const int_1d &mapping, const int map_type);
+			    const int a_off, const int_1d &mapping,
+			    const int map_type);
     static void gen_mapping(int_1d &mapping, int &map_type,
 			    const real_1d &v_pixels, const real vox_z,
 			    const real size_z, const int nv);

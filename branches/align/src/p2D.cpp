@@ -138,6 +138,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 				      const int nv, const recon_type d_conv,
 				      const real_1d &v_pixels,
 				      const real cphi, const real sphi,
+				      const long ij_base, const long nyz,
 				      const int_1d &mapping,
 				      const int map_type)
 {
@@ -147,7 +148,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
   recon_1d l_xy(2 * max_n);
   long_1d ij_arr(2 * max_n + 1);
   int count = 0;
-  long nyz = long(ny) * long(nz);
+  //long nyz = long(ny) * long(nz);
   if (std::abs(cphi) < epsilon) {
     if (std::abs(sphi) < epsilon) {
       // Its not a line - shouldn't happen
@@ -157,7 +158,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
       int i = int(std::floor((p2_x - b_x) / d_x)); // == q2_x
       if (i >= 0 and i < nx) {
 	if (sphi < 0.0) {
-	  long ij_offset = long(i) * nyz + long(ny - 1) * long(nz);
+	  long ij_offset = ij_base + long(i) * nyz + long(ny - 1) * long(nz);
 	  for (int j = ny - 1; j >= 0; j--) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
@@ -165,7 +166,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    count++;
 	  }
 	} else {
-	  long ij_offset = long(i) * nyz;
+	  long ij_offset = ij_base + long(i) * nyz;
 	  for (int j = 0; j < ny; j++) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
@@ -180,7 +181,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
     int j = int(std::floor((p2_y - b_y) / d_y)); // == q2_y
     if (j >= 0 and j < ny) {
       if (cphi < 0.0) {
-	long ij_offset = long(nx - 1) * nyz + long(j) * long(nz);
+	long ij_offset = ij_base + long(nx - 1) * nyz + long(j) * long(nz);
 	for (int i = nx - 1; i >= 0; i--) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
@@ -188,7 +189,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	  count++;
 	}
       } else {
-	long ij_offset = long(j) * long(nz);
+	long ij_offset = ij_base + long(j) * long(nz);
 	for (int i = 0; i < nx; i++) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
@@ -241,7 +242,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    report_error("something wrong in x+ y+");
 	  // could do x_next/y_next here and only calc the one that changes
 	  // inside the if statements below, which would reduce the flops
-	  long xy_offset = long(x) * nyz + long(y) * long(nz);
+	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
 	  while (x < nx and y < ny) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y + 1] - epsilon) {
@@ -273,7 +274,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else
 	    report_error("something wrong in x+ y-");
-	  long xy_offset = long(x) * nyz + long(y) * long(nz);
+	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
 	  while (x < nx and y >= 0) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y] - epsilon) {
@@ -307,7 +308,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = 0;
 	  } else
 	    report_error("something wrong in x- y+");
-	  long xy_offset = long(x) * nyz + long(y) * long(nz);
+	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
 	  while (x >= 0 and y < ny) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y + 1] - epsilon) {
@@ -342,7 +343,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = ny - 1;
 	  } else
 	    report_error("something wrong in x- y-");
-	  long xy_offset = long(x) * nyz + long(y) * long(nz);
+	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
 	  while (x >= 0 and y >= 0) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y] - epsilon) {
@@ -391,7 +392,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	  recon_type ln = ln1 - ln2;
 	  int k;
 	  for (k = 0; k < count; k++) {
-	    if (ij_arr[k] == long(i) * nyz + long(j) * long(nz)) {
+	    if (ij_arr[k] == ij_base + long(i) * nyz + long(j) * long(nz)) {
 	      cmp[k] = true;
 	      real diff = l_xy[k] / d_conv;
 	      if (ln < diff - epsilon or ln > diff + epsilon)
@@ -445,21 +446,123 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
   
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, map_type) schedule(dynamic)
-  for (int a = 0; a < n_angles; a++) {
-    for (int h = 0; h < nh_pixels; h++) {
-      // rotate source and detector positions by current angle
-      real cosa = std::cos(angles[a]);
-      real sina = std::sin(angles[a]);
+  const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+  const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+  long nyz = long(ny) * long(nz);
 
-      real p2_x = cosa * detector_x - sina * h_pixels[h];
-      real p2_y = sina * detector_x + cosa * h_pixels[h];
-      real p1_x = p2_x - real(3.0) * cosa * detector_x;
-      real p1_y = p2_y - real(3.0) * sina * detector_x;
-      fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vox_origin[0],
-		  vox_origin[1], vox_origin[2], vox_size[0], vox_size[1],
-		  vox_size[2], nx, ny, nz, a, h, nv_pixels, d_conv, v_pixels,
-		  cosa, sina, mapping, map_type);
+  const int a_block = n_angles;
+  const int x_block = nx;
+  const int y_block = ny;
+  for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+    int a_step = a_block;
+    if (block_a + a_step > n_angles)
+      a_step = n_angles - block_a;
+    // we don't block h since we have a min/max from the x/y blocks
+    for (int block_x = 0; block_x < nx; block_x += x_block) {
+      int x_step = x_block;
+      if (block_x + x_step > nx)
+	x_step = nx - block_x;
+      long i_base = long(block_x) * nyz;
+      real vx = vox_origin[0] + real(block_x) * vox_size[0];
+      real wx = vox_origin[0] + real(block_x + x_step) * vox_size[0];
+      for (int block_y = 0; block_y < ny; block_y += y_block) {
+	int y_step = y_block;
+	if (block_y + y_step > ny)
+	  y_step = ny - block_y;
+	long ij_base = i_base + long(block_y) * long(nz);
+	real vy = vox_origin[1] + real(block_y) * vox_size[1];
+	real wy = vox_origin[1] + real(block_y + y_step) * vox_size[1];	  
+
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, ihp_step, h_pix0, nyz, ij_base, vx, vy, wx, wy, map_type) schedule(dynamic)
+	for (int ax = 0; ax < a_step; ax++) {
+	  int a = block_a + ax;
+	  // rotate source and detector positions by current angle
+	  real cphi = std::cos(angles[a]);
+	  real sphi = std::sin(angles[a]);
+
+          // from bproject
+          int hmin = 0;
+          int hmax = nh_pixels - 1;
+          if (std::abs(cphi) < epsilon) {
+            // line is parallel to y, so just find h that is between x_0/x_n
+            if (sphi < 0.0) {
+              hmin = int(std::floor(vx * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease x_n by tol so inside upper boundary, not on it?
+              hmax = int(std::floor((wx - epsilon) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+            } else {
+              hmin = int(std::ceil((- wx + epsilon) * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease x_n by tol so inside upper boundary, not on it?
+              hmax = int(std::ceil((- vx) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+            }
+          } else if (std::abs(sphi) < epsilon) {
+            if (cphi < 0.0) {
+              hmin = int(std::ceil((- wy + epsilon) * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease wy by tol so inside upper boundary, not on it?
+              hmax = int(std::ceil((- vy) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+            } else {
+              hmin = int(std::floor(vy * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease wy by tol so inside upper boundary, not on it?
+              hmax = int(std::floor((wy - epsilon) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+             }
+          } else {
+            real ymin;
+            real ymax;
+            // Todo - pass in arrays of vy * cphi etc?
+            if (cphi > 0.0) {
+              if (sphi > 0.0) {
+                ymin = vy * cphi - wx * sphi; //y10;
+                ymax = wy * cphi - vx * sphi; //y01;
+              } else {
+                ymin = vy * cphi - vx * sphi; //y00;
+                ymax = wy * cphi - wx * sphi; //y11;
+              }
+            } else {
+              if (sphi > 0.0) {
+                ymin = wy * cphi - wx * sphi; //y11;
+                ymax = vy * cphi - vx * sphi; //y00;
+              } else {
+                ymin = wy * cphi - vx * sphi; //y01;
+                ymax = vy * cphi - wx * sphi; //y10;
+              }
+            }
+            if (ymin < h_pixels[0])
+              hmin = 0;
+            else
+              hmin = int(std::floor(ymin * ihp_step - h_pix0));
+            //if (ymax >= h_pixels[nh]) Todo
+            hmax = std::min(int(std::floor(ymax * ihp_step - h_pix0)),
+                            nh_pixels-1);
+          }
+          // end bproject
+
+	  for (int h = hmin; h <= hmax; h++) {
+	    real p2_x = cphi * detector_x - sphi * h_pixels[h];
+	    real p2_y = sphi * detector_x + cphi * h_pixels[h];
+	    real p1_x = p2_x - real(3.0) * cphi * detector_x;
+	    real p1_y = p2_y - real(3.0) * sphi * detector_x;
+	    fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vx, vy,
+			vox_origin[2], vox_size[0], vox_size[1], vox_size[2],
+			x_step, y_step, nz, a, h, nv_pixels, d_conv, v_pixels,
+			cphi, sphi, ij_base, nyz, mapping, map_type);
+	  }
+	}
+      }
     }
   }
 }
@@ -541,7 +644,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 				      const real_1d &i_offset,
 				      const real_1d &length,
 				      const real h_pix0, const real ihp_step,
-				      const recon_type d_conv,
+				      const recon_type d_conv, const int a_off,
 				      const int_1d &mapping, const int map_type)
 {
   // Rather than using the centre just calculate for all 4 corners,
@@ -556,8 +659,9 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
   // we need for the upper and lower limits.
   //real pixel_step = h_pixels[1] - h_pixels[0];
   long nah = long(n_h) * long(n_v);
-  long ah_offset = 0;
-  for (int a = 0; a < n_angles; a++) {
+  long ah_offset = long(a_off) * nah;
+  for (int ax = 0; ax < n_angles; ax++) {
+    int a = a_off + ax;
     real cphi = cangle[a];
     real sphi = sangle[a];
     // Todo - is there a direction issue here that should swap 0/n?
@@ -571,11 +675,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::floor((x_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = long(hmin) * long(n_v); 
+	long h_offset = ah_offset + long(hmin) * long(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= x_0 and h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -588,11 +692,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::ceil((- x_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = long(hmin) * long(n_v); 
+	long h_offset = ah_offset + long(hmin) * long(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (-h_pixels[h] >= x_0 and -h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -607,11 +711,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::ceil((- y_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = long(hmin) * long(n_v); 
+	long h_offset = ah_offset + long(hmin) * long(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (- h_pixels[h] >= y_0 and - h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -624,11 +728,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::floor((y_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = long(hmin) * long(n_v); 
+	long h_offset = ah_offset + long(hmin) * long(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= y_0 and h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -672,20 +776,20 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
       real ybot = ymin + y_offset[a];
       real ytop = ymax - y_offset[a];
       const real l = length[a];
-      long h_offset = long(hmin) * long(n_v);
+      long h_offset = ah_offset + long(hmin) * long(n_v);
       for (int h = hmin; h <= hmax; h++) {
 	if (h_pixels[h] > ymin + epsilon) {
 	  if (h_pixels[h] < ybot) {
 	    l_xy[count] = l * (h_pixels[h] - ymin) * i_offset[a];
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  } else if (h_pixels[h] <= ytop) {
 	    l_xy[count] = l;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  } else if (h_pixels[h] < ymax - epsilon) {
 	    l_xy[count] = l * (ymax - h_pixels[h]) * i_offset[a];
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  } else
 	    break;
@@ -704,7 +808,8 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
       cmp[k] = false;
     real start[3];
     real end[3];
-    for (int a = 0; a < n_angles; a++) {
+    for (int ax = 0; ax < n_angles; ax++) {
+      int a = a_off + ax;
       for (int h = 0; h < n_h; h++) {
 	real cos_curr_angle = cangle[a];
 	real sin_curr_angle = sangle[a];
@@ -896,17 +1001,39 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
   const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
   const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
 
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, yvals, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, source_x, y_offset, i_offset, length, h_pix0, ihp_step, c_angle, s_angle, map_type) schedule(dynamic)
-  for (int i = 0; i < nx; i++) {
-    for (int j = 0; j < ny; j++) {
-      const real x_0 = vox_origin[0] + real(i) * vox_size[0];
-      const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
-      bproject_ah(source_x, detector_x, pixels, voxels,
-		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
-		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
-		  n_angles, nh_pixels, nv_pixels, h_pixels, v_pixels,
-		  c_angle, s_angle, y_offset, i_offset, length,
-		  h_pix0, ihp_step, d_conv, mapping, map_type);
+  const int x_block = nx;
+  const int y_block = ny;
+  const int a_block = n_angles;
+  for (int block_x = 0; block_x < nx; block_x += x_block) {
+    int x_step = x_block;
+    if (block_x + x_step > nx)
+      x_step = nx - block_x;
+    for (int block_y = 0; block_y < ny; block_y += y_block) {
+      int y_step = y_block;
+      if (block_y + y_step > ny)
+	y_step = ny - block_y;
+      for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+	int a_step = a_block;
+	if (block_a + a_step > n_angles)
+	  a_step = n_angles - block_a;
+	// we don't block h since we have a min/max from the x/y blocks
+
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, yvals, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, source_x, y_offset, i_offset, length, h_pix0, ihp_step, c_angle, s_angle, block_x, block_y, x_step, y_step, a_step, block_a, map_type) schedule(dynamic)
+	for (int ix = 0; ix < x_step; ix++) {
+	  int i = block_x + ix;
+	  const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+	  const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
+	  for (int jx = 0; jx < y_step; jx++) {
+	    int j = block_y + jx;
+	    bproject_ah(source_x, detector_x, pixels, voxels, x_0, yvals[j],
+			x_n, yvals[j + 1], vox_origin[2], vox_size[0],
+			vox_size[1], vox_size[2], x_step, y_step, nz,
+			i, j, a_step, nh_pixels, nv_pixels, h_pixels, v_pixels,
+			c_angle, s_angle, y_offset, i_offset, length,
+			h_pix0, ihp_step, d_conv, block_a, mapping, map_type);
+	  }
+	}
+      }
     }
   }      
 }
