@@ -17,6 +17,9 @@ namespace CCPi {
 
   enum devices { dev_Diamond_I12, dev_Nikon_XTek };
 
+  enum ring_artefact_alg { no_ring_artefacts, ring_artefacts_column,
+			   ring_artefacts_aml };
+
   class instrument {
   public:
     virtual bool setup_experimental_geometry(const std::string path,
@@ -312,6 +315,10 @@ namespace CCPi {
 
   class Diamond : public parallel_beam {
   public:
+    Diamond(const bool use_hp = false, const real hpj = 0.0,
+	    const int hp_np = 1, const bool use_ring = false,
+	    const real ra_n = 0.0, const real ra_r = 0.0, const int ra_ns = 0,
+	    const ring_artefact_alg ra_alg = no_ring_artefacts);
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
 				     const real rotation_centre,
@@ -324,6 +331,14 @@ namespace CCPi {
     void apply_beam_hardening();
 
   private:
+    real hp_jump;
+    int hp_num_pix;
+    real aml_param_n;
+    real aml_param_r;
+    int ra_num_series;
+    ring_artefact_alg ra_algorithm;
+    bool use_high_peaks;
+    bool use_ring_artefacts;
     std::string name;
     real h_vox_size;
     real v_vox_size;
@@ -333,6 +348,12 @@ namespace CCPi {
     bool read_data_size(const std::string path, const real rotation_centre);
     bool read_data(const std::string path, const int offset,
 		   const int block_size, const bool first);
+    void high_peaks_before(const real jump, const int num_pix);
+    void ring_artefact_removal(const ring_artefact_alg alg, const real param_n,
+			       const real param_r, const int num_series);
+    void remove_column_ring_artefacts();
+    void remove_aml_ring_artefacts(const real param_n, const real param_r,
+				   const int num_series);
   };
 
   class Nikon_XTek : public cone_beam {
@@ -492,6 +513,16 @@ inline void CCPi::cone_beam::set_source(const real x, const real y,
 inline void CCPi::cone_beam::set_detector(const real x)
 {
   detector_x = x;
+}
+
+inline CCPi::Diamond::Diamond(const bool use_hp, const real hpj,
+			      const int hp_np, const bool use_ring,
+			      const real ra_n, const real ra_r, const int ra_ns,
+			      const ring_artefact_alg ra_alg)
+  : hp_jump(hpj), hp_num_pix(hp_np), aml_param_n(ra_n), aml_param_r(ra_r),
+    ra_num_series(ra_ns), ra_algorithm(ra_alg), use_high_peaks(use_hp),
+    use_ring_artefacts(use_ring)
+{
 }
 
 #endif // CCPI_RECON_INSTRUMENTS
