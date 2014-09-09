@@ -81,7 +81,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
   plhs[0] = mxCreateNumericMatrix(n_rays_y * n_rays_z * n_angles, 1, mxSINGLE_CLASS, mxREAL);
   ray_data = (float *) mxGetData(plhs[0]);
-  pixel_data px(ray_data, boost::extents[n_angles][n_rays_z][n_rays_y]);
+  pixel_data px(ray_data, boost::extents[n_angles][n_rays_y][n_rays_z]);
 
   std::vector<real> y_pix(n_rays_y);
   for (int i = 0; i < n_rays_y; i++)
