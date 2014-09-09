@@ -66,7 +66,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	grid_offset = mxGetPr(prhs[8]);
     
     ray_data = (float *) mxGetData(prhs[9]);
-    pixel_data px(ray_data, boost::extents[n_angles][n_rays_z][n_rays_y]);
+    pixel_data px(ray_data, boost::extents[n_angles][n_rays_y][n_rays_z]);
     
     angles = mxGetPr(prhs[10]);
     
