@@ -451,8 +451,8 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   long nyz = long(ny) * long(nz);
 
   const int a_block = n_angles;
-  const int x_block = nx;
-  const int y_block = ny;
+  const int x_block = 32;
+  const int y_block = 32;
   for (int block_a = 0; block_a < n_angles; block_a += a_block) {
     int a_step = a_block;
     if (block_a + a_step > n_angles)
@@ -1001,9 +1001,9 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
   const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
   const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
 
-  const int x_block = nx;
-  const int y_block = ny;
-  const int a_block = n_angles;
+  const int x_block = 32;
+  const int y_block = 32;
+  const int a_block = 40;
   for (int block_x = 0; block_x < nx; block_x += x_block) {
     int x_step = x_block;
     if (block_x + x_step > nx)
