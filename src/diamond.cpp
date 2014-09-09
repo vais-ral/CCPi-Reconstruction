@@ -1,9 +1,11 @@
 
 #include <iostream>
+#include <cmath>
 #include "base_types.hpp"
 #include "instruments.hpp"
 #include "nexus.hpp"
 #include "utils.hpp"
+#include "ui_calls.hpp"
 
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
@@ -257,6 +259,14 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       for (sl_int k = 0; k < nh; k++)
 	for (sl_int j = 0; j < nv; j++)
 	  pixels[i][k][j] /= bright[k][j];
+      // clamp to 1.0
+      for (sl_int k = 0; k < nh; k++) {
+	for (sl_int j = 0; j < nv; j++) {
+	  pixels[i][k][j] -= dark[k][j];
+	  if (pixels[i][k][j] > real(1.0))
+	    pixels[i][k][j] = 1.0;
+	}
+      }
     }
     // take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < nangles; i++)
@@ -264,6 +274,13 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
 	for (sl_int j = 0; j < nv; j++)
 	  pixels[i][k][j] = - std::log(pixels[i][k][j]);
     //find_centre(get_num_v_pixels() / 2 + 1);
+    if (use_high_peaks)
+      high_peaks_before(hp_jump, hp_num_pix);
+    if (use_ring_artefacts)
+      ring_artefact_removal(ra_algorithm, aml_param_n, aml_param_r,
+			    ra_num_series);
+    //if (use_intensity_norm) - port fbp intensity_norm routine
+    //normalise_intensity();
   }
   return ok;
 }
@@ -326,4 +343,310 @@ void CCPi::Diamond::apply_beam_hardening()
     for (sl_int k = 0; k < get_num_h_pixels(); k++)
       for (sl_int j = 0; j < get_num_v_pixels(); j++)
 	pixels[i][k][j] = pixels[i][k][j] * pixels[i][k][j];
+}
+
+void CCPi::Diamond::high_peaks_before(const real jump, const int num_pix)
+{
+  // ported from high_peaks_before routine in Manchester/Diamond FBP code
+  sl_int nh = get_num_h_pixels();
+  sl_int nv = get_num_v_pixels();
+  sl_int nangles = get_num_angles();
+  if (jump < 0.0) {
+    report_error("High peaks - negative jump");
+    return;
+  }
+  if (num_pix < 1 or num_pix >= nangles) {
+    report_error("High peaks - wrong number of neighbours");
+    return;
+  }
+  pixel_data &pixels = get_pixel_data();
+  // correct each slice
+  pixel_2d temp1(boost::extents[nangles - 1][nh]);
+  //pixel_2d temp2(boost::extents[nangles - 1][nh]);
+  // Todo - better loop structure - might require larger temp space.
+  for (int v = 0; v < nv; v++) {
+    // iterate num_pix times
+    for (int k = 0; k < num_pix; k++) {
+      // ToptoBottom
+      //ippsSub
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++)
+	  temp1[a][h] = pixels[a][h][v] - pixels[a + 1][h][v];
+      }
+      /*
+      // ippsThreshold_LTValGTVal
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++) {
+	  if (temp1[a][h] < -jump)
+	    temp2[a][h] = 1.0;
+	  else if (temp2[a][h] > -jump)
+	    temp2[a][h] = 0.0;
+	  else
+	    temp2[a][h] = temp1[a][h];
+	}
+      }
+      */
+      // ippsTheshold_LT
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++) {
+	  if (temp1[a][h] < -jump)
+	    temp1[a][h] = -jump;
+	}
+      }
+      /*
+      // ippsSum - could probably do this with LTValGTVal
+      pixel_type sum = 0.0;
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++) {
+	  sum += temp2[a][h];
+	}
+      }
+      */
+      // ippsAdd
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++)
+	  pixels[a][h][v] = pixels[a + 1][h][v] + temp1[a][h];
+      }
+      //BottomtoTop
+      //ippsSub
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++)
+	  temp1[a][h] = pixels[a + 1][h][v] - pixels[a][h][v];
+      }
+      /*
+      // ippsThreshold_LTValGTVal
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++) {
+	  if (temp1[a][h] < -jump)
+	    temp2[a][h] = 1.0;
+	  else if (temp2[a][h] > -jump)
+	    temp2[a][h] = 0.0;
+	  else
+	    temp2[a][h] = temp1[a][h];
+	}
+      }
+      */
+      // ippsTheshold_LT
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++) {
+	  if (temp1[a][h] < -jump)
+	    temp1[a][h] = -jump;
+	}
+      }
+      /*
+      // ippsSum - could probably do this with LTValGTVal
+      pixel_type sum = 0.0;
+      for (int a = 0; a < nangles - 1; a++) {
+	for (int h = 0; h < nh; h++) {
+	  sum += temp2[a][h];
+	}
+      }
+      */
+      // ippsAdd
+      for (int a = nangles - 2; a >= 0; a--) {
+	for (int h = 0; h < nh; h++)
+	  pixels[a + 1][h][v] = pixels[a][h][v] + temp1[a][h];
+      }
+    }
+  }
+}
+
+void CCPi::Diamond::remove_column_ring_artefacts(/*const real param_n,
+						 const real param_r,
+						 const int num_series*/)
+{
+  sl_int nh = get_num_h_pixels(); // nxi
+  sl_int nv = get_num_v_pixels();
+  sl_int nangles = get_num_angles(); // ny
+  pixel_data &pixels = get_pixel_data();
+  const int crop_left = 0;
+  const int crop_right = 0;
+  const int nx = nh - (crop_left + crop_right);
+  real_1d vec_res(nx);
+  real_1d vec64(nx);
+  pixel_1d vec32(nx);
+  // ippsZero
+  for (int v = 0; v < nv; v++) {
+    for (int h = 0; h < nx; h++)
+      vec_res[h] = real(0.0);
+    // Todo - don't need vec64 really
+    for (int a = 0; a < nangles; a++) {
+      // ippsConvert
+      for (int h = 0; h < nx; h++)
+	vec64[h] = real(pixels[a][h + crop_left][v]);
+      // ippsAdd
+      for (int h = 0; h < nx; h++)
+	vec_res[h] += vec64[h];
+    }
+    // ippsDivC
+    for (int h = 0; h < nx; h++)
+      vec_res[h] /= real(nangles);
+    // ippsConvert
+    for (int h = 0; h < nx; h++)
+      vec32[h] = pixel_type(vec_res[h]);
+    // ippsSub
+    for (int a = 0; a < nangles; a++) {
+      for (int h = 0; h < nx; h++)
+	pixels[a][h + crop_left][v] -= vec32[h];
+    }
+  }
+}
+
+void CCPi::Diamond::remove_aml_ring_artefacts(const real param_n,
+					      const real param_r,
+					      const int num_series)
+{
+  sl_int nh = get_num_h_pixels(); // nxi
+  sl_int nv = get_num_v_pixels();
+  sl_int nangles = get_num_angles(); // ny
+  if (param_n < -1e-10) {
+    report_error("Ring artefacts - wrong param N");
+    return;
+  }
+  if (param_r < 1e-8) {
+    report_error("Ring artefacts - wrong param R");
+    return;
+  }
+  if (num_series < 1 or num_series > 100) {
+    report_error("High peaks - num series out of range");
+    return;
+  }
+  pixel_data &pixels = get_pixel_data();
+  const int crop_left = 0;
+  const int crop_right = 0;
+  const int nx = nh - (crop_left + crop_right);
+  // based on Applied Mathematics Letters v23 p1489
+  // Init
+  real_3d mata(boost::extents[num_series][nx][nx]);
+  real_2d vecRS(boost::extents[2 * num_series][nangles]);
+  {
+    // Todo - can combine a lot of this
+    for(int s = 1; s < num_series; s++) {
+      // ippsVectorSlope
+      real slope = real(s) * M_PI / real(nangles);
+      for (int i = 0; i < nangles; i++)
+	vecRS[0][i] = real(i) * slope; // + 0.0
+      // ippsSinCos
+      for (int i = 0; i < nangles; i++) {
+	vecRS[2 * s - 1][i] = std::sin(vecRS[0][i]);
+	vecRS[2 * s - 0][i] = std::cos(vecRS[0][i]);
+      }
+      // ippsMulC
+      real sqrt2 = std::sqrt(real(2.0));
+      for (int i = 0; i < nangles; i++)
+	vecRS[2 * s - 1][i] *= sqrt2;
+      for (int i = 0; i < nangles; i++)
+	vecRS[2 * s - 0][i] *= sqrt2;
+    }
+    // ippsSet
+    for (int i = 0; i < nangles; i++)
+      vecRS[0][i] = 1.0;
+    real_1d vec_exp(2 * nx + 2);
+    for(int s = 1; s <= num_series; s++){
+      real alpha = (param_n + param_r) * real(s * s);
+      real mdiv = std::sqrt(alpha * (alpha + real(4.0)));
+      real vec1 = std::sqrt(alpha) / real(2.0);
+      //ippsAsinh
+      real vec2 = asinh(vec1); // ln(x + sqrt(x * x + 1))
+      real tau = 2.0 * vec2;
+      // ippsVectorSlope
+      for (int i = 0; i < 2 * nx + 2; i++)
+	vec_exp[i] = -tau * real(i); // + 0.0
+      // ippsExp
+      for (int i = 0; i < 2 * nx + 2; i++)
+	vec_exp[i] = std::exp(vec_exp[i]);
+      int ii;
+      int jj;
+      for (int i = 0; i < nx; i++) {
+	for (int j = 0; j < nx; j++) {
+	  if (j > i) {
+	    ii = i;
+	    jj = j;
+	  } else {
+	    ii = j;
+	    jj = i;
+	  }
+	  ii++;
+	  jj++;
+	  mata[s - 1][i][j] = vec_exp[abs(jj - ii)] *
+	    (1.0 + vec_exp[2 * nx - 2 * jj + 1]) * (1.0 + vec_exp[2 * ii - 1]);
+	}
+      }
+      // ippsDivC
+      real dv = mdiv * (1.0 - vec_exp[2 * nx]);
+      for (int i = 0; i < nx; i++)
+	for (int j = 0; j < nx; j++)
+	  mata[s - 1][i][j] /= dv;
+    }
+  }
+  // per slice code
+  real_1d vec_res(nx);
+  real_1d vec64(nx);
+  pixel_1d vec32(nx);
+  int n = 2 * num_series - 1;
+  for (int v = 0; v < nv; v++) {
+    for (int s = 0; s < n; s++) {
+      int ss = (s + 2) / 2;
+      for (int h = 0; h < nx; h++)
+	vec_res[h] = real(0.0);
+      for (int a = 0; a < nangles; a++) {
+	// ippsConvert
+	for (int h = 0; h < nx; h++)
+	  vec64[h] = real(pixels[a][h + crop_left][v]);
+	// ippsMul
+	for (int h = 0; h < nx; h++)
+	  vec64[h] *= vecRS[s][a];
+	// ippsAdd
+	for (int h = 0; h < nx; h++)
+	  vec_res[h] += vec64[h];
+      }
+      // ippsDivC
+      for (int h = 0; h < nx; h++)
+	vec_res[h] /= real(nangles);
+      // ippsMulC
+      for (int h = 0; h < nx; h++)
+	vec64[h] = param_n * real(ss * ss) * vec_res[h];
+      // ippsAdd
+      for (int h = 0; h < nx - 1; h++)
+	vec64[h] += vec_res[h];
+      // ippsSub
+      for (int h = 0; h < nx - 1; h++)
+	vec64[h] -= vec_res[h + 1];
+      // ippsSub
+      for (int h = 1; h < nx; h++)
+	vec64[h] -= vec_res[h];
+      // ippsAdd
+      for (int h = 0; h < nx - 1; h++)
+	vec64[h + 1] += vec_res[h];
+      // ippsDotProd
+      // Todo - we don't seem to use mata[>0][][], why?, and can we avoid calc?
+      for (int i = 0; i < nx; i++) {
+	real dp = 0.0;
+	for (int h = 0; h < nx; h++)
+	  dp += vec64[h] * mata[0][i][h];
+	vec_res[i] = dp;
+      }
+      // ippsConvert
+      for (int h = 0; h < nx; h++)
+	vec32[h] = pixel_type(vec_res[h]);
+      for (int a = 0; a < nangles; a++) {
+	// ippsAddProductC
+	for (int h = 0; h < nx; h++)
+	  pixels[a][h + crop_left][v] -= pixel_type(vecRS[s][a]) * vec32[h];
+      }
+    }
+  }
+}
+
+// Todo - virtual fns and Diamond sub-classes for each alg?
+void CCPi::Diamond::ring_artefact_removal(const ring_artefact_alg alg,
+					  const real param_n,
+					  const real param_r,
+					  const int num_series)
+{
+  // ported from ring_artefacts routine in Manchester/Diamond FBP code
+  if (alg == ring_artefacts_column)
+    remove_column_ring_artefacts();
+  else if (alg == ring_artefacts_aml)
+    remove_aml_ring_artefacts(param_n, param_r, num_series);
 }

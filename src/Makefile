@@ -36,7 +36,7 @@ parallel.o: parallel.cpp instruments.hpp parallel_f.hpp parallel_b.hpp \
 
 cone.o: cone.cpp instruments.hpp cone_f.hpp project_line.hpp timer.hpp
 
-diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
+diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp ui_calls.hpp
 
 xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp ui_calls.hpp
 
