@@ -262,7 +262,6 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       // clamp to 1.0
       for (sl_int k = 0; k < nh; k++) {
 	for (sl_int j = 0; j < nv; j++) {
-	  pixels[i][k][j] -= dark[k][j];
 	  if (pixels[i][k][j] > real(1.0))
 	    pixels[i][k][j] = 1.0;
 	}
@@ -542,7 +541,7 @@ void CCPi::Diamond::remove_aml_ring_artefacts(const real param_n,
     for (int i = 0; i < nangles; i++)
       vecRS[0][i] = 1.0;
     real_1d vec_exp(2 * nx + 2);
-    for(int s = 1; s <= num_series; s++){
+    for (int s = 1; s <= num_series; s++) {
       real alpha = (param_n + param_r) * real(s * s);
       real mdiv = std::sqrt(alpha * (alpha + real(4.0)));
       real vec1 = std::sqrt(alpha) / real(2.0);
@@ -612,12 +611,12 @@ void CCPi::Diamond::remove_aml_ring_artefacts(const real param_n,
       // ippsSub
       for (int h = 0; h < nx - 1; h++)
 	vec64[h] -= vec_res[h + 1];
-      // ippsSub
-      for (int h = 1; h < nx; h++)
-	vec64[h] -= vec_res[h];
       // ippsAdd
+      for (int h = 1; h < nx; h++)
+	vec64[h] += vec_res[h];
+      // ippsSub
       for (int h = 0; h < nx - 1; h++)
-	vec64[h + 1] += vec_res[h];
+	vec64[h + 1] -= vec_res[h];
       // ippsDotProd
       // Todo - we don't seem to use mata[>0][][], why?, and can we avoid calc?
       for (int i = 0; i < nx; i++) {
