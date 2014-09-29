@@ -52,7 +52,7 @@ int main()
   // Todo - get stuff rather than the above test defaults here
   switch (device) {
   case CCPi::dev_Diamond_I12:
-    instrument = new CCPi::Diamond(true, 0.05, 2, true, 0.000, 0.0050,
+    instrument = new CCPi::Diamond(true, 0.05, 2, true, 0.000, 0.0050, 1,
 				   CCPi::ring_artefacts_aml);
     break;
   case CCPi::dev_Nikon_XTek:
