@@ -66,6 +66,25 @@ inline void norm_voxels(const voxel_data &v, const sl_int nx, const sl_int ny,
   }
 }
 
+inline voxel_type norm_voxels(const voxel_data &v1, const voxel_data &v2,
+			      const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  voxel_type norm = 0.0;
+#pragma omp parallel for shared(v1, v2, norm) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    voxel_type n1 = 0.0;
+    for (sl_int j = 0; j < ny; j++) {
+      voxel_type n2 = 0.0;
+      for (sl_int k = 0; k < nz; k++)
+	n2 += v1[i][j][k] * v2[i][j][k];
+      n1 += n2;
+    }
+#pragma omp atomic
+    norm += n1;
+  }
+  return norm;
+}
+
 inline pixel_type norm_pixels(const pixel_data &p, const sl_int na,
 			      const sl_int nv, const sl_int nh)
 {
@@ -140,7 +159,7 @@ inline void sub_axpy(const pixel_1d &alpha,
 		     boost::multi_array_ref<real_type, 3> &y, const sl_int na,
 		     const sl_int nv, const sl_int nh, const int ppv)
 {
-  // y += alpha * x
+  // y -= alpha * x
 #pragma omp parallel for shared(x, y, alpha) firstprivate(na, nv, nh, ppv) schedule(dynamic)
   for (sl_int i = 0; i < na; i++) {
     for (sl_int j = 0; j < nh; j++)

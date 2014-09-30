@@ -78,6 +78,12 @@ int main()
     recon_algorithm = new CCPi::tv_regularization(alpha, tau, l, mu,
 						  tv_reg_constraint);
     break;
+  case CCPi::alg_BiCGLS:
+    recon_algorithm = new CCPi::bi_cgls_3d(niterations);
+    break;
+  case CCPi::alg_BiCGSTABLS:
+    recon_algorithm = new CCPi::bi_cgstabls_3d(niterations);
+    break;
   default:
     std::cerr << "ERROR: Unknown algorithm\n";
     setup_ok = false;
