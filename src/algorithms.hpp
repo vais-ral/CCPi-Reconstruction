@@ -6,7 +6,7 @@
 
 namespace CCPi {
 
-  enum algorithms { alg_FDK, alg_CGLS, alg_TVreg };
+  enum algorithms { alg_FDK, alg_CGLS, alg_TVreg, alg_BiCGLS, alg_BiCGSTABLS };
 
   class reconstruction_alg {
   public:
@@ -37,6 +37,7 @@ namespace CCPi {
     virtual void voxel_update(const voxel_data &s, voxel_data &v,
 			      const sl_int nx, const sl_int ny, const sl_int nz,
 			      voxel_1d &norm) const = 0;
+    int get_iterations() const;
 
   private:
     int iterations;
@@ -83,6 +84,30 @@ namespace CCPi {
     int pixels_per_voxel;
   };
 
+  class bi_cgls_3d : public cgls_3d {
+  public:
+    bi_cgls_3d(const int niterations);
+
+    bool reconstruct(class instrument *device, voxel_data &voxels,
+		     const real origin[3], const real voxel_size[3]);
+
+  private:
+    voxel_type voxel_update(voxel_data &v, voxel_data &p0,
+			    voxel_data &r0, const voxel_data &vq,
+			    const sl_int nx, const sl_int ny, const sl_int nz,
+			    const pixel_data &q, const sl_int n_angles,
+			    const sl_int n_h, const sl_int n_v,
+			    const voxel_type gamma) const;
+  };
+
+  class bi_cgstabls_3d : public cgls_3d {
+  public:
+    bi_cgstabls_3d(const int niterations);
+
+    bool reconstruct(class instrument *device, voxel_data &voxels,
+		     const real origin[3], const real voxel_size[3]);
+  };
+
   class tv_regularization : public reconstruction_alg {
   public:
     tv_regularization(const real alph, const real t, const real L,
@@ -126,6 +151,11 @@ inline CCPi::cgls_base::cgls_base(const int niterations)
 {
 }
 
+inline int CCPi::cgls_base::get_iterations() const
+{
+  return iterations;
+}
+
 inline CCPi::cgls_3d::cgls_3d(const int niterations)
   : cgls_base(niterations)
 {
@@ -140,6 +170,16 @@ inline CCPi::tv_regularization::tv_regularization(const real alph,
 						  const real t, const real L,
 						  const real mu, const int c)
   : alpha(alph), tau(t), init_L(L), init_mu(mu), constraint(c)
+{
+}
+
+inline CCPi::bi_cgls_3d::bi_cgls_3d(const int niterations)
+  : cgls_3d(niterations)
+{
+}
+
+inline CCPi::bi_cgstabls_3d::bi_cgstabls_3d(const int niterations)
+  : cgls_3d(niterations)
 {
 }
 
