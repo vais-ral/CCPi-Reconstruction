@@ -52,7 +52,7 @@ int main()
   // Todo - get stuff rather than the above test defaults here
   switch (device) {
   case CCPi::dev_Diamond_I12:
-    instrument = new CCPi::Diamond(true, 0.05, 2, true, 0.000, 0.0050,
+    instrument = new CCPi::Diamond(true, 0.05, 2, true, 0.000, 0.0050, 1,
 				   CCPi::ring_artefacts_aml);
     break;
   case CCPi::dev_Nikon_XTek:
@@ -77,6 +77,12 @@ int main()
   case CCPi::alg_TVreg:
     recon_algorithm = new CCPi::tv_regularization(alpha, tau, l, mu,
 						  tv_reg_constraint);
+    break;
+  case CCPi::alg_BiCGLS:
+    recon_algorithm = new CCPi::bi_cgls_3d(niterations);
+    break;
+  case CCPi::alg_BiCGSTABLS:
+    recon_algorithm = new CCPi::bi_cgstabls_3d(niterations);
     break;
   default:
     std::cerr << "ERROR: Unknown algorithm\n";
