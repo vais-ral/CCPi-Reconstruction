@@ -168,9 +168,7 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	  pixel_base = -((n_v_pixels - 1) * ypixel_size / real(2.0));
 	  for (int i = 0; i < n_v_pixels; i++)
 	    v_pixels[i] = pixel_base + real(i) * ypixel_size;
-	  std::string ctfile;
-	  combine_path_and_name(path, "_ctdata.txt", ctfile);
-	  ok = read_angles(ctfile, init_angle, n_phi);
+	  ok = read_angles(path, init_angle, n_phi);
 	} else {
 	  ok = false;
 	  report_error("Negative pixel values");
@@ -191,12 +189,14 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
   return ok;
 }
 
-bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
+bool CCPi::Nikon_XTek::read_angles(const std::string path,
 				   const real init_angle, const int n)
 {
   // since we read actual angles the answer is probably no
   //std::cout << "Should we use initial angle?\n";
-  std::ifstream data(datafile.c_str());
+  std::string ctfile;
+  combine_path_and_name(path, "_ctdata.txt", ctfile);
+  std::ifstream data(ctfile.c_str());
   if (data.good()) {
     real_1d &p = set_phi(n);
     // get first 3 string labels
@@ -224,8 +224,36 @@ bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
     data.close();
     return true;
   } else {
-    report_error("Error opening ctdata file");
-    return false;
+    // Try stop/start angles file rather than continuous scan one
+    std::string ang_base;
+    combine_path_and_name(path, basename, ang_base);
+    std::string ang_name = ang_base + ".ang";
+    std::ifstream ang_file(ang_name.c_str());
+    if (ang_file.good()) {
+      real_1d &p = set_phi(n);
+      // skip first line
+      char line[128];
+      ang_file.getline(line, 128);
+      real tmp;
+      char colon;
+      for (int i = 0; i < n; i++) {
+	// skip index
+	ang_file >> tmp;
+	// skip colon
+	ang_file >> colon;
+	ang_file >> tmp;
+	// everything else is radians
+	p[i] = real(M_PI) * tmp / real(180.0);
+	// Do we need to skip //^M?
+	ang_file.getline(line, 128);
+      }
+      // Todo
+      ang_file.close();
+      return true;
+    } else {
+      report_error("Error opening ctdata file");
+      return false;
+    }
   }
 }
 
