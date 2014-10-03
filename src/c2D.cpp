@@ -35,7 +35,7 @@ static const std::size_t alignsize = 16;
 
 void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy,
-				const std::vector<long> &ij, const int n,
+				const std::vector<sl_int> &ij, const int n,
 				const int a, const int h,
 				const recon_type pzbz, const recon_type inv_dz,
 				const int nv, const int nz, const int midp,
@@ -247,8 +247,8 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 
   int max_n = std::max(nx, ny);
   recon_1d alpha_xy(2 * max_n);
-  std::vector<long> ij_arr(2 * max_n + 1);
-  long nyz = long(ny) * long(nz);
+  std::vector<sl_int> ij_arr(2 * max_n + 1);
+  sl_int nyz = sl_int(ny) * sl_int(nz);
   int count = 0;
   if (std::abs(delta_x) < epsilon) {
     if (std::abs(delta_y) < epsilon) {
@@ -260,7 +260,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
       if (i >= 0 and i < nx) {
 	if (delta_y < 0.0) {
 	  alpha_xy[count] = (real(ny) - q1_y) * inv_dy;
-	  long offset = long(i) * nyz + long(ny - 1) * long(nz);
+	  sl_int offset = sl_int(i) * nyz + sl_int(ny - 1) * sl_int(nz);
 	  ij_arr[count] = offset;
 	  count++;
 	  for (int j = ny - 1; j >= 0; j--) {
@@ -271,7 +271,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  }
 	} else {
 	  alpha_xy[count] = (real(0) - q1_y) * inv_dy;
-	  long offset = long(i) * nyz;
+	  sl_int offset = sl_int(i) * nyz;
 	  ij_arr[count] = offset;
 	  count++;
 	  for (int j = 0; j < ny; j++) {
@@ -289,7 +289,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
     if (j >= 0 and j < ny) {
       if (delta_x < 0.0) {
 	alpha_xy[count] = (real(nx) - q1_x) * inv_dx;
-	long offset = long(nx - 1) * nyz + long(j) * long(nz);
+	sl_int offset = sl_int(nx - 1) * nyz + sl_int(j) * sl_int(nz);
 	ij_arr[count] = offset;
 	count++;
 	for (int i = nx - 1; i >= 0; i--) {
@@ -300,7 +300,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	}
       } else {
 	alpha_xy[count] = (real(0) - q1_x) * inv_dx;
-	long offset = long(j) * long(nz);
+	sl_int offset = sl_int(j) * sl_int(nz);
 	ij_arr[count] = offset;
 	count++;
 	for (int i = 0; i < nx; i++) {
@@ -351,7 +351,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  } else
 	    report_error("something wrong in x+ y+");
 	  alpha_xy[count] = alpha_min;
-	  long offset = long(x) * nyz + long(y) * long(nz);
+	  sl_int offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  ij_arr[count] = offset;
 	  count++;
 	  // could do x_next/y_next here and only calc the one that changes
@@ -385,7 +385,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  } else
 	    report_error("something wrong in x+ y-");
 	  alpha_xy[count] = alpha_min;
-	  long offset = long(x) * nyz + long(y) * long(nz);
+	  sl_int offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  ij_arr[count] = offset;
 	  count++;
 	  while (x < nx and y >= 0) {
@@ -418,7 +418,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  } else
 	    report_error("something wrong in x- y+");
 	  alpha_xy[count] = alpha_min;
-	  long offset = long(x) * nyz + long(y) * long(nz);
+	  sl_int offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  ij_arr[count] = offset;
 	  count++;
 	  while (x >= 0 and y < ny) {
@@ -452,7 +452,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  } else
 	    report_error("something wrong in x- y-");
 	  alpha_xy[count] = alpha_min;
-	  long offset = long(x) * nyz + long(y) * long(nz);
+	  sl_int offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  ij_arr[count] = offset;
 	  count++;
 	  while (x >= 0 and y >= 0) {
@@ -500,7 +500,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 	  recon_type ln = ln1 - ln2;
 	  int k;
 	  for (k = 1; k < count; k++) {
-	    if (ij_arr[k] == long(i) * nyz + long(j) * long(nz)) {
+	    if (ij_arr[k] == sl_int(i) * nyz + sl_int(j) * sl_int(nz)) {
 	      cmp[k] = true;
 	      real diff = alpha_xy[k] - alpha_xy[k-1];
 	      if (ln < diff - epsilon or ln > diff + epsilon)
@@ -614,7 +614,7 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				const recon_1d &alpha_xy_0,
 				const recon_1d &alpha_xy_1,
-				const std::vector<long> &ah,
+				const std::vector<sl_int> &ah,
 				const int n, const int i, const int j,
 				const recon_type pzbz, const recon_type inv_dz,
 				const int nv, const int nz, const int midp,
@@ -787,16 +787,16 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be
   int count = 0;
-  std::vector<long> ah_arr(2 * pix_per_vox * n_angles);
-  std::vector<int> h_arr(2 * pix_per_vox * n_angles);
-  recon_1d alpha_xy_0(2 * pix_per_vox * n_angles);
-  recon_1d alpha_xy_1(2 * pix_per_vox * n_angles);
+  std::vector<sl_int> ah_arr(4 * pix_per_vox * n_angles);
+  std::vector<int> h_arr(4 * pix_per_vox * n_angles);
+  recon_1d alpha_xy_0(4 * pix_per_vox * n_angles);
+  recon_1d alpha_xy_1(4 * pix_per_vox * n_angles);
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   const real pixel_step = h_pixels[1] - h_pixels[0];
   const real ipix_step = 1.0 / pixel_step;
   const real hpix0 = (source_y - h_pixels[0]) / pixel_step;
-  long nah = long(n_h) * long(n_v);
-  long ah_offset = 0;
+  sl_int nah = sl_int(n_h) * sl_int(n_v);
+  sl_int ah_offset = 0;
   for (int a = 0; a < n_angles; a++) {
     const real cphi = cangle[a];
     const real sphi = sangle[a];
@@ -878,7 +878,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
     hmin = std::max(std::min(hmin, h11), 0);
     hmax = std::min(std::max(hmax, h11), n_h - 1);
     // If it intercepts voxel then calc alpha_xy_0, alpha_xy_1 and store
-    long h_offset = long(hmin) * long(n_v);
+    sl_int h_offset = sl_int(hmin) * sl_int(n_v);
     for (int h = hmin; h <= hmax; h++) {
       const real p2_x = cdetx[a] - sphi * h_pixels[h];
       const real p2_y = sdetx[a] + cphi * h_pixels[h];
@@ -914,7 +914,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
     }
     ah_offset += nah;
   }
-  if (count > 2 * pix_per_vox * n_angles)
+  if (count > 4 * pix_per_vox * n_angles)
     report_error("back project overflow");
 #ifdef TEST2D
   {
@@ -936,7 +936,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	  recon_type ln = ln1 - ln2;
 	  int k;
 	  for (k = 0; k < count; k++) {
-	    if (ah_arr[k] == long(a) * nah + long(h) * n_v) {
+	    if (ah_arr[k] == sl_int(a) * nah + sl_int(h) * n_v) {
 	      cmp[k] = true;
 	      real diff = alpha_xy_1[k] - alpha_xy_0[k];
 	      if (ln < diff - epsilon or ln > diff + epsilon)
