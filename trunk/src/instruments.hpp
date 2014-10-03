@@ -174,7 +174,8 @@ namespace CCPi {
     real detector_x;
 
     static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &alpha_xy, const std::vector<long> &ij,
+			  const recon_1d &alpha_xy,
+			  const std::vector<sl_int> &ij,
 			  const int n, const int a, const int h,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
@@ -183,7 +184,7 @@ namespace CCPi {
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 			  const recon_1d &alpha_xy_0,
 			  const recon_1d &alpha_xy_1,
-			  const std::vector<long> &ah,
+			  const std::vector<sl_int> &ah,
 			  const int n, const int i, const int j,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
@@ -270,13 +271,13 @@ namespace CCPi {
 
   private:
     static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy, const std::vector<long> &ij,
+			  const recon_1d &l_xy, const std::vector<sl_int> &ij,
 			  const int n, const int a,
 			  const int h, const int nv, const int nz,
 			  const std::vector<int> &mapping,
 			  const int map_type);
     static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy, const std::vector<long> &ah,
+			  const recon_1d &l_xy, const std::vector<sl_int> &ah,
 			  const int n, const int i, const int j,
 			  const int nv, const int nz,
 			  const std::vector<int> &mapping,
