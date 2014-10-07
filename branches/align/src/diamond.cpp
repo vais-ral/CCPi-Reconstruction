@@ -10,13 +10,14 @@
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
 						const real rotation_centre,
+						const int pixels_per_voxel,
 						const bool phantom)
 {
   if (phantom)
     return create_phantom();
   else {
     name = file;
-    return read_data_size(path, rotation_centre);
+    return read_data_size(path, rotation_centre, pixels_per_voxel);
   }
 }
 
@@ -27,25 +28,25 @@ bool CCPi::Diamond::create_phantom()
   int c;
   for (c = 0; c < 1000; c++) {
     //real p = -100.0 + c * 0.250;
-    real p = -99.8 + real(c) * 0.400;
+    real p = -99.8046875 + real(c) * 0.390625;
     if (p >= 100.0 + 0.001)
       break;
   }
   real_1d &h_pixels = set_h_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + i * 0.250;
-    h_pixels[i] = -99.8 + real(i) * 0.400;
+    h_pixels[i] = -99.8046875 + real(c) * 0.390625;
   }
   for (c = 0; c < 1000; c++) {
     //real p = -100.0 + real(c) * 0.250;
-    real p = -99.8 + real(c) * 0.400;
+    real p = -99.8046875 + real(c) * 0.390625;
     if (p >= 100.0 + 0.001)
       break;
   }
   real_1d &v_pixels = set_v_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + real(i) * 0.250;
-    v_pixels[i] = -99.8 + real(i) * 0.400;
+    v_pixels[i] = -99.8046875 + real(c) * 0.390625;
   }
   // 501 values from 0 to 2pi
   //geom.angles = linspace(0,2*pi,501);
@@ -53,14 +54,15 @@ bool CCPi::Diamond::create_phantom()
   //geom.angles = geom.angles(1:500);
   const int nangles = 250;
   real_1d &pangles = set_phi(nangles);
-  real step = 2.0 * M_PI / real(nangles);
+  real step = M_PI / real(nangles);
   for (int i = 0; i < nangles; i++)
     pangles[i] = real(i) * step;
   return true;
 }
 
 bool CCPi::Diamond::read_data_size(const std::string path,
-				   const real rotation_centre)
+				   const real rotation_centre,
+				   const int pixels_per_voxel)
 {
   bool ok = false;
   std::string fullname;
@@ -79,9 +81,10 @@ bool CCPi::Diamond::read_data_size(const std::string path,
 #ifdef HAS_NEXUS
   ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
 		  nv_pixels, angles, nangles, hsize, vsize, fullname,
-		  false, false, 0, 10000);
+		  false, false, 0, 10000, 0);
 #endif // HAS_NEXUS
   if (ok) {
+    nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
     real shift = 0.0;
     if (rotation_centre > 0.0) {
       // shift h_pixels
@@ -118,9 +121,9 @@ bool CCPi::Diamond::read_scans(const std::string path, const int offset,
 bool CCPi::Diamond::build_phantom(const int offset, const int block_size)
 {
   // build small voxel set to project to produce initial pixels
-  int nx = 500;
-  int ny = 500;
-  int nz = 500;
+  int nx = 512;
+  int ny = 512;
+  int nz = 512;
 
   const real_1d &h_pixels = get_h_pixels();
   const real_1d &v_pixels = get_all_v_pixels();
@@ -214,10 +217,24 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       f_bright[i][j] = 0.0;
     }
   }
+  int v_offset = get_data_v_offset();
+  int v_size = get_data_v_size();
+  int v_end = v_offset + v_size;
 #ifdef HAS_NEXUS
-  ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
-		  nv_pixels, angles, nangles, hsize, vsize, fullname,
-		  false, true, offset, block_size);
+  int bsize = block_size;
+  // need to be careful that we only read bits for the data set range
+  if (block_size > v_size)
+    bsize = v_size;
+  else if (offset + bsize > v_end)
+    bsize = v_end - offset;
+  else if (offset == 0)
+    bsize = block_size - v_offset;
+  if (bsize > 0)
+    ok = read_NeXus(pixels, i_dark, f_dark, i_bright, f_bright, nh_pixels,
+		    nv_pixels, angles, nangles, hsize, vsize, fullname,
+		    false, true, offset, bsize, v_offset);
+  else // Its an empty data range
+    ok = true;
 #endif // HAS_NEXUS
   nangles = get_num_angles();
   // store data in class - now done by read_data_sizes
@@ -234,22 +251,22 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
       real w = angles[i] / angles[nangles - 1];
       for (sl_int k = 0; k < nh; k++)
-	for (sl_int j = 0; j < nv; j++)
+	for (sl_int j = v_offset; j < v_end; j++)
 	  dark[k][j] = i_dark[k][j] * (real(1.0) - w) + f_dark[k][j] * w;
       for (sl_int k = 0; k < nh; k++)
-	for (sl_int j = 0; j < nv; j++)
+	for (sl_int j = v_offset; j < v_end; j++)
 	  bright[k][j] = i_bright[k][j] * (real(1.0) - w) + f_bright[k][j] * w;
       // subtract dark from data/bright
       // and clamp min data/bright value to 0.1
       for (sl_int k = 0; k < nh; k++) {
-	for (sl_int j = 0; j < nv; j++) {
+	for (sl_int j = v_offset; j < v_end; j++) {
 	  bright[k][j] -= dark[k][j];
 	  if (bright[k][j] < real(0.1))
 	    bright[k][j] = 0.1;
 	}
       }
       for (sl_int k = 0; k < nh; k++) {
-	for (sl_int j = 0; j < nv; j++) {
+	for (sl_int j = v_offset; j < v_end; j++) {
 	  pixels[i][k][j] -= dark[k][j];
 	  if (pixels[i][k][j] < real(0.1))
 	    pixels[i][k][j] = 0.1;
@@ -257,21 +274,30 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
       }
       // scale each data pixel by bright pixel
       for (sl_int k = 0; k < nh; k++)
-	for (sl_int j = 0; j < nv; j++)
+	for (sl_int j = v_offset; j < v_end; j++)
 	  pixels[i][k][j] /= bright[k][j];
       // clamp to 1.0
       for (sl_int k = 0; k < nh; k++) {
-	for (sl_int j = 0; j < nv; j++) {
+	for (sl_int j = v_offset; j < v_end; j++) {
 	  if (pixels[i][k][j] > real(1.0))
 	    pixels[i][k][j] = 1.0;
 	}
       }
     }
     // take -ve log, due to exponential extinction in sample.
-    for (int i = 0; i < nangles; i++)
-      for (sl_int k = 0; k < nh; k++)
-	for (sl_int j = 0; j < nv; j++)
+    for (int i = 0; i < nangles; i++) {
+      for (sl_int k = 0; k < nh; k++) {
+	// initialise aligned bits that don't contain data
+	for (sl_int j = 0; j < v_offset; j++) {
+	  pixels[i][k][j] = 0.0;
+	}
+	for (sl_int j = v_offset; j < v_end; j++)
 	  pixels[i][k][j] = - std::log(pixels[i][k][j]);
+	for (sl_int j = v_end; j < nv; j++) {
+	  pixels[i][k][j] = 0.0;
+	}
+      }
+    }
     //find_centre(get_num_v_pixels() / 2 + 1);
     if (use_high_peaks)
       high_peaks_before(hp_jump, hp_num_pix);

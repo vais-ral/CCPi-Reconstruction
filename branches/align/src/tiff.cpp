@@ -12,7 +12,7 @@
 
 bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
 		     const int angle, const int n_h_pixels,
-		     const int n_v_pixels)
+		     const int n_v_pixels, const int v_shift)
 {
   bool ok = true;
   TIFF *tif = TIFFOpen(filename.c_str(), "r");
@@ -85,7 +85,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
 		uint16 *b = (uint16 *)buf;
 		for (int h = 0; h < n_h_pixels; h++) {
 		  for (int v = 0; v < n_v_pixels; v++) {
-		    pixels[angle][h][v] =
+		    pixels[angle][h][v + v_shift] =
 		      pixel_type(b[(n_v_pixels - v - 1) * n_h_pixels + h]);
 		  }
 		}
