@@ -138,7 +138,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 				      const int nv, const recon_type d_conv,
 				      const real_1d &v_pixels,
 				      const real cphi, const real sphi,
-				      const long ij_base, const long nyz,
+				      const sl_int ij_base, const sl_int nyz,
 				      const int_1d &mapping,
 				      const int map_type)
 {
@@ -148,7 +148,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
   recon_1d l_xy(2 * max_n);
   long_1d ij_arr(2 * max_n + 1);
   int count = 0;
-  //long nyz = long(ny) * long(nz);
+  //sl_int nyz = sl_int(ny) * sl_int(nz);
   if (std::abs(cphi) < epsilon) {
     if (std::abs(sphi) < epsilon) {
       // Its not a line - shouldn't happen
@@ -158,7 +158,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
       int i = int(std::floor((p2_x - b_x) / d_x)); // == q2_x
       if (i >= 0 and i < nx) {
 	if (sphi < 0.0) {
-	  long ij_offset = ij_base + long(i) * nyz + long(ny - 1) * long(nz);
+	  sl_int ij_offset = ij_base + sl_int(i) * nyz
+	    + sl_int(ny - 1) * sl_int(nz);
 	  for (int j = ny - 1; j >= 0; j--) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
@@ -166,7 +167,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    count++;
 	  }
 	} else {
-	  long ij_offset = ij_base + long(i) * nyz;
+	  sl_int ij_offset = ij_base + sl_int(i) * nyz;
 	  for (int j = 0; j < ny; j++) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
@@ -181,7 +182,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
     int j = int(std::floor((p2_y - b_y) / d_y)); // == q2_y
     if (j >= 0 and j < ny) {
       if (cphi < 0.0) {
-	long ij_offset = ij_base + long(nx - 1) * nyz + long(j) * long(nz);
+	sl_int ij_offset = ij_base + sl_int(nx - 1) * nyz
+	  + sl_int(j) * sl_int(nz);
 	for (int i = nx - 1; i >= 0; i--) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
@@ -189,7 +191,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	  count++;
 	}
       } else {
-	long ij_offset = ij_base + long(j) * long(nz);
+	sl_int ij_offset = ij_base + sl_int(j) * sl_int(nz);
 	for (int i = 0; i < nx; i++) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
@@ -242,7 +244,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    report_error("something wrong in x+ y+");
 	  // could do x_next/y_next here and only calc the one that changes
 	  // inside the if statements below, which would reduce the flops
-	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
+	  sl_int xy_offset = ij_base + sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  while (x < nx and y < ny) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y + 1] - epsilon) {
@@ -274,7 +276,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else
 	    report_error("something wrong in x+ y-");
-	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
+	  sl_int xy_offset = ij_base + sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  while (x < nx and y >= 0) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y] - epsilon) {
@@ -308,7 +310,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = 0;
 	  } else
 	    report_error("something wrong in x- y+");
-	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
+	  sl_int xy_offset = ij_base + sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  while (x >= 0 and y < ny) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y + 1] - epsilon) {
@@ -343,7 +345,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = ny - 1;
 	  } else
 	    report_error("something wrong in x- y-");
-	  long xy_offset = ij_base + long(x) * nyz + long(y) * long(nz);
+	  sl_int xy_offset = ij_base + sl_int(x) * nyz + sl_int(y) * sl_int(nz);
 	  while (x >= 0 and y >= 0) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y] - epsilon) {
@@ -392,7 +394,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	  recon_type ln = ln1 - ln2;
 	  int k;
 	  for (k = 0; k < count; k++) {
-	    if (ij_arr[k] == ij_base + long(i) * nyz + long(j) * long(nz)) {
+	    if (ij_arr[k] == ij_base + sl_int(i) * nyz + sl_int(j)*sl_int(nz)) {
 	      cmp[k] = true;
 	      real diff = l_xy[k] / d_conv;
 	      if (ln < diff - epsilon or ln > diff + epsilon)
@@ -448,7 +450,7 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   
   const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
   const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
-  long nyz = long(ny) * long(nz);
+  sl_int nyz = sl_int(ny) * sl_int(nz);
 
   const int a_block = n_angles;
   const int x_block = 32;
@@ -462,14 +464,14 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
       int x_step = x_block;
       if (block_x + x_step > nx)
 	x_step = nx - block_x;
-      long i_base = long(block_x) * nyz;
+      sl_int i_base = sl_int(block_x) * nyz;
       real vx = vox_origin[0] + real(block_x) * vox_size[0];
       real wx = vox_origin[0] + real(block_x + x_step) * vox_size[0];
       for (int block_y = 0; block_y < ny; block_y += y_block) {
 	int y_step = y_block;
 	if (block_y + y_step > ny)
 	  y_step = ny - block_y;
-	long ij_base = i_base + long(block_y) * long(nz);
+	sl_int ij_base = i_base + sl_int(block_y) * sl_int(nz);
 	real vy = vox_origin[1] + real(block_y) * vox_size[1];
 	real wy = vox_origin[1] + real(block_y + y_step) * vox_size[1];	  
 
@@ -658,8 +660,8 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
   // Todo - in parallel we can probably make a better guess at which 2 corners
   // we need for the upper and lower limits.
   //real pixel_step = h_pixels[1] - h_pixels[0];
-  long nah = long(n_h) * long(n_v);
-  long ah_offset = long(a_off) * nah;
+  sl_int nah = sl_int(n_h) * sl_int(n_v);
+  sl_int ah_offset = sl_int(a_off) * nah;
   for (int ax = 0; ax < n_angles; ax++) {
     int a = a_off + ax;
     real cphi = cangle[a];
@@ -675,7 +677,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::floor((x_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = ah_offset + long(hmin) * long(n_v); 
+	sl_int h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= x_0 and h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
@@ -692,7 +694,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::ceil((- x_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = ah_offset + long(hmin) * long(n_v); 
+	sl_int h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (-h_pixels[h] >= x_0 and -h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
@@ -711,7 +713,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::ceil((- y_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = ah_offset + long(hmin) * long(n_v); 
+	sl_int h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (- h_pixels[h] >= y_0 and - h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
@@ -728,7 +730,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::floor((y_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	long h_offset = ah_offset + long(hmin) * long(n_v); 
+	sl_int h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= y_0 and h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
@@ -776,7 +778,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
       real ybot = ymin + y_offset[a];
       real ytop = ymax - y_offset[a];
       const real l = length[a];
-      long h_offset = ah_offset + long(hmin) * long(n_v);
+      sl_int h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
       for (int h = hmin; h <= hmax; h++) {
 	if (h_pixels[h] > ymin + epsilon) {
 	  if (h_pixels[h] < ybot) {
@@ -799,7 +801,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
     }
     ah_offset += nah;
   }
-  if (count > 2 * pix_per_vox * n_angles)
+  if (count > 4 * pix_per_vox * n_angles)
     report_error("back project overflow");
 #ifdef TEST2D
   {
@@ -822,7 +824,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	  recon_type ln = ln1 - ln2;
 	  int k;
 	  for (k = 0; k < count; k++) {
-	    if (ah_arr[k] == long(a) * nah + long(h) * long(n_v)) {
+	    if (ah_arr[k] == sl_int(a) * nah + sl_int(h) * sl_int(n_v)) {
 	      cmp[k] = true;
 	      real diff = l_xy[k] / d_conv;
 	      if (ln < diff - epsilon or ln > diff + epsilon)

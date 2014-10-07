@@ -2,6 +2,12 @@
 #ifndef CCPI_ALIGNED_ALLOCATOR
 #define CCPI_ALIGNED_ALLOCATOR
 
+#if LONG_MAX == 2147483647L
+typedef unsigned long long ul_int;
+#else
+typedef unsigned long ul_int;
+#endif // LONG_MAX
+
 template <typename T> class aligned_allocator {
 public:
   typedef std::size_t size_type;
@@ -14,7 +20,9 @@ public:
 
   // must be >= sizeof(pointer) = 8 typically
   // and multiple of which is usually the case with powers of 2
-#ifdef __MIC__
+#ifdef NVIDIAGPU
+  static const int alignment = 32 * 4; // warp size
+#elif defined(__MIC__)
   static const int alignment = 64;
 #elif defined(__AVX__)
   static const int alignment = 32;
@@ -35,12 +43,12 @@ public:
   {
     std::size_t s = n * sizeof(T) + 2 * alignment;
     void *p = ::operator new(s);
-    unsigned long offset = ((unsigned long)p) % alignment;
-    unsigned long shift = alignment - offset;
+    ul_int offset = ((ul_int)p) % alignment;
+    ul_int shift = alignment - offset;
     // if not enough room for a pointer shift into the second block - 2 *
     if (shift < sizeof(pointer))
       shift += alignment;
-    void *q = (void *)((unsigned long long)p + shift);
+    void *q = (void *)((ul_int)p + shift);
     pointer r = static_cast<T*>(q);
     // store real pointer just above the one we return
     void **x = (void **)q;

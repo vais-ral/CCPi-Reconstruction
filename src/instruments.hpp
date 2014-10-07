@@ -25,6 +25,7 @@ namespace CCPi {
     virtual bool setup_experimental_geometry(const std::string path,
 					     const std::string file,
 					     const real rotation_centre,
+					     const int pixels_per_voxel,
 					     const bool phantom = false) = 0;
     virtual bool read_scans(const std::string path, const int offset,
 			    const int block_size, const bool first,
@@ -97,12 +98,15 @@ namespace CCPi {
     const real_1d &get_h_pixels() const;
     const real_1d &get_v_pixels() const;
     const real_1d &get_all_v_pixels() const;
+    int get_data_v_size() const;
+    int get_data_v_offset() const;
 
     real_1d &set_phi(const int n);
     real_1d &set_h_pixels(const int n);
     real_1d &set_v_pixels(const int n);
     void set_v_offset(const int offset);
     void adjust_h_pixels(const real centre);
+    int calc_v_alignment(const int n, const int pix_per_vox, const bool cone);
 
   private:
     real_1d phi;
@@ -114,6 +118,8 @@ namespace CCPi {
     int n_vertical_pixels;
     int total_vertical_pixels;
     int v_offset;
+    int data_v_size;
+    int data_v_offset;
     pixel_3d *pixels;
   };
 
@@ -200,8 +206,8 @@ namespace CCPi {
 			    const recon_2d &d_conv, const recon_1d &delta_z,
 			    const recon_1d &inv_delz, const recon_1d &vox_z,
 			    const real_1d &v_pixels, const recon_type pzbz,
-			    const recon_type inv_dz, const long ij_base,
-			    const long nyz);
+			    const recon_type inv_dz, const sl_int ij_base,
+			    const sl_int nyz);
     static void bproject_ah(const real source_x, const real source_y,
 			    const real detector_x, pixel_data &pixels,
 			    voxel_data &voxels, const real x_0,
@@ -289,7 +295,7 @@ namespace CCPi {
 			    const int nv, const recon_type d_conv,
 			    const real_1d &v_pixels,
 			    const real cphi, const real sphi,
-			    const long ij_base, const long nyz,
+			    const sl_int ij_base, const sl_int nyz,
 			    const int_1d &mapping, const int map_type);
     static void bproject_ah(const real source_x,
 			    const real detector_x, pixel_data &pixels,
@@ -321,6 +327,7 @@ namespace CCPi {
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
 				     const real rotation_centre,
+				     const int pixels_per_voxel,
 				     const bool phantom);
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
@@ -344,7 +351,8 @@ namespace CCPi {
 
     bool create_phantom();
     bool build_phantom(const int offset, const int block_size);
-    bool read_data_size(const std::string path, const real rotation_centre);
+    bool read_data_size(const std::string path, const real rotation_centre,
+			const int pixels_per_voxel);
     bool read_data(const std::string path, const int offset,
 		   const int block_size, const bool first);
     void high_peaks_before(const real jump, const int num_pix);
@@ -360,6 +368,7 @@ namespace CCPi {
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
 				     const real rotation_centre,
+				     const int pixels_per_voxel,
 				     const bool phantom);
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
@@ -377,7 +386,8 @@ namespace CCPi {
 
     bool create_phantom();
     bool build_phantom();
-    bool read_config_file(const std::string path, const std::string file);
+    bool read_config_file(const std::string path, const std::string file,
+			  const int pixels_per_voxel);
     bool read_angles(const std::string path, const real init_angle,
 		     const int n);
     bool read_images(const std::string path);
@@ -479,6 +489,16 @@ inline void CCPi::instrument::set_v_offset(const int offset)
   v_offset = offset;
   for (int i = 0; i < total_vertical_pixels - offset; i++)
     vertical_pixels[i] = all_vertical_pixels[i + offset];
+}
+
+inline int CCPi::instrument::get_data_v_size() const
+{
+  return data_v_size;
+}
+
+inline int CCPi::instrument::get_data_v_offset() const
+{
+  return data_v_offset;
 }
 
 inline real CCPi::cone_beam::get_source_x() const

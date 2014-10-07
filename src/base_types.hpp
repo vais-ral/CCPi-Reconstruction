@@ -50,6 +50,6 @@ typedef boost::multi_array<voxel_type, 3,
 			   aligned_allocator<voxel_type> > voxel_data;
 
 typedef std::vector<int, aligned_allocator<int> > int_1d;
-typedef std::vector<long, aligned_allocator<long> > long_1d;
+typedef std::vector<sl_int, aligned_allocator<long> > long_1d;
 
 #endif // CCPI_RECON_TYPES
