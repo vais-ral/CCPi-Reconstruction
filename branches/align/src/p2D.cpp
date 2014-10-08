@@ -74,12 +74,15 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
 				    const int nv, const int nz,
 				    const int_1d &mapping, const int map_type)
 {
-  pixel_type *const pix = &(pixels[a][h][0]);
+  pixel_type *const pix = assume_aligned(&(pixels[a][h][0]), pixel_type);
+  sl_int *ijptr = assume_aligned(&(ij[0]), sl_int);
+  recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
     for (int m = 0; m < n; m++) {
-      const voxel_type *const vox = &(voxels.data()[ij[m]]);
-      const recon_type alpha = l_xy[m];
+      const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						   voxel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	pix[v] += vox[v] * alpha;
     }
@@ -88,8 +91,9 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v2 = nv / 2;
       for (int m = 0; m < n; m++) {
-	const voxel_type *const vox = &(voxels.data()[ij[m]]);
-	const recon_type alpha = l_xy[m];
+	const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						     voxel_type);
+	const recon_type alpha = lptr[m];
 	int v = 0;
 	for (int l = 0; l < v2; l++) {
 	  pix[v + 0] += vox[l] * alpha;
@@ -103,8 +107,9 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v4 = nv / 4;
       for (int m = 0; m < n; m++) {
-	const voxel_type *const vox = &(voxels.data()[ij[m]]);
-	const recon_type alpha = l_xy[m];
+	const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						     voxel_type);
+	const recon_type alpha = lptr[m];
 	int v = 0;
 	for (int l = 0; l < v4; l++) {
 	  pix[v + 0] += vox[l] * alpha;
@@ -118,8 +123,9 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     break;
   default:
     for (int m = 0; m < n; m++) {
-      const voxel_type *const vox = &(voxels.data()[ij[m]]);
-      const recon_type alpha = l_xy[m];
+      const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						   voxel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	pix[v] += vox[mapping[v]] * alpha;
     }
@@ -575,12 +581,15 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 				    const int nv, const int nz,
 				    const int_1d &mapping, const int map_type)
 {
-  voxel_type *const vox = &(voxels[i][j][0]);
+  voxel_type *const vox = assume_aligned(&(voxels[i][j][0]), voxel_type);
+  sl_int *ahptr = assume_aligned(&(ah[0]), sl_int);
+  recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
     for (int m = 0; m < n; m++) {
-      const pixel_type *const pix = &(pixels.data()[ah[m]]);
-      const recon_type alpha = l_xy[m];
+      const pixel_type *const pix = assume_aligned(&(pixels.data()[ahptr[m]]),
+						   pixel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	vox[v] += pix[v] * alpha;
     }
@@ -589,8 +598,9 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v2 = nv / 2;
       for (int m = 0; m < n; m++) {
-	const pixel_type *const pix = &(pixels.data()[ah[m]]);
-	const recon_type alpha = l_xy[m];
+	const pixel_type *const pix = assume_aligned(&(pixels.data()[ahptr[m]]),
+						     pixel_type);
+	const recon_type alpha = lptr[m];
 	int v = 0;
 	for (int l = 0; l < v2; l++) {
 	  vox[l] += pix[v + 0] * alpha;
@@ -604,8 +614,9 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     {
       int v4 = nv / 4;
       for (int m = 0; m < n; m++) {
-	const pixel_type *const pix = &(pixels.data()[ah[m]]);
-	const recon_type alpha = l_xy[m];
+	const pixel_type *const pix = assume_aligned(&(pixels.data()[ahptr[m]]),
+						     pixel_type);
+	const recon_type alpha = lptr[m];
 	int v = 0;
 	for (int l = 0; l < v4; l++) {
 	  vox[l] += pix[v + 0] * alpha;
@@ -619,8 +630,9 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     break;
   default:
     for (int m = 0; m < n; m++) {
-      const pixel_type *const pix = &(pixels.data()[ah[m]]);
-      const recon_type alpha = l_xy[m];
+      const pixel_type *const pix = assume_aligned(&(pixels.data()[ahptr[m]]),
+						   pixel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	vox[mapping[v]] += pix[v] * alpha;
     }

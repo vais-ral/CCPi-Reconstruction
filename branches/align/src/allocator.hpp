@@ -83,4 +83,16 @@ public:
   }
 };
 
+// Todo - add an assert #if DEBUG to check that alignment is what it should be?
+#if defined(__GNUC__)
+#  define assume_aligned(a, T) (T *)__builtin_assume_aligned(a, aligned_allocator<T>::alignment)
+#elif defined(__INTEL_COMPILER) || defined(__ICC) || defined(__ICL)
+// This doesn't really seem to work. Adding __assume(nv%8==0) etc also failed
+// #pragma vector aligned is also supposed to be an alternative
+#  define assume_aligned(a,T) a; __assume_aligned(a, aligned_allocator<T>::alignment)
+#else
+#  define assume_aligned(a,T) a
+#endif // compiler choices for forcing alignment
+// Todo - need _MSC_VER option
+
 #endif // CCPI_ALIGNED_ALLOCATOR
