@@ -58,12 +58,18 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
   const int nzm1 = nz - 1;
+  sl_int *ijptr = assume_aligned(&(ij[0]), sl_int);
+  recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
   recon_1d alpha_inv(n);
+  recon_type *ainv_ptr = assume_aligned(&(alpha_inv[0]), recon_type);
   for (int l = 0; l < n; l++)
-    alpha_inv[l] = alpha_xy[l] * inv_dz;
+    ainv_ptr[l] = axy_ptr[l] * inv_dz;
   int min_xy_all = n;
   for (int m = 1; m < n; m++) {
-    int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[0]));
+    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[0]));
     if (k <= 0) {
       if (k == 0)
 	min_xy_all = m;
@@ -78,7 +84,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   }
   int max_xy_all = n;
   for (int m = 1; m < n; m++) {
-    int k = int(std::floor(pzbz + alpha_inv[m - 1] * delta_z[nv - 1]));
+    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[nv - 1]));
     if (k >= nzm1) {
       if (k == nzm1)
 	max_xy_all = m;
@@ -94,7 +100,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   // Now find the range of v for which all m fit in the voxels
   int min_v_all = midp;
   for (int v = 0; v < midp; v++) {
-    int k = int(std::floor(pzbz + alpha_inv[n - 2] * delta_z[v]));
+    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
     if (k > 0) {
       min_v_all = v;
       break;
@@ -102,32 +108,34 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   }
   int max_v_all = midp - 1;
   for (int v = nv - 1; v >= midp; v--) {
-    int k = int(std::floor(pzbz + alpha_inv[n - 2] * delta_z[v]));
+    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
     if (k < nzm1) {
       max_v_all = v;
       break;
     }
   }
   int_1d kv(nv);
-  pixel_type *const pix = &(pixels[a][h][0]);
+  int *k_ptr = assume_aligned(&(kv[0]), int);
+  pixel_type *const pix = assume_aligned(&(pixels[a][h][0]), pixel_type);
   int ncom = std::min(min_xy_all, max_xy_all);
-  recon_type alpha_m0 = alpha_xy[0];
+  recon_type alpha_m0 = axy_ptr[0];
   for (int m = 1; m < ncom; m++) {
-    const voxel_type *const vox = &(voxels.data()[ij[m]]);
-    const recon_type alpha_val = alpha_inv[m - 1];
+    const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						 voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
     for (int v = 0; v < nv; v++)
-      kv[v] = int(pzbz + alpha_val * delta_z[v]);
-    const recon_type alpha_m1 = alpha_xy[m];
+      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+    const recon_type alpha_m1 = axy_ptr[m];
     for (int v = 0; v < midp; v++) {
-      int k = kv[v];
-      recon_type alpha_z = vox_z[k] * inv_delz[v];
+      int k = k_ptr[v];
+      recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
 		 + vox[k - 1] * (alpha_m1 - min_z));
     }
     for (int v = midp; v < nv; v++) {
-      int k = kv[v];
-      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+      int k = k_ptr[v];
+      recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
 		 + vox[k + 1] * (alpha_m1 - min_z));
@@ -136,21 +144,22 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   }
   // Do the rest where its all inside
   for (int m = ncom; m < n; m++) {
-    const voxel_type *const vox = &(voxels.data()[ij[m]]);
-    const recon_type alpha_val = alpha_inv[m - 1];
+    const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						 voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
     for (int v = min_v_all; v <= max_v_all; v++)
-      kv[v] = int(pzbz + alpha_val * delta_z[v]);
-    const recon_type alpha_m1 = alpha_xy[m];
+      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+    const recon_type alpha_m1 = axy_ptr[m];
     for (int v = min_v_all; v < midp; v++) {
-      int k = kv[v];
-      recon_type alpha_z = vox_z[k] * inv_delz[v];
+      int k = k_ptr[v];
+      recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
 		 + vox[k - 1] * (alpha_m1 - min_z));
     }
     for (int v = midp; v <= max_v_all; v++) {
-      int k = kv[v];
-      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+      int k = k_ptr[v];
+      recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
 		 + vox[k + 1] * (alpha_m1 - min_z));
@@ -158,22 +167,23 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     alpha_m0 = alpha_m1;
   }
   // The bits along the edge
-  alpha_m0 = alpha_xy[ncom - 1];
+  alpha_m0 = axy_ptr[ncom - 1];
   const recon_type pzbz1 = pzbz + 1.0;
   for (int m = ncom; m < n; m++) {
-    const voxel_type *const vox = &(voxels.data()[ij[m]]);
-    const recon_type alpha_val = alpha_inv[m - 1];
-    const recon_type alpha_m1 = alpha_xy[m];
+    const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						 voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
+    const recon_type alpha_m1 = axy_ptr[m];
     for (int v = min_v_all - 1; v >= 0; v--) {
-      int k = int(pzbz1 + alpha_val * delta_z[v]);
+      int k = int(pzbz1 + alpha_val * dz_ptr[v]);
       k--;
       if (k > 0) {
-	recon_type alpha_z = vox_z[k] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	pix[v] += (vox[k] * (min_z - alpha_m0)
 		   + vox[k - 1] * (alpha_m1 - min_z));
       } else if (k == 0) {
-	recon_type alpha_z = vox_z[0] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[0] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	pix[v] += vox[0] * (min_z - alpha_m0);
       } else
@@ -181,20 +191,21 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     }
     alpha_m0 = alpha_m1;
   }
-  alpha_m0 = alpha_xy[ncom - 1];
+  alpha_m0 = axy_ptr[ncom - 1];
   for (int m = ncom; m < n; m++) {
-    const voxel_type *const vox = &(voxels.data()[ij[m]]);
-    const recon_type alpha_val = alpha_inv[m - 1];
-    const recon_type alpha_m1 = alpha_xy[m];
+    const voxel_type *const vox = assume_aligned(&(voxels.data()[ijptr[m]]),
+						 voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
+    const recon_type alpha_m1 = axy_ptr[m];
     for (int v = max_v_all + 1; v < nv; v++) {
-      int k = int(pzbz + alpha_val * delta_z[v]);
+      int k = int(pzbz + alpha_val * dz_ptr[v]);
       if (k < nzm1) {
-	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	pix[v] += (vox[k] * (min_z - alpha_m0)
 		   + vox[k + 1] * (alpha_m1 - min_z));
       } else if (k == nzm1) {
-	recon_type alpha_z = vox_z[nz] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[nz] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	pix[v] += vox[nzm1] * (min_z - alpha_m0);
       } else
@@ -203,7 +214,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     alpha_m0 = alpha_m1;
   }
   // scale
-  const recon_type *const dc = &(d_conv[h][0]);
+  const recon_type *const dc = assume_aligned(&(d_conv[h][0]), recon_type);
   for (int v = 0; v < nv; v++)
     pix[v] *= dc[v];
 }
@@ -711,32 +722,40 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   int min_v = 0;
   // We have rounding issues with pzdv, so add a small increment
   // since epsilon is 1 + epsilon, we need to scale so its meaningful
+  sl_int *ahptr = assume_aligned(&(ah[0]), sl_int);
+  recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  recon_type *axy0_ptr = assume_aligned(&(alpha_xy_0[0]), recon_type);
+  recon_type *axy1_ptr = assume_aligned(&(alpha_xy_1[0]), recon_type);
   recon_type pzdeps = pzdv * (1.0 + epsilon);
   for (int m = 0; m < n; m++) {
-    int v = int(std::ceil(pzdeps + z_1 / alpha_xy_0[m]));
+    int v = int(std::ceil(pzdeps + z_1 / axy0_ptr[m]));
     if (v > min_v)
       min_v = v;
   }
   int max_v = nv;
   for (int m = 0; m < n; m++) {
-    int v = int(std::floor(pzdv + z_nm / alpha_xy_0[m]));
+    int v = int(std::floor(pzdv + z_nm / axy0_ptr[m]));
     if (v < max_v)
       max_v = v;
   }
   // Todo - is there anything equivalent to min/max_xy in calc_xy
   const recon_type pzbz1 = pzbz + 1.0;
   int_1d kv(nv);
-  voxel_type *const vox = &(voxels[i][j][0]);
+  int *k_ptr = assume_aligned(&kv[0], int);
+  voxel_type *const vox = assume_aligned(&(voxels[i][j][0]), voxel_type);
   for (int m = 0; m < n; m++) {
-    const pixel_type *const pix = &(pixels.data()[ah[m]]);
-    const recon_type alpha_m0 = alpha_xy_0[m];
-    const recon_type alpha_m1 = alpha_xy_1[m];
+    const pixel_type *const pix = assume_aligned(&(pixels.data()[ahptr[m]]),
+						 pixel_type);
+    const recon_type alpha_m0 = axy0_ptr[m];
+    const recon_type alpha_m1 = axy1_ptr[m];
     const recon_type alpha_inv = alpha_m0 * inv_dz;
     for (int v = min_v; v < max_v; v++)
-      kv[v] = int(pzbz + alpha_inv * delta_z[v]);
+      k_ptr[v] = int(pzbz + alpha_inv * dz_ptr[v]);
     for (int v = min_v; v < midp; v++) {
-      int k = kv[v];
-      recon_type alpha_z = vox_z[k] * inv_delz[v];
+      int k = k_ptr[v];
+      recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       vox[k] += pix[v] * (min_z - alpha_m0);
       vox[k - 1] += pix[v] * (alpha_m1 - min_z);
@@ -746,8 +765,8 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
 #endif // TEST2D
     }
     for (int v = midp; v < max_v; v++) {
-      int k = kv[v];
-      recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+      int k = k_ptr[v];
+      recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       vox[k] += pix[v] * (min_z - alpha_m0);
       vox[k + 1] += pix[v] * (alpha_m1 - min_z);
@@ -758,38 +777,39 @@ void CCPi::cone_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
     }
   }
   for (int m = 0; m < n; m++) {
-    const pixel_type *const pix = &(pixels.data()[ah[m]]);
-    const recon_type alpha_m0 = alpha_xy_0[m];
-    const recon_type alpha_m1 = alpha_xy_1[m];
+    const pixel_type *const pix = assume_aligned(&(pixels.data()[ahptr[m]]),
+						 pixel_type);
+    const recon_type alpha_m0 = axy0_ptr[m];
+    const recon_type alpha_m1 = axy1_ptr[m];
     const recon_type alpha_inv = alpha_m0 * inv_dz;
     for (int v = min_v - 1; v >= 0; v--) {
-      int k = int(pzbz1 + alpha_inv * delta_z[v]);
+      int k = int(pzbz1 + alpha_inv * dz_ptr[v]);
       k--;
       if (k > 0) {
-	recon_type alpha_z = vox_z[k] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	vox[k] += pix[v] * (min_z - alpha_m0);
 	vox[k - 1] += pix[v] * (alpha_m1 - min_z);
       } else if (k == 0) {
 #ifdef TEST2D
-	if (pzbz + alpha_inv * delta_z[v] < 0.0)
+	if (pzbz + alpha_inv * dz_ptr[v] < 0.0)
 	  std::cerr << "Naughty\n";
 #endif // TEST2D
-	recon_type alpha_z = vox_z[k] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	vox[k] += pix[v] * (min_z - alpha_m0);
       } else
 	break;
     }
     for (int v = max_v; v < nv; v++) {
-      int k = int(pzbz + alpha_inv * delta_z[v]);
+      int k = int(pzbz + alpha_inv * dz_ptr[v]);
       if (k < nzm1) {
-	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	vox[k] += pix[v] * (min_z - alpha_m0);
 	vox[k + 1] += pix[v] * (alpha_m1 - min_z);
       } else if (k == nzm1) {
-	recon_type alpha_z = vox_z[k + 1] * inv_delz[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
 	recon_type min_z = std::min(alpha_z, alpha_m1);
 	vox[k] += pix[v] * (min_z - alpha_m0);
       } else
@@ -1175,19 +1195,23 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
       }
     }
 #pragma omp parallel for shared(pixels, d_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
-    for (int a = 0; a < n_angles; a++)
-      for (int h = 0; h < n_h; h++)
-	for (int v = 0; v < n_v; v++)
-	  pixels[a][h][v] *= d_conv[h][v];
+    for (int a = 0; a < n_angles; a++) {
+      const recon_type *const dc = assume_aligned(&(d_conv[0][0]), recon_type);
+      pixel_type *const pix = assume_aligned(&(pixels[a][0][0]), pixel_type);
+      for (int hv = 0; hv < n_h * n_v; hv++)
+	pix[hv] *= dc[hv];
+    }
     b2D(source_x, source_y, source_z, detector_x, h_pixels, v_pixels,
 	angles, pixels, voxels, n_angles, n_h, n_v, vox_origin, vox_size,
 	nx, ny, nz, d_conv);
     // This will have some numerical noise.
 #pragma omp parallel for shared(pixels, id_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
-    for (int a = 0; a < n_angles; a++)
-      for (int h = 0; h < n_h; h++)
-	for (int v = 0; v < n_v; v++)
-	  pixels[a][h][v] *= id_conv[h][v];
+    for (int a = 0; a < n_angles; a++) {
+      const recon_type *const dc = assume_aligned(&(id_conv[0][0]), recon_type);
+      pixel_type *const pix = assume_aligned(&(pixels[a][0][0]), pixel_type);
+      for (int hv = 0; hv < n_h * n_v; hv++)
+	pix[hv] *= dc[hv];
+    }
   } else {
     real x2 = (detector_x - source_x) * (detector_x - source_x);
 #pragma omp parallel for shared(h_pixels, v_pixels) firstprivate(x2, n_h, n_v, source_y, source_z) schedule(dynamic)
@@ -1200,10 +1224,14 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
     }
     pixel_3d dpixels(boost::extents[n_angles][n_h][n_v]);
 #pragma omp parallel for shared(dpixels, pixels, d_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
-    for (int a = 0; a < n_angles; a++)
-      for (int h = 0; h < n_h; h++)
-	for (int v = 0; v < n_v; v++)
-	  dpixels[a][h][v] = pixels[a][h][v] * d_conv[h][v];
+    for (int a = 0; a < n_angles; a++) {
+      const recon_type *const dc = assume_aligned(&(d_conv[0][0]), recon_type);
+      const pixel_type *const pix = assume_aligned(&(pixels[a][0][0]),
+						   pixel_type);
+      pixel_type *const dpx = assume_aligned(&(dpixels[a][0][0]), pixel_type);
+      for (int hv = 0; hv < n_h * n_v; hv++)
+	dpx[hv] = pix[hv] * dc[hv];
+    }
     b2D(source_x, source_y, source_z, detector_x, h_pixels, v_pixels,
 	angles, dpixels, voxels, n_angles, n_h, n_v, vox_origin, vox_size,
 	nx, ny, nz, d_conv);
