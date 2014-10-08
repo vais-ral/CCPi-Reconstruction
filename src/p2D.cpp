@@ -16,17 +16,6 @@
 
 static const recon_type epsilon = FLT_EPSILON;
 
-extern bool test_2D(const real start[], const real end[],
-		    const real b_x, const real b_y,
-		    const real d_x, const real d_y,
-		    const int im_size_x, const int im_size_y,
-		    recon_type &length1, recon_type &length2);
-extern bool test_3D(const real start[], const real end[],
-		    const real b_x, const real b_y, const real b_z,
-		    const real d_x, const real d_y, const real d_z,
-		    const int im_size_x, const int im_size_y,
-		    const int im_size_z, recon_type &length);
-
 void CCPi::parallel_beam::gen_mapping(int_1d &mapping, int &map_type,
 				      const real_1d &v_pixels, const real vox_z,
 				      const real size_z, const int nv)
@@ -133,19 +122,15 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   }
 }
 
-void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
-				      const real p2_x, const real p2_y,
+void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 				      pixel_data &pixels, voxel_data &voxels,
 				      const real b_x, const real b_y,
-				      const real b_z, const real d_x,
-				      const real d_y, const real d_z,
+				      const real d_x, const real d_y,
 				      const int nx, const int ny, const int nz,
-				      const int a, const int h,
-				      const int nv, const recon_type d_conv,
-				      const real_1d &v_pixels,
-				      const real cphi, const real sphi,
-				      const sl_int ij_base, const sl_int nyz,
-				      const int_1d &mapping,
+				      const int a, const int h, const int nv,
+				      const recon_type d_conv, const real cphi,
+				      const real sphi, const sl_int ij_base,
+				      const sl_int nyz, const int_1d &mapping,
 				      const int map_type)
 {
   // Todo? In parallel beam some of this should be common in a since
@@ -380,52 +365,9 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
   }
   if (count > 2 * max_n + 1)
     report_error("forward project overflow");
-#ifdef TEST2D
-  {
-    std::vector<bool> cmp(count);
-    for (int i = 0; i < count; i++)
-      cmp[i] = false;
-    real start[3];
-    real end[3];
-    start[0] = p1_x;
-    start[1] = p1_y;
-    end[0] = p2_x;
-    end[1] = p2_y;
-    for (int i = 0; i < nx; i++) {
-      real x_0 = b_x + real(i) * d_x;
-      for (int j = 0; j < ny; j++) {
-	real y_0 = b_y + real(j) * d_y;
-	recon_type ln1, ln2;
-	if (test_2D(start, end, x_0, y_0, d_x, d_y, 1, 1, ln1, ln2)) {
-	  recon_type ln = ln1 - ln2;
-	  int k;
-	  for (k = 0; k < count; k++) {
-	    if (ij_arr[k] == ij_base + sl_int(i) * nyz + sl_int(j)*sl_int(nz)) {
-	      cmp[k] = true;
-	      real diff = l_xy[k] / d_conv;
-	      if (ln < diff - epsilon or ln > diff + epsilon)
-		std::cerr << "Bug " << i << ' ' << j << ' ' << a << ' ' << h 
-			  << ' ' << ln << ' ' << diff << '\n';
-	      break;
-	    }
-	  }
-	  if (k == count and ln > epsilon)
-	    std::cerr << "Missed " << i << ' ' << j << ' ' << a << ' ' << h
-		      << ' ' << k << ' ' << count << ' ' << ln << '\n';
-	}
-      }
-    }
-    for (int k = 0; k < count; k++) {
-      if (!cmp[k])
-	std::cerr << "Not found " << a << ' ' << h << ' ' << ij_arr[k]
-		  << ' ' << ij_arr[k] << ' ' << k << ' ' << count
-		  << ' ' << l_xy[k] / d_conv << '\n';
-    }
-  }
-#endif // TEST2D
   if (count > 0) {
-    calc_xy_z(pixels, voxels, l_xy, ij_arr, count, a, h,
-	      nv, nz, mapping, map_type);
+    calc_xy_z(pixels, voxels, l_xy, ij_arr, count, a, h, nv, nz,
+	      mapping, map_type);
   }    
 }
 
@@ -562,12 +504,11 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
 	  for (int h = hmin; h <= hmax; h++) {
 	    real p2_x = cphi * detector_x - sphi * h_pixels[h];
 	    real p2_y = sphi * detector_x + cphi * h_pixels[h];
-	    real p1_x = p2_x - real(3.0) * cphi * detector_x;
-	    real p1_y = p2_y - real(3.0) * sphi * detector_x;
-	    fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vx, vy,
-			vox_origin[2], vox_size[0], vox_size[1], vox_size[2],
-			x_step, y_step, nz, a, h, nv_pixels, d_conv, v_pixels,
-			cphi, sphi, ij_base, nyz, mapping, map_type);
+	    //real p1_x = p2_x - real(3.0) * cphi * detector_x;
+	    //real p1_y = p2_y - real(3.0) * sphi * detector_x;
+	    fproject_xy(p2_x, p2_y, pixels, voxels, vx, vy, vox_size[0],
+			vox_size[1], x_step, y_step, nz, a, h, nv_pixels,
+			d_conv, cphi, sphi, ij_base, nyz, mapping, map_type);
 	  }
 	}
       }
@@ -640,25 +581,19 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   }
 }
 
-void CCPi::parallel_beam::bproject_ah(const real source_x,
-				      const real detector_x, pixel_data &pixels,
-				      voxel_data &voxels, const real x_0,
-				      const real y_0, const real x_n,
-				      const real y_n, const real b_z,
+void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
+				      const real x_0, const real y_0,
+				      const real x_n, const real y_n,
 				      const real d_x, const real d_y,
-				      const real d_z, const int nx,
-				      const int ny, const int nz, const int i,
-				      const int j, const int n_angles,
-				      const int n_h, const int n_v,
-				      const real_1d &h_pixels,
-				      const real_1d &v_pixels,
+				      const int nz, const int i, const int j,
+				      const int n_angles, const int n_h,
+				      const int n_v, const real_1d &h_pixels,
 				      const real_1d &cangle,
 				      const real_1d &sangle,
 				      const real_1d &y_offset,
 				      const real_1d &i_offset,
-				      const real_1d &length,
-				      const real h_pix0, const real ihp_step,
-				      const recon_type d_conv, const int a_off,
+				      const real_1d &length, const real h_pix0,
+				      const real ihp_step, const int a_off,
 				      const int_1d &mapping, const int map_type)
 {
   // Rather than using the centre just calculate for all 4 corners,
@@ -815,69 +750,18 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
   }
   if (count > 4 * pix_per_vox * n_angles)
     report_error("back project overflow");
-#ifdef TEST2D
-  {
-    std::vector<bool> cmp(count);
-    for (int k = 0; k < count; k++)
-      cmp[k] = false;
-    real start[3];
-    real end[3];
-    for (int ax = 0; ax < n_angles; ax++) {
-      int a = a_off + ax;
-      for (int h = 0; h < n_h; h++) {
-	real cos_curr_angle = cangle[a];
-	real sin_curr_angle = sangle[a];
-	end[0] = cos_curr_angle * detector_x - sin_curr_angle * h_pixels[h];
-	end[1] = sin_curr_angle * detector_x + cos_curr_angle * h_pixels[h];
-	start[0] = end[0] - real(3.0) * cos_curr_angle * detector_x;
-	start[1] = end[1] - real(3.0) * sin_curr_angle * detector_x;
-	recon_type ln1, ln2;
-	if (test_2D(start, end, x_0, y_0, d_x, d_y, 1, 1, ln1, ln2)) {
-	  recon_type ln = ln1 - ln2;
-	  int k;
-	  for (k = 0; k < count; k++) {
-	    if (ah_arr[k] == sl_int(a) * nah + sl_int(h) * sl_int(n_v)) {
-	      cmp[k] = true;
-	      real diff = l_xy[k] / d_conv;
-	      if (ln < diff - epsilon or ln > diff + epsilon)
-		std::cerr << "Bug " << a << ' ' << h << ' ' << i << ' ' << j 
-			  << ' ' << ln << ' ' << diff << '\n';
-	      break;
-	    }
-	  }
-	  if (k == count and ln > epsilon)
-	    std::cerr << "Missed " << a << ' ' << h << ' ' << i << ' ' << j
-		      << ' ' << k << ' ' << count << ' ' << ln << '\n';
-	}
-      }
-    }
-    for (int k = 0; k < count; k++) {
-      if (!cmp[k])
-	std::cerr << "Not found " << i << ' ' << j << ' ' << ah_arr[k]
-		  << ' ' << ah_arr[k] << ' ' << k << ' ' << count
-		  << ' ' << l_xy[k] / d_conv << '\n';
-    }
-  }
-#endif // TEST2D
   if (count > 0) {
-    calc_ah_z(pixels, voxels, l_xy, ah_arr, count,
-	      i, j, n_v, nz, mapping, map_type);
+    calc_ah_z(pixels, voxels, l_xy, ah_arr, count, i, j, n_v, nz,
+	      mapping, map_type);
   }
 }
 
-void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
-			      const real_1d &v_pixels,
-			      const real_1d &angles,
-			      pixel_data &pixels,
-			      voxel_data &voxels,
-			      const int n_angles,
-			      const int nh_pixels,
-			      const int nv_pixels,
-			      const real vox_origin[3],
-			      const real vox_size[3],
-			      const int nx,
-			      const int ny,
-			      const int nz)
+void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
+			      const real_1d &angles, pixel_data &pixels,
+			      voxel_data &voxels, const int n_angles,
+			      const int nh_pixels, const int nv_pixels,
+			      const real vox_origin[3], const real vox_size[3],
+			      const int nx, const int ny, const int nz)
 {
   // Todo - 1d arrays of x,y,p1x.p1y positions and 2d p2x/p2y?
 
@@ -894,15 +778,15 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
 
   // set detector z to 2* the yz limits of the voxels, so it misses
   // longest voxel dim should be sqrt(3), so 2 should be safe
-  real detector_x = real(2.0) * std::max(std::abs(vox_origin[0]),
-					 std::max(std::abs(vox_origin[1]),
-						  std::abs(vox_origin[2])));
+  //real detector_x = real(2.0) * std::max(std::abs(vox_origin[0]),
+  //				 std::max(std::abs(vox_origin[1]),
+  //					  std::abs(vox_origin[2])));
   // at 0 degrees
   //real p2_x = detector_x;
   //real p2_y = 0.0;
   // path length from source to detector is independent of rotation
-  recon_type d_conv = recon_type(3.0 * detector_x);
-  const real source_x = -2.0 * detector_x;
+  //recon_type d_conv = recon_type(3.0 * detector_x);
+  //const real source_x = -2.0 * detector_x;
 
   // Todo - do we need this?
   recon_1d vox_z(nz + 1);
@@ -966,46 +850,6 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
       }
     }
     y_offset[a] = ybot - ymin;
-#ifdef TEST2D
-    real ymax;
-    real ytop;
-    if (cphi > 0.0) {
-      if (sphi > 0.0) {
-	ymax = y01;
-	if (y11 < y00) {
-	  ytop = y00;
-	} else {
-	  ytop = y11;
-	}
-      } else {
-	ymax = y11;
-	if (y01 < y10) {
-	  ytop = y10;
-	} else {
-	  ytop = y01;
-	}
-      }
-    } else {
-      if (sphi > 0.0) {
-	ymax = y00;
-	if (y01 < y10) {
-	  ytop = y10;
-	} else {
-	  ytop = y01;
-	}
-      } else {
-	ymax = y10;
-	if (y11 < y00) {
-	  ytop = y00;
-	} else {
-	  ytop = y11;
-	}
-      }
-    }
-    real yx = ymax - ytop;
-    if (std::abs(y_offset[a] - yx) > epsilon)
-      std::cerr << "Offset " << a << ' ' << yx << ' ' << y_offset[a] << '\n';
-#endif // TEST2D
     i_offset[a] = 1.0 / y_offset[a];
     if (std::abs(cphi) > std::abs(sphi))
       length[a] = vox_size[0] / std::abs(cphi);
@@ -1032,19 +876,18 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
 	  a_step = n_angles - block_a;
 	// we don't block h since we have a min/max from the x/y blocks
 
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, yvals, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, source_x, y_offset, i_offset, length, h_pix0, ihp_step, c_angle, s_angle, block_x, block_y, x_step, y_step, a_step, block_a, map_type) schedule(dynamic)
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin, yvals, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, y_offset, i_offset, length, h_pix0, ihp_step, c_angle, s_angle, block_x, block_y, x_step, y_step, a_step, block_a, map_type) schedule(dynamic)
 	for (int ix = 0; ix < x_step; ix++) {
 	  int i = block_x + ix;
 	  const real x_0 = vox_origin[0] + real(i) * vox_size[0];
 	  const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
 	  for (int jx = 0; jx < y_step; jx++) {
 	    int j = block_y + jx;
-	    bproject_ah(source_x, detector_x, pixels, voxels, x_0, yvals[j],
-			x_n, yvals[j + 1], vox_origin[2], vox_size[0],
-			vox_size[1], vox_size[2], x_step, y_step, nz,
-			i, j, a_step, nh_pixels, nv_pixels, h_pixels, v_pixels,
+	    bproject_ah(pixels, voxels, x_0, yvals[j],
+			x_n, yvals[j + 1], vox_size[0], vox_size[1], nz,
+			i, j, a_step, nh_pixels, nv_pixels, h_pixels,
 			c_angle, s_angle, y_offset, i_offset, length,
-			h_pix0, ihp_step, d_conv, block_a, mapping, map_type);
+			h_pix0, ihp_step, block_a, mapping, map_type);
 	  }
 	}
       }
