@@ -213,10 +213,6 @@ void CCPi::cone_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
     }
     alpha_m0 = alpha_m1;
   }
-  // scale
-  const recon_type *const dc = assume_aligned(&(d_conv[h][0]), recon_type);
-  for (int v = 0; v < nv; v++)
-    pix[v] *= dc[v];
 }
 
 void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
@@ -685,6 +681,14 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 	  }
 	}
       }
+    }
+#pragma omp parallel for shared(pixels, d_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
+    for (int ax = 0; ax < a_step; ax++) {
+      int a = block_a + ax;
+      const recon_type *const dc = assume_aligned(&(d_conv[0][0]), recon_type);
+      pixel_type *const pix = assume_aligned(&(pixels[a][0][0]), pixel_type);
+      for (int hv = 0; hv < n_h * n_v; hv++)
+	pix[hv] *= dc[hv];
     }
   }
 }
