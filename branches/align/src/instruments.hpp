@@ -179,17 +179,15 @@ namespace CCPi {
     // Todo - does this need further generalisation?
     real detector_x;
 
-    static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &alpha_xy, const long_1d &ij,
-			  const int n, const int a, const int h,
+    static void calc_xy_z(pixel_type *const pixels, const voxel_ptr_1d &voxels,
+			  const recon_1d &alpha_xy, const int n,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
 			  const recon_1d &delta_z, const recon_1d &inv_delz,
 			  const recon_1d &vox_z);
-    static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
+    static void calc_ah_z(const pixel_ptr_1d &pixels, voxel_type *const voxels,
 			  const recon_1d &alpha_xy_0,
-			  const recon_1d &alpha_xy_1, const long_1d &ah,
-			  const int n, const int i, const int j,
+			  const recon_1d &alpha_xy_1, const int n,
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
 			  const recon_1d &delta_z, const recon_1d &inv_delz,
@@ -265,14 +263,12 @@ namespace CCPi {
 			      const int nx, const int ny, const int nz);
 
   private:
-    static void calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy, const long_1d &ij,
-			  const int n, const int a, const int h, const int nv,
+    static void calc_xy_z(pixel_type *const pixels, const voxel_ptr_1d &voxels,
+			  const recon_1d &l_xy, const int n, const int nv,
 			  const int nz, const int_1d &mapping,
 			  const int map_type);
-    static void calc_ah_z(pixel_data &pixels, voxel_data &voxels,
-			  const recon_1d &l_xy, const long_1d &ah,
-			  const int n, const int i, const int j, const int nv,
+    static void calc_ah_z(const pixel_ptr_1d &pixels, voxel_type *const voxels,
+			  const recon_1d &l_xy, const int n, const int nv,
 			  const int nz, const int_1d &mapping,
 			  const int map_type);
     static void fproject_xy(const real p2_x, const real p2_y,
