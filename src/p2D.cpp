@@ -554,8 +554,8 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
   const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be - Todo - use mapping for pix_per_vox?
   int count = 0;
-  std::vector<sl_int> ah_arr(4 * pix_per_vox * n_angles);
-  recon_1d l_xy(4 * pix_per_vox * n_angles);
+  std::vector<sl_int> ah_arr(2 * pix_per_vox * (n_angles + 10));
+  recon_1d l_xy(2 * pix_per_vox * (n_angles + 10));
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   // Todo - in parallel we can probably make a better guess at which 2 corners
   // we need for the upper and lower limits.
@@ -700,7 +700,7 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
     }
     ah_offset += nah;
   }
-  if (count > 4 * pix_per_vox * n_angles)
+  if (count > 2 * pix_per_vox * (n_angles + 10))
     report_error("back project overflow");
 #ifdef TEST2D
   {
