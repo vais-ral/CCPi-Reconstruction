@@ -13,6 +13,9 @@
 #ifdef TEST2D
 #  include <iostream>
 #endif // TEST2D
+#if defined(__AVX__)
+#  include <immintrin.h>
+#endif // AVX etc
 
 static const recon_type epsilon = FLT_EPSILON;
 
@@ -67,44 +70,135 @@ void CCPi::parallel_beam::calc_xy_z(pixel_type *const pixels,
   recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
+#if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&pix[v],
+			_mm256_fmadd_ps(al,_mm256_load_ps(&vox[v]),
+					_mm256_load_ps(&pix[v])));
+      }
+    }
+#elif defined(__AVX__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&pix[v],
+			_mm256_add_ps(_mm256_mul_ps(al,_mm256_load_ps(&vox[v])),
+				      _mm256_load_ps(&pix[v])));
+      }
+    }
+#else
     for (int m = 0; m < n; m++) {
       const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
       const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	pix[v] += vox[v] * alpha;
     }
+#endif
     break;
   case 2:
+#if defined(__AVX2__) && PIXEL_SIZE == 4
     {
-      int v2 = nv / 2;
+      // assume this is low to high abcdabcd->aabbccdd
+      const __m256i offsets = _mm256_set_epi32(0, 4, 1, 5, 2, 6, 3, 7);
       for (int m = 0; m < n; m++) {
-	const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+	const voxel_type *const vox = voxels[m];
+	// __mm256 al = _mm256_broadcast_ss(lptr[m]); ?
 	const recon_type alpha = lptr[m];
-	int v = 0;
-	for (int l = 0; l < v2; l++) {
-	  pix[v + 0] += vox[l] * alpha;
-	  pix[v + 1] += vox[l] * alpha;
-	  v += 2;
+	__m256 al = _mm256_set1_ps(alpha);
+	int h = 0;
+	for (int l = 0; l < nv; l += 8) {
+	  __m256 vx = _mm256_broadcast_ps((__m128 *)&vox[h]); //abcdabcd
+	  __m256 v = _mm256_permutevar8x32_ps(vx, offsets);
+	  _mm256_store_ps(&pix[l], _mm256_fmadd_ps(al, v,
+						   _mm256_load_ps(&pix[l])));
+	  h += 4;
 	}
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      // __mm256 al = _mm256_broadcast_ss(lptr[m]); ?
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      int h = 0;
+      // Todo - can load 8 way vox as 2x means 16 way pix unroll
+      for (int l = 0; l < nv; l += 8) {
+	__m256 vx = _mm256_broadcast_ps((__m128 *)&vox[h]); //abcdabcd
+	__m256 vl = _mm256_unpacklo_ps(vx, vx);
+	__m256 vh = _mm256_unpackhi_ps(vx, vx);
+	__m256 v = _mm256_blend_ps(vl, vh, 0xf0); //aabbccdd I hope
+	_mm256_store_ps(&pix[l], _mm256_add_ps(_mm256_mul_ps(al, v),
+					       _mm256_load_ps(&pix[l])));
+	h += 4;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	pix[v + 0] += vox[l] * alpha;
+	pix[v + 1] += vox[l] * alpha;
+	v += 2;
+      }
+    }
+#endif
     break;
   case 4:
-    {
-      int v4 = nv / 4;
-      for (int m = 0; m < n; m++) {
-	const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
-	const recon_type alpha = lptr[m];
-	int v = 0;
-	for (int l = 0; l < v4; l++) {
-	  pix[v + 0] += vox[l] * alpha;
-	  pix[v + 1] += vox[l] * alpha;
-	  pix[v + 2] += vox[l] * alpha;
-	  pix[v + 3] += vox[l] * alpha;
-	  v += 4;
-	}
+#if defined(__AVX2__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      // Todo - try to load a vector and rearrange?
+      int h = 0;
+      for (int l = 0; l < nv; l += 8) {
+	__m256 vl = _mm256_broadcast_ss(&vox[h + 0]); //aaaaaaaa
+	__m256 vh = _mm256_broadcast_ss(&vox[h + 1]); //bbbbbbbb
+	__m256 v = _mm256_blend_ps(vl, vh, 0xf0); //aaaabbbb
+	_mm256_store_ps(&pix[l], _mm256_fmadd_ps(al, v,
+						 _mm256_load_ps(&pix[l])));
+	h += 2;
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      // Todo - try to load a vector and rearrange?
+      int h = 0;
+      for (int l = 0; l < nv; l += 8) {
+	__m256 vl = _mm256_broadcast_ss(&vox[h + 0]); //aaaaaaaa
+	__m256 vh = _mm256_broadcast_ss(&vox[h + 1]); //bbbbbbbb
+	__m256 v = _mm256_blend_ps(vl, vh, 0xf0); //aaaabbbb
+	_mm256_store_ps(&pix[l], _mm256_add_ps(_mm256_mul_ps(al, v),
+					       _mm256_load_ps(&pix[l])));
+	h += 2;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	pix[v + 0] += vox[l] * alpha;
+	pix[v + 1] += vox[l] * alpha;
+	pix[v + 2] += vox[l] * alpha;
+	pix[v + 3] += vox[l] * alpha;
+	v += 4;
+      }
+    }
+#endif
     break;
   default:
     for (int m = 0; m < n; m++) {
@@ -525,44 +619,164 @@ void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
   recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
+#if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&vox[v],
+			_mm256_fmadd_ps(al,_mm256_load_ps(&pix[v]),
+					_mm256_load_ps(&vox[v])));
+      }
+    }
+#elif defined(__AVX__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&vox[v],
+			_mm256_add_ps(_mm256_mul_ps(al,_mm256_load_ps(&pix[v])),
+				      _mm256_load_ps(&vox[v])));
+      }
+    }
+#else
     for (int m = 0; m < n; m++) {
       const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
       const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	vox[v] += pix[v] * alpha;
     }
+#endif
     break;
   case 2:
+#if defined(__AVX2__) && PIXEL_SIZE == 4
     {
-      int v2 = nv / 2;
+      //const __m256i offsets = _mm256_set_epi32(0, 2, 4, 6, 1, 3, 6, 7);
+      // Todo - use 8 way vox vectors
       for (int m = 0; m < n; m++) {
-	const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
+	const pixel_type *const pix = pixels[m];
 	const recon_type alpha = lptr[m];
+	__m128 al = _mm_set1_ps(alpha);
 	int v = 0;
-	for (int l = 0; l < v2; l++) {
-	  vox[l] += pix[v + 0] * alpha;
-	  vox[l] += pix[v + 1] * alpha;
-	  v += 2;
+	for (int l = 0; l < nz; l += 4) {
+	  __m256 p = _mm256_load_ps(&pix[v]);
+	  __m128 pl = _mm256_extractf128_ps(p, 0x0); //abcd
+	  __m128 ph = _mm256_extractf128_ps(p, 0x1); //efgh
+	  _mm_store_ps(&vox[l], _mm_fmadd_ps(al, _mm_hadd_ps(pl, ph),
+					     _mm_load_ps(&vox[l])));
+	  /*
+	  __m128 pp = _mm256_permutevar8x32_ps(p, offsets); //acegbdfh
+	  __m128 p0 = _mm256_extractf128_ps(pp, 0x0); //aceg
+	  __m128 p1 = _mm256_extractf128_ps(pp, 0x1); //bdfh
+	  // sum pair of values since both a multiplied by alpha
+	  _mm_store_ps(&vox[l], _mm_fmadd_ps(al, _mm_add_ps(p0, p1),
+	           _mm_load_ps(&vox[l])));
+	  */
+	  v += 8;
 	}
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      int v = 0;
+      for (int l = 0; l < nz; l += 8) {
+	// opt manual recommends reducing port-5 pressure with insert
+	__m256 pl = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 0])),
+					 _mm_load_ps(&pix[v + 8]), 0x1);
+	__m256 ph = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 4])),
+					 _mm_load_ps(&pix[v + 12]), 0x1);
+	/*
+	__m256 p0 = _mm256_load_ps(&pix[v + 0]); //abcdefgh
+	__m256 p1 = _mm256_load_ps(&pix[v + 8]); //ijklmnop
+	__m256 pl = _mm256_permute2f128_ps(p0, p1, 0x20); //abcdijkl
+	__m256 ph = _mm256_permute2f128_ps(p0, p1, 0x31); //efghmnop
+	*/
+	// hadd should now give (ab)(cd)(ef)(gh)(ij)(kl)(mn)(op)
+	_mm256_store_ps(&vox[l],
+			_mm256_add_ps(_mm256_mul_ps(al, _mm256_hadd_ps(pl, ph)),
+				      _mm256_load_ps(&vox[l])));
+	v += 16;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	vox[l] += (pix[v + 0] + pix[v + 1]) * alpha;
+	v += 2;
+      }
+    }
+#endif
     break;
   case 4:
-    {
-      int v4 = nv / 4;
-      for (int m = 0; m < n; m++) {
-	const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
-	const recon_type alpha = lptr[m];
-	int v = 0;
-	for (int l = 0; l < v4; l++) {
-	  vox[l] += pix[v + 0] * alpha;
-	  vox[l] += pix[v + 1] * alpha;
-	  vox[l] += pix[v + 2] * alpha;
-	  vox[l] += pix[v + 3] * alpha;
-	  v += 4;
-	}
+#if defined(__AVX2__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m128 al = _mm_set1_ps(alpha);
+      int v = 0;
+      for (int l = 0; l < nz; l += 4) {
+	__m256 p0 = _mm256_load_ps(&pix[v + 0]);
+	__m256 p1 = _mm256_load_ps(&pix[v + 8]);
+	__m256 p = _mm256_hadd_ps(p0, p1);
+	__m128 pl = _mm256_extractf128_ps(p, 0x0); //abcd
+	__m128 ph = _mm256_extractf128_ps(p, 0x1); //efgh
+	_mm_store_ps(&vox[l], _mm_fmadd_ps(al, _mm_hadd_ps(pl, ph),
+					   _mm_load_ps(&vox[l])));
+	v += 16;
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      int v = 0;
+      for (int l = 0; l < nz; l += 8) {
+	__m256 pa = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 0])),
+					 _mm_load_ps(&pix[v + 16]), 0x1);
+	__m256 pb = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 4])),
+					 _mm_load_ps(&pix[v + 20]), 0x1);
+	__m256 pc = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 8])),
+					 _mm_load_ps(&pix[v + 24]), 0x1);
+	__m256 pd = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 12])),
+					 _mm_load_ps(&pix[v + 28]), 0x1);
+	/*
+	__m256 p0 = _mm256_load_ps(&pix[v + 0]);
+	__m256 p1 = _mm256_load_ps(&pix[v + 8]);
+	__m256 p2 = _mm256_load_ps(&pix[v + 16]);
+	__m256 p3 = _mm256_load_ps(&pix[v + 24]);
+	__m256 pa = _mm256_permute2f128_ps(p0, p2, 0x20);
+	__m256 pb = _mm256_permute2f128_ps(p0, p2, 0x31);
+	__m256 pc = _mm256_permute2f128_ps(p1, p3, 0x20);
+	__m256 pd = _mm256_permute2f128_ps(p1, p3, 0x31);
+	*/
+	__m256 pl = _mm256_hadd_ps(pa, pb);
+	__m256 ph = _mm256_hadd_ps(pc, pd);
+	_mm256_store_ps(&vox[l],
+			_mm256_add_ps(_mm256_mul_ps(al, _mm256_hadd_ps(pl, ph)),
+				      _mm256_load_ps(&vox[l])));
+	v += 32;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	vox[l] += (pix[v + 0] + pix[v + 1] + pix[v + 2] + pix[v + 3]) * alpha;
+	v += 4;
+      }
+    }
+#endif
     break;
   default:
     for (int m = 0; m < n; m++) {
