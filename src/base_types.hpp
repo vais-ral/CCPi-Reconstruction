@@ -23,6 +23,7 @@ typedef double real;
 typedef float voxel_type;
 typedef float pixel_type;
 typedef float recon_type;
+#define PIXEL_SIZE 4
 
 typedef std::vector<real, aligned_allocator<real> > real_1d;
 typedef std::vector<real, aligned_allocator<real> > real_1dr;
