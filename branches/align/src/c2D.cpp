@@ -808,10 +808,10 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be
   int count = 0;
-  pixel_ptr_1d ah_arr(2 * pix_per_vox * n_angles);
+  pixel_ptr_1d ah_arr(2 * pix_per_vox * (n_angles + 10));
   //int_1d h_arr(2 * pix_per_vox * n_angles);
-  recon_1d alpha_xy_0(2 * pix_per_vox * n_angles);
-  recon_1d alpha_xy_1(2 * pix_per_vox * n_angles);
+  recon_1d alpha_xy_0(2 * pix_per_vox * (n_angles + 10));
+  recon_1d alpha_xy_1(2 * pix_per_vox * (n_angles + 10));
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   const real pixel_step = h_pixels[1] - h_pixels[0];
   const real ipix_step = 1.0 / pixel_step;
@@ -936,7 +936,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
     }
     ah_offset += nah;
   }
-  if (count > 4 * pix_per_vox * n_angles)
+  if (count > 2 * pix_per_vox * (n_angles + 10))
     report_error("back project overflow");
   if (count > 0) {
     calc_ah_z(ah_arr, &(voxels[i][j][0]), alpha_xy_0, alpha_xy_1, count,
