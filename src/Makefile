@@ -42,7 +42,7 @@ xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp ui_calls.hpp
 
 results.o: results.cpp results.hpp tiff.hpp mpi.hpp ui_calls.hpp
 
-tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp
+tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp blas.hpp
 
 tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
 
