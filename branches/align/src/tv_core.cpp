@@ -103,8 +103,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   /*temp vectors */
   voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
 	      boost::c_storage_order());
-  pixel_3d tv2(boost::extents[n_angles][n_v][n_h]);
+  pixel_3d tv2(boost::extents[n_angles][n_h][n_v]);
   std::vector<real> uijl(Ddim);
+
+  add_output("TVreg initialising...");
+  send_output();
 
   /* INITIALIZE */
   numGrad = 0;
@@ -133,11 +136,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   /* For each voxel */
   scal_y(alpha, Nablafyk, nx, ny, nz);
   /*-----------------Forward projection--------------------------------*/
-  init_data(tv2, n_angles, n_v, n_h);
+  init_data(tv2, n_angles, n_h, n_v);
   /*tv2 = A*yk */
   device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = tv2 - b */
-  sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+  sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
   numFunc++;
   /* fyk + 0.5*||A*y_k - b||^2 */
@@ -165,11 +168,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  init_data(tv2, n_angles, n_v, n_h);
+  init_data(tv2, n_angles, n_h, n_v);
   /*tv2 = A*x_k+1 */
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = (A*x_k+1 - b) */
-  sum_axpy(-1.0, b, tv2, n_angles, n_v, n_h);
+  sum_axpy(-1.0, b, tv2, n_angles, n_h, n_v);
 
   /* 0.5*||A*x_k+1 - b||^2 */
   gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -198,11 +201,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    init_data(tv2, n_angles, n_v, n_h);
+    init_data(tv2, n_angles, n_h, n_v);
     /*tv2 = A*x_k+1 */
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
     /* tv2 = (A*x_k+1 - b) */
-    sum_axpy(-1.0, b, tv2, n_angles, n_v, n_h);
+    sum_axpy(-1.0, b, tv2, n_angles, n_h, n_v);
 
     /* 0.5*||A*x_k+1 - b||^2 */
     gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -239,9 +242,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   real fxk = alpha*DTD(xkp1,Nablafxkp1,uijl,tau,Ddim,Dm,Dn,Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  init_data(tv2, n_angles, n_v, n_h);
+  init_data(tv2, n_angles, n_h, n_v);
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-  sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+  sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
   numFunc++;
   fxk += real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -250,6 +253,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   // subroutine?
   int kk = -1;
   for (int k = 0; k <= k_max; k++) {
+    add_output("Iteration ");
+    add_output(k + 1);
+    send_output();
     kk++;
     Lklist[kk] = bL;
     muklist[kk] = bmu;
@@ -260,9 +266,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     scal_y(alpha, Nablafyk, nx, ny, nz);
 
     /*-----------------Forward projection--------------------------------*/
-    init_data(tv2, n_angles, n_v, n_h);
+    init_data(tv2, n_angles, n_h, n_v);
     device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
-    sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+    sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
     numFunc++;
     fyk += real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -300,9 +306,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    init_data(tv2, n_angles, n_v, n_h);
+    init_data(tv2, n_angles, n_h, n_v);
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-    sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+    sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
     gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
@@ -326,9 +332,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
       hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
       /*-----------------Forward projection--------------------------------*/
-      init_data(tv2, n_angles, n_v, n_h);
+      init_data(tv2, n_angles, n_h, n_v);
       device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-      sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+      sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
       gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
