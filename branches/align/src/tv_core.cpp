@@ -14,9 +14,6 @@
 #include "algorithms.hpp"
 #include "ui_calls.hpp"
 
-// FLT_EPSILON? or 1e-14
-static const recon_type one_eps = 1.0 + FLT_EPSILON;
-
 /* Settings which makes the user do a CTRL-C break out of the loop*/
 #if defined(_WIN32) || defined(__WIN32__)
 
@@ -71,6 +68,8 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 					 const real grid_offset[],
 					 instrument *device)
 {
+  // FLT_EPSILON? or 1e-14
+  const real one_eps = 1.0 + 1e-14; //1.0 + FLT_EPSILON;
   real q;
   real thetakp1;
   real betak;
@@ -516,7 +515,7 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 	 const real tau, const int Ddim, const int Dm, const int Dn,
 	 const int Dl, const voxel_data::size_type sz[])
 {
-  real tv_tau_x=0;
+  real tv_tau_x = 0;
   real taud2 = tau / 2;
   real tau2 = 1 / (tau * 2);
 
@@ -524,14 +523,13 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
   init_data(Nablafx, sl_int(sz[0]), sl_int(sz[1]), sl_int(sz[2]));
 
   if (Ddim == 2) {
-    for (sl_int u = 0; u <= Dm - 1; u++) {
-      for (sl_int v = 0; v <= Dn - 1; v++) {
-	sl_int i1 = (u + 1) %Dm + v * Dm;
-	sl_int i2 = u + ((v + 1) % Dn) * Dm;
-	sl_int i3= u + v * Dm;
+    for (sl_int u = 0; u < Dm; u++) {
+      for (sl_int v = 0; v < Dn; v++) {
+	sl_int i1 = (u + 1) % Dm;
+	sl_int i2 = (v + 1) % Dn;
 
-	uijl[0] = (x.data())[i1] - (x.data())[i3];
-	uijl[1] = (x.data())[i2] - (x.data())[i3];
+	uijl[0] = x[i1][v][0] - x[u][v][0];
+	uijl[1] = x[u][i2][0] - x[u][v][0];
 
 	real c1 = std::sqrt(uijl[0] * uijl[0] + uijl[1] * uijl[1]);
 	real c2;
@@ -546,36 +544,37 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 	uijl[0] /= c2;
 	uijl[1] /= c2;
 
-	(Nablafx.data())[i1] += uijl[0];
-	(Nablafx.data())[i3] -= uijl[0];
-	(Nablafx.data())[i2] += uijl[1];
-	(Nablafx.data())[i3] -= uijl[1];
+	Nablafx[i1][v][0] += uijl[0];
+	Nablafx[u][v][0] -= uijl[0];
+	Nablafx[u][i2][0] += uijl[1];
+	Nablafx[u][v][0] -= uijl[1];
       }
     }
 
   } else if (Ddim == 3) {
-    sl_int mn = Dm * Dn;
-    sl_int mnl = mn * Dl;
+    for (sl_int u = 0; u < Dm; u++) {
+      int u1 = (u + 1) % Dm;
+      for (sl_int v = 0; v < Dn; v++) {
+	int v1 = (v + 1) % Dn;
+	//sl_int s1= ((u + 1) % Dm) + v * Dm;
+	//sl_int s2 = u + ((v + 1) % Dn) * Dm;
+	//sl_int s3 = u + v * Dm;
+	//sl_int s4 = 0;
+	for (sl_int w = 0; w < Dl; w++) {
+	  int w1 = (w + 1) % Dl;
+	  //sl_int i1 = s1 + s4;
+	  //sl_int i2 = s2 + s4;
+	  //sl_int i4 = s3 + s4;
+	  //sl_int i3 = (i4 + mn) % mnl;
 
-    for (sl_int u = 0; u <= Dm - 1; u++) {
-      for (sl_int v = 0; v <= Dn - 1; v++) {
-	/*s1= ((u+1)%Dm) + v*Dm;*/
-	/*s2 = u + ((v+1)%Dn)*Dm;*/
-	sl_int s1= ((u + 1) % Dm) + v * Dm;
-	sl_int s2 = u + ((v + 1) % Dn) * Dm;
-	sl_int s3 = u + v * Dm;
-	sl_int s4 = 0;
-	for (sl_int w = 0; w <= Dl - 1; w++) {
-	  sl_int i1 = s1 + s4;
-	  sl_int i2 = s2 + s4;
-	  sl_int i4 = s3 + s4;
-	  sl_int i3 = (i4 + mn) % mnl;
+	  //s4 += mn;
 
-	  s4 += mn;
-
-	  uijl[0] = (x.data())[i1] - (x.data())[i4];
-	  uijl[1] = (x.data())[i2] - (x.data())[i4];
-	  uijl[2] = (x.data())[i3] - (x.data())[i4];
+	  uijl[0] = x[u1][v][w] - x[u][v][w];
+	  uijl[1] = x[u][v1][w] - x[u][v][w];
+	  uijl[2] = x[u][v][w1] - x[u][v][w];
+	  //uijl[0] = (x.data())[i1] - (x.data())[i4];
+	  //uijl[1] = (x.data())[i2] - (x.data())[i4];
+	  //uijl[2] = (x.data())[i3] - (x.data())[i4];
 
 	  real c1 = std::sqrt(uijl[0] * uijl[0] + uijl[1] * uijl[1]
 			      + uijl[2] * uijl[2]);
@@ -592,10 +591,14 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 	  uijl[1] /= c2;
 	  uijl[2] /= c2;
 
-	  (Nablafx.data())[i1] += uijl[0];
-	  (Nablafx.data())[i4] -= uijl[0] + uijl[1] + uijl[2];
-	  (Nablafx.data())[i2] += uijl[1];
-	  (Nablafx.data())[i3] += uijl[2];
+	  Nablafx[u1][v][w] += uijl[0];
+	  Nablafx[u][v][w] -= uijl[0] + uijl[1] + uijl[2];
+	  Nablafx[u][v1][w] += uijl[1];
+	  Nablafx[u][v][w1] += uijl[2];
+	  //(Nablafx.data())[i1] += uijl[0];
+	  //(Nablafx.data())[i4] -= uijl[0] + uijl[1] + uijl[2];
+	  //(Nablafx.data())[i2] += uijl[1];
+	  //(Nablafx.data())[i3] += uijl[2];
 
 	}
       }
