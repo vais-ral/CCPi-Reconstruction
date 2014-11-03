@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <algorithm>
+#include <float.h>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
@@ -12,6 +13,9 @@
 #include "instruments.hpp"
 #include "algorithms.hpp"
 #include "ui_calls.hpp"
+
+// FLT_EPSILON? or 1e-14
+static const recon_type one_eps = 1.0 + FLT_EPSILON;
 
 /* Settings which makes the user do a CTRL-C break out of the loop*/
 #if defined(_WIN32) || defined(__WIN32__)
@@ -181,7 +185,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   // f(x_k+1) = h(x_k+1) + g(x_k+1) = alpha*T_tau(x_k+1) + 0.5*||A*x_k+1 - b||^2
   fxkp1 = hxkp1 + gxkp1;
 
-  while (fxkp1 / (1+1e-14) > fyk + dot_prod(Nablafyk, tv, nx, ny, nz)
+  while (fxkp1 / one_eps > fyk + dot_prod(Nablafyk, tv, nx, ny, nz)
 	 + (bL / 2) * norm_voxels(tv, nx, ny, nz)) {
     numBack++;
     bL *= s_L;
@@ -287,7 +291,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     if (k != 0) {
       diff_xyz(xk, yk, tv, nx, ny, nz);
 
-      bmu = std::max(std::min(real(2) * (fxk * (real(1) + real(1e-14))
+      bmu = std::max(std::min(real(2) * (fxk * real(one_eps)
 					 - (fyk
 					    + dot_prod(Nablafyk, tv, nx,ny,nz)))
 			      / norm_voxels(tv, nx, ny, nz), bmu),
@@ -315,8 +319,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     numFunc++;
     fxkp1 = hxkp1 + gxkp1;
 
-    while (fxkp1 / (real(1) + real(1e-14)) > fyk
-	   + dot_prod(Nablafyk, tv, nx, ny, nz)
+    while (fxkp1 / one_eps > fyk + dot_prod(Nablafyk, tv, nx, ny, nz)
 	   + (bL / real(2)) * norm_voxels(tv, nx, ny, nz)) {
       numBack++;
       bL *= s_L;
