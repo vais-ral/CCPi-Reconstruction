@@ -288,7 +288,7 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_ibright++;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
-			bptr[h * nv_pixels + v_shift + v] +=
+			bptr[h * nv_pixels + v_shift + (block_size - v - 1)] +=
 			  pixel_type(ptr[v * sizes[2] + h]);
 		      }
 		    }
@@ -304,7 +304,7 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_idark++;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
-			dptr[h * nv_pixels + v_shift + v] +=
+			dptr[h * nv_pixels + v_shift + (block_size - v - 1)] +=
 			  pixel_type(ptr[v * sizes[2] + h]);
 		      }
 		    }
