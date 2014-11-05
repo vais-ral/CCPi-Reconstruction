@@ -248,8 +248,7 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
     pixel_2d bright(boost::extents[nh][nv]);
     for (int i = 0; i < nangles; i++) {
       // Based on fbp code, interpolate bright/dark
-      // w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0])?
-      real w = angles[i] / angles[nangles - 1];
+      real w = (angles[i] - angles[0]) / (angles[nangles - 1] - angles[0]);
       for (sl_int k = 0; k < nh; k++)
 	for (sl_int j = v_offset; j < v_end; j++)
 	  dark[k][j] = i_dark[k][j] * (real(1.0) - w) + f_dark[k][j] * w;
