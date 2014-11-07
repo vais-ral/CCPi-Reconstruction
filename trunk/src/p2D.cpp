@@ -13,21 +13,13 @@
 #ifdef TEST2D
 #  include <iostream>
 #endif // TEST2D
+#if defined(__AVX__)
+#  include <immintrin.h>
+#endif // AVX etc
 
 static const recon_type epsilon = FLT_EPSILON;
 
-extern bool test_2D(const real start[], const real end[],
-		    const real b_x, const real b_y,
-		    const real d_x, const real d_y,
-		    const int im_size_x, const int im_size_y,
-		    recon_type &length1, recon_type &length2);
-extern bool test_3D(const real start[], const real end[],
-		    const real b_x, const real b_y, const real b_z,
-		    const real d_x, const real d_y, const real d_z,
-		    const int im_size_x, const int im_size_y,
-		    const int im_size_z, recon_type &length);
-
-void CCPi::parallel_beam::gen_mapping(std::vector<int> &mapping, int &map_type,
+void CCPi::parallel_beam::gen_mapping(int_1d &mapping, int &map_type,
 				      const real_1d &v_pixels, const real vox_z,
 				      const real size_z, const int nv)
 {
@@ -68,60 +60,150 @@ void CCPi::parallel_beam::gen_mapping(std::vector<int> &mapping, int &map_type,
   }
 }
 
-void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
-				    const recon_1d &l_xy,
-				    const std::vector<sl_int> &ij,
-				    const int n, const int a, const int h,
+void CCPi::parallel_beam::calc_xy_z(pixel_type *const pixels,
+				    const voxel_ptr_1d &voxels,
+				    const recon_1d &l_xy, const int n,
 				    const int nv, const int nz,
-				    const std::vector<int> &mapping,
-				    const int map_type)
+				    const int_1d &mapping, const int map_type)
 {
-  pixel_type *const pix = &(pixels[a][h][0]);
+  pixel_type *const pix = assume_aligned(pixels, pixel_type);
+  recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
+#if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
     for (int m = 0; m < n; m++) {
-      const voxel_type *const vox = &(voxels.data()[ij[m]]);
-      const recon_type alpha = l_xy[m];
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&pix[v],
+			_mm256_fmadd_ps(al,_mm256_load_ps(&vox[v]),
+					_mm256_load_ps(&pix[v])));
+      }
+    }
+#elif defined(__AVX__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&pix[v],
+			_mm256_add_ps(_mm256_mul_ps(al,_mm256_load_ps(&vox[v])),
+				      _mm256_load_ps(&pix[v])));
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	pix[v] += vox[v] * alpha;
     }
+#endif
     break;
   case 2:
+#if defined(__AVX2__) && PIXEL_SIZE == 4
     {
-      int v2 = nv / 2;
+      // assume this is low to high abcdabcd->aabbccdd
+      const __m256i offsets = _mm256_set_epi32(0, 4, 1, 5, 2, 6, 3, 7);
       for (int m = 0; m < n; m++) {
-	const voxel_type *const vox = &(voxels.data()[ij[m]]);
-	const recon_type alpha = l_xy[m];
-	int v = 0;
-	for (int l = 0; l < v2; l++) {
-	  pix[v + 0] += vox[l] * alpha;
-	  pix[v + 1] += vox[l] * alpha;
-	  v += 2;
+	const voxel_type *const vox = voxels[m];
+	// __mm256 al = _mm256_broadcast_ss(lptr[m]); ?
+	const recon_type alpha = lptr[m];
+	__m256 al = _mm256_set1_ps(alpha);
+	int h = 0;
+	for (int l = 0; l < nv; l += 8) {
+	  __m256 vx = _mm256_broadcast_ps((__m128 *)&vox[h]); //abcdabcd
+	  __m256 v = _mm256_permutevar8x32_ps(vx, offsets);
+	  _mm256_store_ps(&pix[l], _mm256_fmadd_ps(al, v,
+						   _mm256_load_ps(&pix[l])));
+	  h += 4;
 	}
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      // __mm256 al = _mm256_broadcast_ss(lptr[m]); ?
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      int h = 0;
+      // Todo - can load 8 way vox as 2x means 16 way pix unroll
+      for (int l = 0; l < nv; l += 8) {
+	__m256 vx = _mm256_broadcast_ps((__m128 *)&vox[h]); //abcdabcd
+	__m256 vl = _mm256_unpacklo_ps(vx, vx);
+	__m256 vh = _mm256_unpackhi_ps(vx, vx);
+	__m256 v = _mm256_blend_ps(vl, vh, 0xf0); //aabbccdd I hope
+	_mm256_store_ps(&pix[l], _mm256_add_ps(_mm256_mul_ps(al, v),
+					       _mm256_load_ps(&pix[l])));
+	h += 4;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	pix[v + 0] += vox[l] * alpha;
+	pix[v + 1] += vox[l] * alpha;
+	v += 2;
+      }
+    }
+#endif
     break;
   case 4:
-    {
-      int v4 = nv / 4;
-      for (int m = 0; m < n; m++) {
-	const voxel_type *const vox = &(voxels.data()[ij[m]]);
-	const recon_type alpha = l_xy[m];
-	int v = 0;
-	for (int l = 0; l < v4; l++) {
-	  pix[v + 0] += vox[l] * alpha;
-	  pix[v + 1] += vox[l] * alpha;
-	  pix[v + 2] += vox[l] * alpha;
-	  pix[v + 3] += vox[l] * alpha;
-	  v += 4;
-	}
+#if defined(__AVX2__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      // Todo - try to load a vector and rearrange?
+      int h = 0;
+      for (int l = 0; l < nv; l += 8) {
+	__m256 vl = _mm256_broadcast_ss(&vox[h + 0]); //aaaaaaaa
+	__m256 vh = _mm256_broadcast_ss(&vox[h + 1]); //bbbbbbbb
+	__m256 v = _mm256_blend_ps(vl, vh, 0xf0); //aaaabbbb
+	_mm256_store_ps(&pix[l], _mm256_fmadd_ps(al, v,
+						 _mm256_load_ps(&pix[l])));
+	h += 2;
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = voxels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      // Todo - try to load a vector and rearrange?
+      int h = 0;
+      for (int l = 0; l < nv; l += 8) {
+	__m256 vl = _mm256_broadcast_ss(&vox[h + 0]); //aaaaaaaa
+	__m256 vh = _mm256_broadcast_ss(&vox[h + 1]); //bbbbbbbb
+	__m256 v = _mm256_blend_ps(vl, vh, 0xf0); //aaaabbbb
+	_mm256_store_ps(&pix[l], _mm256_add_ps(_mm256_mul_ps(al, v),
+					       _mm256_load_ps(&pix[l])));
+	h += 2;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	pix[v + 0] += vox[l] * alpha;
+	pix[v + 1] += vox[l] * alpha;
+	pix[v + 2] += vox[l] * alpha;
+	pix[v + 3] += vox[l] * alpha;
+	v += 4;
+      }
+    }
+#endif
     break;
   default:
     for (int m = 0; m < n; m++) {
-      const voxel_type *const vox = &(voxels.data()[ij[m]]);
-      const recon_type alpha = l_xy[m];
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	pix[v] += vox[mapping[v]] * alpha;
     }
@@ -129,27 +211,24 @@ void CCPi::parallel_beam::calc_xy_z(pixel_data &pixels, voxel_data &voxels,
   }
 }
 
-void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
-				      const real p2_x, const real p2_y,
+void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 				      pixel_data &pixels, voxel_data &voxels,
 				      const real b_x, const real b_y,
-				      const real b_z, const real d_x,
-				      const real d_y, const real d_z,
+				      const real d_x, const real d_y,
 				      const int nx, const int ny, const int nz,
-				      const int a, const int h,
-				      const int nv, const recon_type d_conv,
-				      const real_1d &v_pixels,
-				      const real cphi, const real sphi,
-				      const std::vector<int> &mapping,
+				      const int a, const int h, const int nv,
+				      const recon_type d_conv, const real cphi,
+				      const real sphi, const sl_int ij_base,
+				      const sl_int nyz, const int_1d &mapping,
 				      const int map_type)
 {
   // Todo? In parallel beam some of this should be common in a since
   // all h within a have same angle to voxels.
   int max_n = std::max(nx, ny);
   recon_1d l_xy(2 * max_n);
-  std::vector<sl_int> ij_arr(2 * max_n + 1);
+  voxel_ptr_1d ij_arr(2 * max_n + 1);
   int count = 0;
-  sl_int nyz = sl_int(ny) * sl_int(nz);
+  //sl_int nyz = sl_int(ny) * sl_int(nz);
   if (std::abs(cphi) < epsilon) {
     if (std::abs(sphi) < epsilon) {
       // Its not a line - shouldn't happen
@@ -159,7 +238,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
       int i = int(std::floor((p2_x - b_x) / d_x)); // == q2_x
       if (i >= 0 and i < nx) {
 	if (sphi < 0.0) {
-	  sl_int ij_offset = sl_int(i) * nyz + sl_int(ny - 1) * sl_int(nz);
+	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(i) * nyz
+	    + sl_int(ny - 1) * sl_int(nz);
 	  for (int j = ny - 1; j >= 0; j--) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
@@ -167,7 +247,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    count++;
 	  }
 	} else {
-	  sl_int ij_offset = sl_int(i) * nyz;
+	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(i) * nyz;
 	  for (int j = 0; j < ny; j++) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
@@ -182,7 +262,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
     int j = int(std::floor((p2_y - b_y) / d_y)); // == q2_y
     if (j >= 0 and j < ny) {
       if (cphi < 0.0) {
-	sl_int ij_offset = sl_int(nx - 1) * nyz + sl_int(j) * sl_int(nz);
+	voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(nx - 1) * nyz
+	  + sl_int(j) * sl_int(nz);
 	for (int i = nx - 1; i >= 0; i--) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
@@ -190,7 +271,7 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	  count++;
 	}
       } else {
-	sl_int ij_offset = sl_int(j) * sl_int(nz);
+	voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(j) * sl_int(nz);
 	for (int i = 0; i < nx; i++) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
@@ -243,7 +324,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    report_error("something wrong in x+ y+");
 	  // could do x_next/y_next here and only calc the one that changes
 	  // inside the if statements below, which would reduce the flops
-	  sl_int xy_offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
+	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	    + sl_int(y) * sl_int(nz);
 	  while (x < nx and y < ny) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y + 1] - epsilon) {
@@ -275,7 +357,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else
 	    report_error("something wrong in x+ y-");
-	  sl_int xy_offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
+	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	    + sl_int(y) * sl_int(nz);
 	  while (x < nx and y >= 0) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y] - epsilon) {
@@ -309,7 +392,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = 0;
 	  } else
 	    report_error("something wrong in x- y+");
-	  sl_int xy_offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
+	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	    + sl_int(y) * sl_int(nz);
 	  while (x >= 0 and y < ny) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y + 1] - epsilon) {
@@ -344,7 +428,8 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
 	    y = ny - 1;
 	  } else
 	    report_error("something wrong in x- y-");
-	  sl_int xy_offset = sl_int(x) * nyz + sl_int(y) * sl_int(nz);
+	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	    + sl_int(y) * sl_int(nz);
 	  while (x >= 0 and y >= 0) {
 	    ij_arr[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y] - epsilon) {
@@ -373,52 +458,9 @@ void CCPi::parallel_beam::fproject_xy(const real p1_x, const real p1_y,
   }
   if (count > 2 * max_n + 1)
     report_error("forward project overflow");
-#ifdef TEST2D
-  {
-    std::vector<bool> cmp(count);
-    for (int i = 0; i < count; i++)
-      cmp[i] = false;
-    real start[3];
-    real end[3];
-    start[0] = p1_x;
-    start[1] = p1_y;
-    end[0] = p2_x;
-    end[1] = p2_y;
-    for (int i = 0; i < nx; i++) {
-      real x_0 = b_x + real(i) * d_x;
-      for (int j = 0; j < ny; j++) {
-	real y_0 = b_y + real(j) * d_y;
-	recon_type ln1, ln2;
-	if (test_2D(start, end, x_0, y_0, d_x, d_y, 1, 1, ln1, ln2)) {
-	  recon_type ln = ln1 - ln2;
-	  int k;
-	  for (k = 0; k < count; k++) {
-	    if (ij_arr[k] == sl_int(i) * nyz + sl_int(j) * sl_int(nz)) {
-	      cmp[k] = true;
-	      real diff = l_xy[k] / d_conv;
-	      if (ln < diff - epsilon or ln > diff + epsilon)
-		std::cerr << "Bug " << i << ' ' << j << ' ' << a << ' ' << h 
-			  << ' ' << ln << ' ' << diff << '\n';
-	      break;
-	    }
-	  }
-	  if (k == count and ln > epsilon)
-	    std::cerr << "Missed " << i << ' ' << j << ' ' << a << ' ' << h
-		      << ' ' << k << ' ' << count << ' ' << ln << '\n';
-	}
-      }
-    }
-    for (int k = 0; k < count; k++) {
-      if (!cmp[k])
-	std::cerr << "Not found " << a << ' ' << h << ' ' << ij_arr[k]
-		  << ' ' << ij_arr[k] << ' ' << k << ' ' << count
-		  << ' ' << l_xy[k] / d_conv << '\n';
-    }
-  }
-#endif // TEST2D
   if (count > 0) {
-    calc_xy_z(pixels, voxels, l_xy, ij_arr, count, a, h,
-	      nv, nz, mapping, map_type);
+    calc_xy_z(&(pixels[a][h][0]), ij_arr, l_xy, count, nv, nz,
+	      mapping, map_type);
   }    
 }
 
@@ -442,84 +484,304 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   // path length from source to detector is independent of rotation
   recon_type d_conv = recon_type(3.0 * detector_x);
 
-  std::vector<int> mapping(nv_pixels);
+  int_1d mapping(nv_pixels);
   int map_type = 0;
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
   
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, map_type) schedule(dynamic)
-  for (int a = 0; a < n_angles; a++) {
-    for (int h = 0; h < nh_pixels; h++) {
-      // rotate source and detector positions by current angle
-      real cosa = std::cos(angles[a]);
-      real sina = std::sin(angles[a]);
+  const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+  const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+  sl_int nyz = sl_int(ny) * sl_int(nz);
 
-      real p2_x = cosa * detector_x - sina * h_pixels[h];
-      real p2_y = sina * detector_x + cosa * h_pixels[h];
-      real p1_x = p2_x - real(3.0) * cosa * detector_x;
-      real p1_y = p2_y - real(3.0) * sina * detector_x;
-      fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vox_origin[0],
-		  vox_origin[1], vox_origin[2], vox_size[0], vox_size[1],
-		  vox_size[2], nx, ny, nz, a, h, nv_pixels, d_conv, v_pixels,
-		  cosa, sina, mapping, map_type);
+  const int a_block = n_angles;
+  const int x_block = 32;
+  const int y_block = 32;
+  for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+    int a_step = a_block;
+    if (block_a + a_step > n_angles)
+      a_step = n_angles - block_a;
+    // we don't block h since we have a min/max from the x/y blocks
+    for (int block_x = 0; block_x < nx; block_x += x_block) {
+      int x_step = x_block;
+      if (block_x + x_step > nx)
+	x_step = nx - block_x;
+      sl_int i_base = sl_int(block_x) * nyz;
+      real vx = vox_origin[0] + real(block_x) * vox_size[0];
+      real wx = vox_origin[0] + real(block_x + x_step) * vox_size[0];
+      for (int block_y = 0; block_y < ny; block_y += y_block) {
+	int y_step = y_block;
+	if (block_y + y_step > ny)
+	  y_step = ny - block_y;
+	sl_int ij_base = i_base + sl_int(block_y) * sl_int(nz);
+	real vy = vox_origin[1] + real(block_y) * vox_size[1];
+	real wy = vox_origin[1] + real(block_y + y_step) * vox_size[1];	  
+
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, ihp_step, h_pix0, nyz, ij_base, vx, vy, wx, wy, map_type) schedule(dynamic)
+	for (int ax = 0; ax < a_step; ax++) {
+	  int a = block_a + ax;
+	  // rotate source and detector positions by current angle
+	  real cphi = std::cos(angles[a]);
+	  real sphi = std::sin(angles[a]);
+
+          // from bproject
+          int hmin = 0;
+          int hmax = nh_pixels - 1;
+          if (std::abs(cphi) < epsilon) {
+            // line is parallel to y, so just find h that is between x_0/x_n
+            if (sphi < 0.0) {
+              hmin = int(std::floor(vx * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease x_n by tol so inside upper boundary, not on it?
+              hmax = int(std::floor((wx - epsilon) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+            } else {
+              hmin = int(std::ceil((- wx + epsilon) * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease x_n by tol so inside upper boundary, not on it?
+              hmax = int(std::ceil((- vx) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+            }
+          } else if (std::abs(sphi) < epsilon) {
+            if (cphi < 0.0) {
+              hmin = int(std::ceil((- wy + epsilon) * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease wy by tol so inside upper boundary, not on it?
+              hmax = int(std::ceil((- vy) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+            } else {
+              hmin = int(std::floor(vy * ihp_step - h_pix0));
+              if (hmin < 0)
+                hmin = 0;
+              // decrease wy by tol so inside upper boundary, not on it?
+              hmax = int(std::floor((wy - epsilon) * ihp_step - h_pix0));
+              if (hmax >= nh_pixels)
+                hmax = nh_pixels - 1;
+             }
+          } else {
+            real ymin;
+            real ymax;
+            // Todo - pass in arrays of vy * cphi etc?
+            if (cphi > 0.0) {
+              if (sphi > 0.0) {
+                ymin = vy * cphi - wx * sphi; //y10;
+                ymax = wy * cphi - vx * sphi; //y01;
+              } else {
+                ymin = vy * cphi - vx * sphi; //y00;
+                ymax = wy * cphi - wx * sphi; //y11;
+              }
+            } else {
+              if (sphi > 0.0) {
+                ymin = wy * cphi - wx * sphi; //y11;
+                ymax = vy * cphi - vx * sphi; //y00;
+              } else {
+                ymin = wy * cphi - vx * sphi; //y01;
+                ymax = vy * cphi - wx * sphi; //y10;
+              }
+            }
+            if (ymin < h_pixels[0])
+              hmin = 0;
+            else
+              hmin = int(std::floor(ymin * ihp_step - h_pix0));
+            //if (ymax >= h_pixels[nh]) Todo
+            hmax = std::min(int(std::floor(ymax * ihp_step - h_pix0)),
+                            nh_pixels-1);
+          }
+          // end bproject
+
+	  for (int h = hmin; h <= hmax; h++) {
+	    real p2_x = cphi * detector_x - sphi * h_pixels[h];
+	    real p2_y = sphi * detector_x + cphi * h_pixels[h];
+	    //real p1_x = p2_x - real(3.0) * cphi * detector_x;
+	    //real p1_y = p2_y - real(3.0) * sphi * detector_x;
+	    fproject_xy(p2_x, p2_y, pixels, voxels, vx, vy, vox_size[0],
+			vox_size[1], x_step, y_step, nz, a, h, nv_pixels,
+			d_conv, cphi, sphi, ij_base, nyz, mapping, map_type);
+	  }
+	}
+      }
     }
   }
 }
 
-void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
-				    const recon_1d &l_xy,
-				    const std::vector<sl_int> &ah,
-				    const int n, const int i, const int j,
+void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
+				    voxel_type *const voxels,
+				    const recon_1d &l_xy, const int n,
 				    const int nv, const int nz,
-				    const std::vector<int> &mapping,
-				    const int map_type)
+				    const int_1d &mapping, const int map_type)
 {
-  voxel_type *const vox = &(voxels[i][j][0]);
+  voxel_type *const vox = assume_aligned(voxels, voxel_type);
+  recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
+#if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
     for (int m = 0; m < n; m++) {
-      const pixel_type *const pix = &(pixels.data()[ah[m]]);
-      const recon_type alpha = l_xy[m];
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&vox[v],
+			_mm256_fmadd_ps(al,_mm256_load_ps(&pix[v]),
+					_mm256_load_ps(&vox[v])));
+      }
+    }
+#elif defined(__AVX__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      for (int v = 0; v < nv; v += 8) {
+	_mm256_store_ps(&vox[v],
+			_mm256_add_ps(_mm256_mul_ps(al,_mm256_load_ps(&pix[v])),
+				      _mm256_load_ps(&vox[v])));
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	vox[v] += pix[v] * alpha;
     }
+#endif
     break;
   case 2:
+#if defined(__AVX2__) && PIXEL_SIZE == 4
     {
-      int v2 = nv / 2;
+      //const __m256i offsets = _mm256_set_epi32(0, 2, 4, 6, 1, 3, 6, 7);
+      // Todo - use 8 way vox vectors
       for (int m = 0; m < n; m++) {
-	const pixel_type *const pix = &(pixels.data()[ah[m]]);
-	const recon_type alpha = l_xy[m];
+	const pixel_type *const pix = pixels[m];
+	const recon_type alpha = lptr[m];
+	__m128 al = _mm_set1_ps(alpha);
 	int v = 0;
-	for (int l = 0; l < v2; l++) {
-	  vox[l] += pix[v + 0] * alpha;
-	  vox[l] += pix[v + 1] * alpha;
-	  v += 2;
+	for (int l = 0; l < nz; l += 4) {
+	  __m256 p = _mm256_load_ps(&pix[v]);
+	  __m128 pl = _mm256_extractf128_ps(p, 0x0); //abcd
+	  __m128 ph = _mm256_extractf128_ps(p, 0x1); //efgh
+	  _mm_store_ps(&vox[l], _mm_fmadd_ps(al, _mm_hadd_ps(pl, ph),
+					     _mm_load_ps(&vox[l])));
+	  /*
+	  __m128 pp = _mm256_permutevar8x32_ps(p, offsets); //acegbdfh
+	  __m128 p0 = _mm256_extractf128_ps(pp, 0x0); //aceg
+	  __m128 p1 = _mm256_extractf128_ps(pp, 0x1); //bdfh
+	  // sum pair of values since both a multiplied by alpha
+	  _mm_store_ps(&vox[l], _mm_fmadd_ps(al, _mm_add_ps(p0, p1),
+	           _mm_load_ps(&vox[l])));
+	  */
+	  v += 8;
 	}
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      int v = 0;
+      for (int l = 0; l < nz; l += 8) {
+	// opt manual recommends reducing port-5 pressure with insert
+	__m256 pl = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 0])),
+					 _mm_load_ps(&pix[v + 8]), 0x1);
+	__m256 ph = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 4])),
+					 _mm_load_ps(&pix[v + 12]), 0x1);
+	/*
+	__m256 p0 = _mm256_load_ps(&pix[v + 0]); //abcdefgh
+	__m256 p1 = _mm256_load_ps(&pix[v + 8]); //ijklmnop
+	__m256 pl = _mm256_permute2f128_ps(p0, p1, 0x20); //abcdijkl
+	__m256 ph = _mm256_permute2f128_ps(p0, p1, 0x31); //efghmnop
+	*/
+	// hadd should now give (ab)(cd)(ef)(gh)(ij)(kl)(mn)(op)
+	_mm256_store_ps(&vox[l],
+			_mm256_add_ps(_mm256_mul_ps(al, _mm256_hadd_ps(pl, ph)),
+				      _mm256_load_ps(&vox[l])));
+	v += 16;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	vox[l] += (pix[v + 0] + pix[v + 1]) * alpha;
+	v += 2;
+      }
+    }
+#endif
     break;
   case 4:
-    {
-      int v4 = nv / 4;
-      for (int m = 0; m < n; m++) {
-	const pixel_type *const pix = &(pixels.data()[ah[m]]);
-	const recon_type alpha = l_xy[m];
-	int v = 0;
-	for (int l = 0; l < v4; l++) {
-	  vox[l] += pix[v + 0] * alpha;
-	  vox[l] += pix[v + 1] * alpha;
-	  vox[l] += pix[v + 2] * alpha;
-	  vox[l] += pix[v + 3] * alpha;
-	  v += 4;
-	}
+#if defined(__AVX2__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m128 al = _mm_set1_ps(alpha);
+      int v = 0;
+      for (int l = 0; l < nz; l += 4) {
+	__m256 p0 = _mm256_load_ps(&pix[v + 0]);
+	__m256 p1 = _mm256_load_ps(&pix[v + 8]);
+	__m256 p = _mm256_hadd_ps(p0, p1);
+	__m128 pl = _mm256_extractf128_ps(p, 0x0); //abcd
+	__m128 ph = _mm256_extractf128_ps(p, 0x1); //efgh
+	_mm_store_ps(&vox[l], _mm_fmadd_ps(al, _mm_hadd_ps(pl, ph),
+					   _mm_load_ps(&vox[l])));
+	v += 16;
       }
     }
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = pixels[m];
+      const recon_type alpha = lptr[m];
+      __m256 al = _mm256_set1_ps(alpha);
+      int v = 0;
+      for (int l = 0; l < nz; l += 8) {
+	__m256 pa = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 0])),
+					 _mm_load_ps(&pix[v + 16]), 0x1);
+	__m256 pb = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 4])),
+					 _mm_load_ps(&pix[v + 20]), 0x1);
+	__m256 pc = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 8])),
+					 _mm_load_ps(&pix[v + 24]), 0x1);
+	__m256 pd = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_load_ps(&pix[v + 12])),
+					 _mm_load_ps(&pix[v + 28]), 0x1);
+	/*
+	__m256 p0 = _mm256_load_ps(&pix[v + 0]);
+	__m256 p1 = _mm256_load_ps(&pix[v + 8]);
+	__m256 p2 = _mm256_load_ps(&pix[v + 16]);
+	__m256 p3 = _mm256_load_ps(&pix[v + 24]);
+	__m256 pa = _mm256_permute2f128_ps(p0, p2, 0x20);
+	__m256 pb = _mm256_permute2f128_ps(p0, p2, 0x31);
+	__m256 pc = _mm256_permute2f128_ps(p1, p3, 0x20);
+	__m256 pd = _mm256_permute2f128_ps(p1, p3, 0x31);
+	*/
+	__m256 pl = _mm256_hadd_ps(pa, pb);
+	__m256 ph = _mm256_hadd_ps(pc, pd);
+	_mm256_store_ps(&vox[l],
+			_mm256_add_ps(_mm256_mul_ps(al, _mm256_hadd_ps(pl, ph)),
+				      _mm256_load_ps(&vox[l])));
+	v += 32;
+      }
+    }
+#else
+    for (int m = 0; m < n; m++) {
+      const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
+      const recon_type alpha = lptr[m];
+      int v = 0;
+      for (int l = 0; l < nz; l++) {
+	vox[l] += (pix[v + 0] + pix[v + 1] + pix[v + 2] + pix[v + 3]) * alpha;
+	v += 4;
+      }
+    }
+#endif
     break;
   default:
     for (int m = 0; m < n; m++) {
-      const pixel_type *const pix = &(pixels.data()[ah[m]]);
-      const recon_type alpha = l_xy[m];
+      const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
+      const recon_type alpha = lptr[m];
       for (int v = 0; v < nv; v++)
 	vox[mapping[v]] += pix[v] * alpha;
     }
@@ -527,42 +789,36 @@ void CCPi::parallel_beam::calc_ah_z(pixel_data &pixels, voxel_data &voxels,
   }
 }
 
-void CCPi::parallel_beam::bproject_ah(const real source_x,
-				      const real detector_x, pixel_data &pixels,
-				      voxel_data &voxels, const real x_0,
-				      const real y_0, const real x_n,
-				      const real y_n, const real b_z,
+void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
+				      const real x_0, const real y_0,
+				      const real x_n, const real y_n,
 				      const real d_x, const real d_y,
-				      const real d_z, const int nx,
-				      const int ny, const int nz, const int i,
-				      const int j, const int n_angles,
-				      const int n_h, const int n_v,
-				      const real_1d &h_pixels,
-				      const real_1d &v_pixels,
+				      const int nz, const int i, const int j,
+				      const int n_angles, const int n_h,
+				      const int n_v, const real_1d &h_pixels,
 				      const real_1d &cangle,
 				      const real_1d &sangle,
 				      const real_1d &y_offset,
 				      const real_1d &i_offset,
-				      const real_1d &length,
-				      const real h_pix0, const real ihp_step,
-				      const recon_type d_conv,
-				      const std::vector<int> &mapping,
-				      const int map_type)
+				      const real_1d &length, const real h_pix0,
+				      const real ihp_step, const int a_off,
+				      const int_1d &mapping, const int map_type)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
   const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be - Todo - use mapping for pix_per_vox?
   int count = 0;
-  std::vector<sl_int> ah_arr(2 * pix_per_vox * (n_angles + 10));
+  pixel_ptr_1d ah_arr(2 * pix_per_vox * (n_angles + 10));
   recon_1d l_xy(2 * pix_per_vox * (n_angles + 10));
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   // Todo - in parallel we can probably make a better guess at which 2 corners
   // we need for the upper and lower limits.
   //real pixel_step = h_pixels[1] - h_pixels[0];
   sl_int nah = sl_int(n_h) * sl_int(n_v);
-  sl_int ah_offset = 0;
-  for (int a = 0; a < n_angles; a++) {
+  pixel_ptr ah_offset = pixels.data() + sl_int(a_off) * nah;
+  for (int ax = 0; ax < n_angles; ax++) {
+    int a = a_off + ax;
     real cphi = cangle[a];
     real sphi = sangle[a];
     // Todo - is there a direction issue here that should swap 0/n?
@@ -576,11 +832,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::floor((x_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	sl_int h_offset = sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= x_0 and h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -593,11 +849,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::ceil((- x_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	sl_int h_offset = sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (-h_pixels[h] >= x_0 and -h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -612,11 +868,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::ceil((- y_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	sl_int h_offset = sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (- h_pixels[h] >= y_0 and - h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -629,11 +885,11 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
 	int hmax = int(std::floor((y_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	sl_int h_offset = sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= y_0 and h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  }
 	  h_offset += n_v;
@@ -677,20 +933,20 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
       real ybot = ymin + y_offset[a];
       real ytop = ymax - y_offset[a];
       const real l = length[a];
-      sl_int h_offset = sl_int(hmin) * sl_int(n_v);
+      pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
       for (int h = hmin; h <= hmax; h++) {
 	if (h_pixels[h] > ymin + epsilon) {
 	  if (h_pixels[h] < ybot) {
 	    l_xy[count] = l * (h_pixels[h] - ymin) * i_offset[a];
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  } else if (h_pixels[h] <= ytop) {
 	    l_xy[count] = l;
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  } else if (h_pixels[h] < ymax - epsilon) {
 	    l_xy[count] = l * (ymax - h_pixels[h]) * i_offset[a];
-	    ah_arr[count] = ah_offset + h_offset;
+	    ah_arr[count] = h_offset;
 	    count++;
 	  } else
 	    break;
@@ -702,68 +958,18 @@ void CCPi::parallel_beam::bproject_ah(const real source_x,
   }
   if (count > 2 * pix_per_vox * (n_angles + 10))
     report_error("back project overflow");
-#ifdef TEST2D
-  {
-    std::vector<bool> cmp(count);
-    for (int k = 0; k < count; k++)
-      cmp[k] = false;
-    real start[3];
-    real end[3];
-    for (int a = 0; a < n_angles; a++) {
-      for (int h = 0; h < n_h; h++) {
-	real cos_curr_angle = cangle[a];
-	real sin_curr_angle = sangle[a];
-	end[0] = cos_curr_angle * detector_x - sin_curr_angle * h_pixels[h];
-	end[1] = sin_curr_angle * detector_x + cos_curr_angle * h_pixels[h];
-	start[0] = end[0] - real(3.0) * cos_curr_angle * detector_x;
-	start[1] = end[1] - real(3.0) * sin_curr_angle * detector_x;
-	recon_type ln1, ln2;
-	if (test_2D(start, end, x_0, y_0, d_x, d_y, 1, 1, ln1, ln2)) {
-	  recon_type ln = ln1 - ln2;
-	  int k;
-	  for (k = 0; k < count; k++) {
-	    if (ah_arr[k] == sl_int(a) * nah + sl_int(h) * sl_int(n_v)) {
-	      cmp[k] = true;
-	      real diff = l_xy[k] / d_conv;
-	      if (ln < diff - epsilon or ln > diff + epsilon)
-		std::cerr << "Bug " << a << ' ' << h << ' ' << i << ' ' << j 
-			  << ' ' << ln << ' ' << diff << '\n';
-	      break;
-	    }
-	  }
-	  if (k == count and ln > epsilon)
-	    std::cerr << "Missed " << a << ' ' << h << ' ' << i << ' ' << j
-		      << ' ' << k << ' ' << count << ' ' << ln << '\n';
-	}
-      }
-    }
-    for (int k = 0; k < count; k++) {
-      if (!cmp[k])
-	std::cerr << "Not found " << i << ' ' << j << ' ' << ah_arr[k]
-		  << ' ' << ah_arr[k] << ' ' << k << ' ' << count
-		  << ' ' << l_xy[k] / d_conv << '\n';
-    }
-  }
-#endif // TEST2D
   if (count > 0) {
-    calc_ah_z(pixels, voxels, l_xy, ah_arr, count,
-	      i, j, n_v, nz, mapping, map_type);
+    calc_ah_z(ah_arr, &(voxels[i][j][0]), l_xy, count, n_v, nz,
+	      mapping, map_type);
   }
 }
 
-void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
-			      const real_1d &v_pixels,
-			      const real_1d &angles,
-			      pixel_data &pixels,
-			      voxel_data &voxels,
-			      const int n_angles,
-			      const int nh_pixels,
-			      const int nv_pixels,
-			      const real vox_origin[3],
-			      const real vox_size[3],
-			      const int nx,
-			      const int ny,
-			      const int nz)
+void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
+			      const real_1d &angles, pixel_data &pixels,
+			      voxel_data &voxels, const int n_angles,
+			      const int nh_pixels, const int nv_pixels,
+			      const real vox_origin[3], const real vox_size[3],
+			      const int nx, const int ny, const int nz)
 {
   // Todo - 1d arrays of x,y,p1x.p1y positions and 2d p2x/p2y?
 
@@ -780,15 +986,15 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
 
   // set detector z to 2* the yz limits of the voxels, so it misses
   // longest voxel dim should be sqrt(3), so 2 should be safe
-  real detector_x = real(2.0) * std::max(std::abs(vox_origin[0]),
-					 std::max(std::abs(vox_origin[1]),
-						  std::abs(vox_origin[2])));
+  //real detector_x = real(2.0) * std::max(std::abs(vox_origin[0]),
+  //				 std::max(std::abs(vox_origin[1]),
+  //					  std::abs(vox_origin[2])));
   // at 0 degrees
   //real p2_x = detector_x;
   //real p2_y = 0.0;
   // path length from source to detector is independent of rotation
-  recon_type d_conv = recon_type(3.0 * detector_x);
-  const real source_x = -2.0 * detector_x;
+  //recon_type d_conv = recon_type(3.0 * detector_x);
+  //const real source_x = -2.0 * detector_x;
 
   // Todo - do we need this?
   recon_1d vox_z(nz + 1);
@@ -798,7 +1004,7 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
   for (int j = 0; j <= ny; j++)
     yvals[j] = vox_origin[1] + real(j) * vox_size[1];
 
-  std::vector<int> mapping(nv_pixels);
+  int_1d mapping(nv_pixels);
   int map_type = 0;
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
@@ -852,46 +1058,6 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
       }
     }
     y_offset[a] = ybot - ymin;
-#ifdef TEST2D
-    real ymax;
-    real ytop;
-    if (cphi > 0.0) {
-      if (sphi > 0.0) {
-	ymax = y01;
-	if (y11 < y00) {
-	  ytop = y00;
-	} else {
-	  ytop = y11;
-	}
-      } else {
-	ymax = y11;
-	if (y01 < y10) {
-	  ytop = y10;
-	} else {
-	  ytop = y01;
-	}
-      }
-    } else {
-      if (sphi > 0.0) {
-	ymax = y00;
-	if (y01 < y10) {
-	  ytop = y10;
-	} else {
-	  ytop = y01;
-	}
-      } else {
-	ymax = y10;
-	if (y11 < y00) {
-	  ytop = y00;
-	} else {
-	  ytop = y11;
-	}
-      }
-    }
-    real yx = ymax - ytop;
-    if (std::abs(y_offset[a] - yx) > epsilon)
-      std::cerr << "Offset " << a << ' ' << yx << ' ' << y_offset[a] << '\n';
-#endif // TEST2D
     i_offset[a] = 1.0 / y_offset[a];
     if (std::abs(cphi) > std::abs(sphi))
       length[a] = vox_size[0] / std::abs(cphi);
@@ -901,17 +1067,38 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels,
   const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
   const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
 
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, yvals, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, source_x, y_offset, i_offset, length, h_pix0, ihp_step, c_angle, s_angle, map_type) schedule(dynamic)
-  for (int i = 0; i < nx; i++) {
-    for (int j = 0; j < ny; j++) {
-      const real x_0 = vox_origin[0] + real(i) * vox_size[0];
-      const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
-      bproject_ah(source_x, detector_x, pixels, voxels,
-		  x_0, yvals[j], x_n, yvals[j + 1], vox_origin[2],
-		  vox_size[0], vox_size[1], vox_size[2], nx, ny, nz, i, j,
-		  n_angles, nh_pixels, nv_pixels, h_pixels, v_pixels,
-		  c_angle, s_angle, y_offset, i_offset, length,
-		  h_pix0, ihp_step, d_conv, mapping, map_type);
+  const int x_block = 32;
+  const int y_block = 32;
+  const int a_block = 40;
+  for (int block_x = 0; block_x < nx; block_x += x_block) {
+    int x_step = x_block;
+    if (block_x + x_step > nx)
+      x_step = nx - block_x;
+    for (int block_y = 0; block_y < ny; block_y += y_block) {
+      int y_step = y_block;
+      if (block_y + y_step > ny)
+	y_step = ny - block_y;
+      for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+	int a_step = a_block;
+	if (block_a + a_step > n_angles)
+	  a_step = n_angles - block_a;
+	// we don't block h since we have a min/max from the x/y blocks
+
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin, yvals, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, y_offset, i_offset, length, h_pix0, ihp_step, c_angle, s_angle, block_x, block_y, x_step, y_step, a_step, block_a, map_type) schedule(dynamic)
+	for (int ix = 0; ix < x_step; ix++) {
+	  int i = block_x + ix;
+	  const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+	  const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
+	  for (int jx = 0; jx < y_step; jx++) {
+	    int j = block_y + jx;
+	    bproject_ah(pixels, voxels, x_0, yvals[j],
+			x_n, yvals[j + 1], vox_size[0], vox_size[1], nz,
+			i, j, a_step, nh_pixels, nv_pixels, h_pixels,
+			c_angle, s_angle, y_offset, i_offset, length,
+			h_pix0, ihp_step, block_a, mapping, map_type);
+	  }
+	}
+      }
     }
   }      
 }

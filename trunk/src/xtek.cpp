@@ -36,12 +36,13 @@ static pixel_type interpolate2D(const real_1d &h, const int v_slice,
 bool CCPi::Nikon_XTek::setup_experimental_geometry(const std::string path,
 						   const std::string file,
 						   const real rotation_centre,
+						   const int pixels_per_voxel,
 						   const bool phantom)
 {
   if (phantom)
     return create_phantom();
   else
-    return read_config_file(path, file);
+    return read_config_file(path, file, pixels_per_voxel);
 }
 
 bool CCPi::Nikon_XTek::create_phantom()
@@ -51,25 +52,25 @@ bool CCPi::Nikon_XTek::create_phantom()
   int c;
   for (c = 0; c < 1000; c++) {
     //real p = -100.0 + c * 0.250;
-    real p = -99.8 + real(c) * 0.400;
+    real p = -99.8046875 + real(c) * 0.390625;
     if (p >= 100.0 + 0.001)
       break;
   }
   real_1d &h_pixels = set_h_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + i * 0.250;
-    h_pixels[i] = -99.8 + real(i) * 0.400;
+    h_pixels[i] = -99.8046875 + real(c) * 0.390625;
   }
   for (c = 0; c < 1000; c++) {
     //real p = -100.0 + real(c) * 0.250;
-    real p = -99.8 + real(c) * 0.400;
+    real p = -99.8046875 + real(c) * 0.390625;
     if (p >= 100.0 + 0.001)
       break;
   }
   real_1d &v_pixels = set_v_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + real(i) * 0.250;
-    v_pixels[i] = -99.8 + real(i) * 0.400;
+    v_pixels[i] = -99.8046875 + real(c) * 0.390625;
   }
   // 501 values from 0 to 2pi
   //geom.angles = linspace(0,2*pi,501);
@@ -89,7 +90,8 @@ bool CCPi::Nikon_XTek::create_phantom()
 }
 
 bool CCPi::Nikon_XTek::read_config_file(const std::string path,
-					const std::string file)
+					const std::string file,
+					const int pixels_per_voxel)
 {
   bool ok = false;
   // read Xtek .xtekct file
@@ -160,6 +162,7 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	  ok = false;
 	  std::cerr << "No name found for tiff files\n";
 	} else if (n_h_pixels > 0 and n_v_pixels > 0 and n_phi > 0) {
+	  n_v_pixels = calc_v_alignment(n_v_pixels, pixels_per_voxel, true);
 	  real_1d &h_pixels = set_h_pixels(n_h_pixels);
 	  real_1d &v_pixels = set_v_pixels(n_v_pixels);
 	  real pixel_base = -((n_h_pixels - 1) * xpixel_size / real(2.0));
@@ -285,9 +288,9 @@ bool CCPi::Nikon_XTek::read_scans(const std::string path, const int offset,
 bool CCPi::Nikon_XTek::build_phantom()
 {
   // build small voxel set to project to produce initial pixels
-  int nx = 500;
-  int ny = 500;
-  int nz = 500;
+  int nx = 512;
+  int ny = 512;
+  int nz = 512;
 
   //real *h_pixels = get_h_pixels();
   //int n_h_pixels = get_num_h_pixels();
@@ -358,10 +361,12 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
   combine_path_and_name(path, basename, pathbase);
   char index[8];
   initialise_progress(get_num_angles(), "Loading data...");
+  int v_shift = get_data_v_offset();
+  int v_size = get_data_v_size();
   for (sl_int i = 0; (i < get_num_angles() and ok); i++) {
     snprintf(index, 8, "%04d", int(i + 1));
     std::string name = pathbase + index + ".tif";
-    ok = read_tiff(name, pixels, i, get_num_h_pixels(), get_num_v_pixels());
+    ok = read_tiff(name, pixels, i, get_num_h_pixels(), v_size, v_shift);
     update_progress(i + 1);
   }
   if (ok) {
@@ -377,14 +382,20 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     */
     real max_v = real(65535.0);
     // scale and take -ve log, due to exponential extinction in sample.
+    int v_end = v_shift + v_size;
     for (int i = 0; i < get_num_angles(); i++) {
       for (int j = 0; j < get_num_h_pixels(); j++) {
-	for (int k = 0; k < get_num_v_pixels(); k++) {
+	// initialise aligned areas
+	for (int k = 0; k < v_shift; k++)
+	  pixels[i][j][k] = 0.0;
+	for (int k = v_shift; k < v_end; k++) {
 	  if (pixels[i][j][k] < real(1.0))
 	    pixels[i][j][k] = - std::log(real(0.00001) / max_v);
 	  else
 	    pixels[i][j][k] = - std::log(pixels[i][j][k] / max_v);
 	}
+	for (int k = v_end; k < get_num_v_pixels(); k++)
+	  pixels[i][j][k] = 0.0;
       }
     }
     find_centre(get_num_v_pixels() / 2 + 1);

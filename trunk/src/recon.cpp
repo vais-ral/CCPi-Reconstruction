@@ -97,7 +97,8 @@ int main()
       std::string filename;
       CCPi::split_path_and_name(data_file, path, filename);
       if (instrument->setup_experimental_geometry(path, filename,
-						  rotation_centre, phantom)) {
+						  rotation_centre,
+						  pixels_per_voxel, phantom)) {
 	int nx_voxels = 0;
 	int ny_voxels = 0;
 	int maxz_voxels = 0;
