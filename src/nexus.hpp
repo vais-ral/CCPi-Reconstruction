@@ -9,7 +9,7 @@ namespace CCPi {
 		  int &nv_pixels, std::vector<real> &angles, int &nangles,
 		  real &hsize, real &vsize, const std::string filename,
 		  const bool all_angles, const bool read_data,
-		  const int start_idx, const int block_size);
+		  const int start_idx, const int block_size, const int v_shift);
   // Todo - write NeXus NXtomoproc?
 
 }

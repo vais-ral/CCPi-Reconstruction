@@ -5,7 +5,7 @@ TIFFINC =
 TIFFLIB = -ltiff
 NXINC = -I/usr/local/nexus/include/nexus -DHAS_NEXUS
 NXLIB = -L/usr/local/nexus/lib -lNeXusCPP
-CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(MKLINC) -DTEST2D
+CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(MKLINC)
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
 MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_intel_ilp64.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_sequential.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a
@@ -21,7 +21,7 @@ recon: $(OBJECTS)
 clean:
 	rm recon *.o
 
-$(OBJECTS): base_types.hpp
+$(OBJECTS): base_types.hpp allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
@@ -42,7 +42,7 @@ xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp ui_calls.hpp
 
 results.o: results.cpp results.hpp tiff.hpp mpi.hpp ui_calls.hpp
 
-tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp
+tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp blas.hpp
 
 tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
 

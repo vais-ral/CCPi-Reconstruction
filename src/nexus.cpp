@@ -17,7 +17,8 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      int &nv_pixels, std::vector<real> &angles, int &nangles,
 		      real &hsize, real &vsize, const std::string filename,
 		      const bool all_angles, const bool read_data,
-		      const int start_idx, const int block_size)
+		      const int start_idx, const int block_size,
+		      const int v_shift)
 {
   bool ok = true;
   timer ldtime(USE_TIMER);
@@ -268,7 +269,7 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		  if (read_data) {
 		    for (sl_int k = 0; k < sizes[1]; k++) {
 		      for (sl_int j = 0; j < sizes[2]; j++) {
-			pixels[n_angles][j][(block_size - k - 1)] =
+			pixels[n_angles][j][v_shift + (block_size - k - 1)] =
 			  pixel_type(ptr[k * sizes[2] + j]);
 		      }
 		    }
@@ -285,11 +286,10 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_fbright++;
 		    } else
 		      n_ibright++;
-		    sl_int j = 0;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
-			bptr[j] += pixel_type(ptr[v * sizes[2] + h]);
-			j++;
+			bptr[h * nv_pixels + v_shift + (block_size - v - 1)] +=
+			  pixel_type(ptr[v * sizes[2] + h]);
 		      }
 		    }
 		  }
@@ -302,11 +302,10 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_fdark++;
 		    } else
 		      n_idark++;
-		    sl_int j = 0;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
-			dptr[j] += pixel_type(ptr[v * sizes[2] + h]);
-			j++;
+			dptr[h * nv_pixels + v_shift + (block_size - v - 1)] +=
+			  pixel_type(ptr[v * sizes[2] + h]);
 		      }
 		    }
 		  }
@@ -332,16 +331,16 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
     // Average bright/dark frames - Todo, something else? outside here?
     for (int i = 0; i < nh_pixels; i++)
       for (int j = 0; j < nv_pixels; j++)
-	i_dark[i][j] /= pixel_type(n_idark);
+	i_dark[i][j + v_shift] /= pixel_type(n_idark);
     for (int i = 0; i < nh_pixels; i++)
       for (int j = 0; j < nv_pixels; j++)
-	f_dark[i][j] /= pixel_type(n_fdark);
+	f_dark[i][j + v_shift] /= pixel_type(n_fdark);
     for (int i = 0; i < nh_pixels; i++)
       for (int j = 0; j < nv_pixels; j++)
-	i_bright[i][j] /= pixel_type(n_ibright);
+	i_bright[i][j + v_shift] /= pixel_type(n_ibright);
     for (int i = 0; i < nh_pixels; i++)
       for (int j = 0; j < nv_pixels; j++)
-	f_bright[i][j] /= pixel_type(n_fbright);
+	f_bright[i][j + v_shift] /= pixel_type(n_fbright);
     // destructor closes file
   }
   return ok;
