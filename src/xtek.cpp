@@ -146,7 +146,8 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	  white_level = std::atof(&line[11]);
 	  ndata++;
 	} else if (strncmp(line, "InputSeparator", 14) == 0) {
-	  sep = line[15];
+	  if (int(line[15]) != 13)
+	    sep = line[15];
 	} else if (strncmp(line, "Name", 4) == 0) {
 	  while (isspace(line[strlen(line) - 1]))
 	    line[strlen(line) - 1] = '\0';
@@ -370,19 +371,23 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     update_progress(i + 1);
   }
   if (ok) {
-    /*
     real max_v = 0.0;
-    for (sl_int j = 0; j < n_rays; j++)
-      if (max_v < pixel_data[j])
-	max_v = pixel_data[j];
-    if (max_v > white_level + 0.01)
-      std::cout << "Values exceed white level\n";
-    else
-      max_v = white_level;
-    */
-    real max_v = real(65535.0);
-    // scale and take -ve log, due to exponential extinction in sample.
     int v_end = v_shift + v_size;
+    bool fail = false;
+    for (int i = 0; i < get_num_angles(); i++) {
+      for (int j = 0; j < get_num_h_pixels(); j++) {
+        for (int k = v_shift; k < v_end; k++) {
+          if (max_v < pixels[i][j][k])
+            max_v = pixels[i][j][k];
+          if (max_v > white_level)
+            fail = true;
+        }
+      }
+    }
+    if (fail)
+      report_error("Values exceed white level");
+    max_v = white_level;
+    // scale and take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < get_num_angles(); i++) {
       for (int j = 0; j < get_num_h_pixels(); j++) {
 	// initialise aligned areas
