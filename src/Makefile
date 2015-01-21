@@ -25,7 +25,7 @@ $(OBJECTS): base_types.hpp allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
-	mpi.hpp voxels.hpp blas.hpp
+	mpi.hpp voxels.hpp
 
 cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp blas.hpp
 
@@ -62,6 +62,7 @@ ui_calls.o: ui_calls.cpp ui_calls.hpp
 
 mpi.o: mpi.cpp mpi.hpp
 
-voxels.o: voxels.cpp instruments.hpp utils.hpp voxels.hpp
+voxels.o: voxels.cpp voxels.hpp instruments.hpp algorithms.hpp mpi.hpp \
+	utils.hpp ui_calls.hpp results.hpp blas.hpp
 
 point.o: point.cpp
