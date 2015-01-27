@@ -103,10 +103,20 @@ void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
 	    device->apply_beam_hardening();
 	  ok = algorithm->reconstruct(device, voxels,
 				      voxel_origin, voxel_size);
-	  if (ok)
+	  if (ok) {
+	    // truncate negative values
+	    for (int i = 0; i < nx_voxels; i++) {
+	      for (int j = 0; j < ny_voxels; j++) {
+		for (int k = 0; k < nz_voxels; k++) {
+		  if (voxels[i][j][k] < 0.0)
+		    voxels[i][j][k] = 0.0;
+		}
+	      }
+	    }
 	    CCPi::write_results(output_name, voxels, full_vox_origin,
 				voxel_size, block_offset, maxz_voxels,
 				write_format, clamp_output);
+	  }
 	} else
 	  ok = false;
 	first = false;
