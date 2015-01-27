@@ -106,6 +106,13 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
     real ypixel_size = 0.0;
     real init_angle = 0.0;
     white_level = 0.0;
+    scattering = 0.0;
+    coeff_x4 = 0.0;
+    coeff_x3 = 0.0;
+    coeff_x2 = 1.0;
+    coeff_x1 = 0.0;
+    coeff_x0 = 0.0;
+    scale = 1.0;
     int n_h_pixels = 0;
     int n_v_pixels = 0;
     int n_phi = 0;
@@ -148,14 +155,26 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	} else if (strncmp(line, "InputSeparator", 14) == 0) {
 	  if (int(line[15]) != 13)
 	    sep = line[15];
+	} else if (strncmp(line, "Scattering", 10) == 0) {
+	  scattering = std::atof(&line[11]);
+	} else if (strncmp(line, "CoefX4", 6) == 0) {
+	  coeff_x4 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX3", 6) == 0) {
+	  coeff_x3 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX2", 6) == 0) {
+	  coeff_x2 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX1", 6) == 0) {
+	  coeff_x1 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX0", 6) == 0) {
+	  coeff_x0 = std::atof(&line[7]);
+	} else if (strncmp(line, "Scale", 5) == 0) {
+	  scale = std::atof(&line[6]);
 	} else if (strncmp(line, "Name", 4) == 0) {
 	  while (isspace(line[strlen(line) - 1]))
 	    line[strlen(line) - 1] = '\0';
 	  basename = &line[5];
 	  ndata++;
 	}
-	if (ndata == 11)
-	  break;
       }
       if (ndata == 11) {
 	set_detector(det_x + get_source_x());
@@ -392,6 +411,7 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
 	for (int k = 0; k < v_shift; k++)
 	  pixels[i][j][k] = 0.0;
 	for (int k = v_shift; k < v_end; k++) {
+	  pixels[i][j][k] -= white_level * scattering / real(100.0);
 	  if (pixels[i][j][k] < real(1.0))
 	    pixels[i][j][k] = - std::log(real(0.00001) / max_v);
 	  else
@@ -627,10 +647,17 @@ void CCPi::Nikon_XTek::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
 
 void CCPi::Nikon_XTek::apply_beam_hardening()
 {
-  // Todo - does this belong in the base class?
+  // Todo - vectorize
   pixel_data &pixels = get_pixel_data();
-  for (sl_int i = 0; i < get_num_angles(); i++)
-    for (sl_int j = 0; j < get_num_h_pixels(); j++)
-      for (sl_int k = 0; k < get_num_v_pixels(); k++)
-	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
+  for (sl_int i = 0; i < get_num_angles(); i++) {
+    for (sl_int j = 0; j < get_num_h_pixels(); j++) {
+      for (sl_int k = 0; k < get_num_v_pixels(); k++) {
+	pixels[i][j][k] = ((((((coeff_x4 * pixels[i][j][k])
+			       + coeff_x3) * pixels[i][j][k]
+			      + coeff_x2) * pixels[i][j][k]
+			     + coeff_x1) * pixels[i][j][k]) + coeff_x0)
+	  * scale;
+      }
+    }
+  }
 }

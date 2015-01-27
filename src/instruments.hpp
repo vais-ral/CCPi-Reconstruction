@@ -361,6 +361,13 @@ namespace CCPi {
     std::string basename;
     real h_vox_size;
     real v_vox_size;
+    real scattering;
+    real coeff_x4;
+    real coeff_x3;
+    real coeff_x2;
+    real coeff_x1;
+    real coeff_x0;
+    real scale;
 
     bool create_phantom();
     bool build_phantom();
