@@ -196,8 +196,6 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 bool CCPi::Nikon_XTek::read_angles(const std::string path,
 				   const real init_angle, const int n)
 {
-  // since we read actual angles the answer is probably no
-  //std::cout << "Should we use initial angle?\n";
   std::string ctfile;
   combine_path_and_name(path, "_ctdata.txt", ctfile);
   std::ifstream data(ctfile.c_str());
@@ -222,7 +220,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string path,
       data >> tmp;
       data >> tmp;
       // everything else is radians
-      p[i] = real(M_PI) * tmp / real(180.0);
+      p[i] = real(M_PI) * (init_angle + tmp) / real(180.0);
       data >> tmp;
     }
     data.close();
@@ -247,7 +245,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string path,
 	ang_file >> colon;
 	ang_file >> tmp;
 	// everything else is radians
-	p[i] = real(M_PI) * tmp / real(180.0);
+	p[i] = real(M_PI) * (init_angle + tmp) / real(180.0);
 	// Do we need to skip //^M?
 	ang_file.getline(line, 128);
       }
