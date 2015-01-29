@@ -15,6 +15,12 @@
    current Matlab structures.
 */
 
+CCPi::instrument::~instrument()
+{
+  if (pixels != 0)
+    delete pixels;
+}
+
 pixel_3d &CCPi::instrument::get_pixel_data()
 {
   return *pixels;

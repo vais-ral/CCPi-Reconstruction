@@ -10,6 +10,7 @@ namespace CCPi {
 
   class reconstruction_alg {
   public:
+    virtual ~reconstruction_alg();
     virtual bool reconstruct(class instrument *device, voxel_data &voxels,
 			     const real origin[3],
 			     const real voxel_size[3]) = 0;
@@ -144,6 +145,10 @@ namespace CCPi {
 		     const real voxel_size[3]);
   };
 
+}
+
+inline CCPi::reconstruction_alg::~reconstruction_alg()
+{
 }
 
 inline CCPi::cgls_base::cgls_base(const int niterations)

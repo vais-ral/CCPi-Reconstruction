@@ -20,4 +20,13 @@ extern void reconstruct(CCPi::instrument *device,
 			const CCPi::output_format write_format,
 			const bool clamp_output, const bool phantom);
 
+extern voxel_data *reconstruct(CCPi::instrument *device,
+			       CCPi::reconstruction_alg *algorithm,
+			       const numpy_3d &pixels,
+			       const numpy_1d &angles,
+			       const real rotation_centre,
+			       const int pixels_per_voxel,
+			       const int blocking_factor,
+			       const bool beam_harden);
+
 #endif // CCPI_VOXEL_SETUP

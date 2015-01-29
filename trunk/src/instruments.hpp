@@ -6,15 +6,6 @@
 
 namespace CCPi {
 
-  struct map_index {
-    int x;
-    int y;
-
-    bool operator < (const map_index &b) const;
-  };
-
-  typedef std::map<map_index, real> projection_map;
-
   enum devices { dev_Diamond_I12, dev_Nikon_XTek };
 
   enum ring_artefact_alg { no_ring_artefacts, ring_artefacts_column,
@@ -22,6 +13,9 @@ namespace CCPi {
 
   class instrument {
   public:
+    instrument();
+    virtual ~instrument();
+
     virtual bool setup_experimental_geometry(const std::string path,
 					     const std::string file,
 					     const real rotation_centre,
@@ -381,14 +375,8 @@ namespace CCPi {
 
 }
 
-inline bool CCPi::map_index::operator < (const map_index &b) const
+inline CCPi::instrument::instrument() : pixels(0)
 {
-  if (x < b.x)
-    return true;
-  else if (x == b.x)
-    return (y < b.y);
-  else
-    return false;
 }
 
 inline const real_1d &CCPi::instrument::get_phi() const

@@ -25,6 +25,9 @@ typedef float pixel_type;
 typedef float recon_type;
 #define PIXEL_SIZE 4
 
+typedef boost::multi_array_ref<float, 1> numpy_1d;
+typedef boost::multi_array_ref<float, 3> numpy_3d;
+
 typedef std::vector<real, aligned_allocator<real> > real_1d;
 typedef std::vector<real, aligned_allocator<real> > real_1dr;
 typedef std::vector<pixel_type, aligned_allocator<pixel_type> > pixel_1d;

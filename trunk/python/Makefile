@@ -1,19 +1,19 @@
 
 CXX = g++
-PYTHONINC = -I/usr/include/python
+PYTHONINC = -I/usr/include/python -I/usr/lib64/python2.7/site-packages/numpy/core/include
 PYTHONLIB = -lboost_python
 TIFFINC =
-TIFFLIB = -ltiff
+TIFFLIB =
 NXINC = -I/usr/local/nexus/include/nexus -DHAS_NEXUS
 NXLIB = -L/usr/local/nexus/lib -lNeXusCPP
-CXXFLAGS = -g -O2 -fPIC -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) -I../src $(PYTHONINC)
+CXXFLAGS = -g -O2 -fPIC -ansi -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp -I../src $(PYTHONINC)
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS) -shared
-LIBS = $(NXLIB) $(TIFFLIB) $(PYTHONLIB)
+LIBS = $(PYTHONLIB)
 
-PYOBJS = ccpi_wrapper.o reconstruct.o
+PYOBJS = ccpi_wrapper.o
 OBJECTS = results.o instruments.o parallel.o cone.o diamond.o xtek.o cgls.o \
-	p2D.o tv_reg.o tv_core.o nexus.o tiff.o timer.o utils.o ui_calls.o \
+	p2D.o tv_reg.o tv_core.o tiff.o timer.o utils.o ui_calls.o \
 	mpi.o c2D.o voxels.o
 
 ccpi.so: $(PYOBJS) $(OBJECTS)
@@ -28,11 +28,9 @@ $(PYOBJS): ../src/base_types.hpp ../src/allocator.hpp
 $(OBJECTS): ../src/base_types.hpp ../src/allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ ../src/$(@F:.o=.cpp)
 
-ccpi_wrapper.o: ccpi_wrapper.cpp reconstruct.hpp
-
-reconstruct.o: reconstruct.cpp reconstruct.hpp ../src/mpi.hpp ../src/utils.hpp \
-	../src/instruments.hpp ../src/algorithms.hpp ../src/results.hpp \
-	../src/voxels.hpp
+ccpi_wrapper.o: ccpi_wrapper.cpp reconstruct.hpp reconstruct.cpp \
+	../src/mpi.hpp ../src/utils.hpp ../src/instruments.hpp \
+	../src/algorithms.hpp ../src/results.hpp ../src/voxels.hpp
 
 cgls.o: ../src/cgls.cpp ../src/algorithms.hpp ../src/instruments.hpp \
 	../src/timer.hpp ../src/ui_calls.hpp ../src/blas.hpp

@@ -1,11 +1,11 @@
 
 CXX = g++
 MKLINC = -I/opt/intel/composerxe/mkl/include -DMKL_ILP64
-TIFFINC =
+TIFFINC = -DHAS_TIFF
 TIFFLIB = -ltiff
 NXINC = -I/usr/local/nexus/include/nexus -DHAS_NEXUS
 NXLIB = -L/usr/local/nexus/lib -lNeXusCPP
-CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC)
+CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(TIFFINC)
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
 MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_intel_ilp64.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_sequential.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a
