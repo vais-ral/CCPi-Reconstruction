@@ -1,5 +1,7 @@
 
-#include "tiffio.h"
+#ifdef HAS_TIFF
+#  include "tiffio.h"
+#endif // HAS_TIFF
 
 #include "base_types.hpp"
 #include "tiff.hpp"
@@ -15,6 +17,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
 		     const int n_v_pixels, const int v_shift)
 {
   bool ok = true;
+#ifdef HAS_TIFF
   TIFF *tif = TIFFOpen(filename.c_str(), "r");
   if (tif == 0) {
     ok = false;
@@ -100,6 +103,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
     //ldtime.accumulate();
     //ldtime.output("Tiff load");
   }
+#endif // HAS_TIFF
   return ok;
 }
 
@@ -107,6 +111,7 @@ bool CCPi::write_tiff(const std::string filename, unsigned char data[],
 		      const int nx, const int ny, const int width)
 {
   bool ok = true;
+#ifdef HAS_TIFF
   TIFF *tif = TIFFOpen(filename.c_str(), "w");
   if (tif == 0) {
     ok = false;
@@ -162,5 +167,6 @@ bool CCPi::write_tiff(const std::string filename, unsigned char data[],
     _TIFFfree(buf);
     TIFFClose(tif);
   }
+#endif // HAS_TIFF
   return ok;
 }
