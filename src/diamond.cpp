@@ -88,7 +88,7 @@ bool CCPi::Diamond::create_phantom()
   real_1d &h_pixels = set_h_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + i * 0.250;
-    h_pixels[i] = -99.8046875 + real(c) * 0.390625;
+    h_pixels[i] = -99.8046875 + real(i) * 0.390625;
   }
   for (c = 0; c < 1000; c++) {
     //real p = -100.0 + real(c) * 0.250;
@@ -99,7 +99,7 @@ bool CCPi::Diamond::create_phantom()
   real_1d &v_pixels = set_v_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + real(i) * 0.250;
-    v_pixels[i] = -99.8046875 + real(c) * 0.390625;
+    v_pixels[i] = -99.8046875 + real(i) * 0.390625;
   }
   // 501 values from 0 to 2pi
   //geom.angles = linspace(0,2*pi,501);
