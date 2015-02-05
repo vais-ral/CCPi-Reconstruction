@@ -3,7 +3,9 @@
 #include <cmath>
 #include "base_types.hpp"
 #include "instruments.hpp"
-#include "nexus.hpp"
+#ifdef HAS_NEXUS
+#  include "nexus.hpp"
+#endif // HAS_NEXUS
 #include "utils.hpp"
 #include "ui_calls.hpp"
 
@@ -19,6 +21,57 @@ bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
     name = file;
     return read_data_size(path, rotation_centre, pixels_per_voxel);
   }
+}
+
+bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
+						const numpy_1d &angle_array,
+						const real rotation_centre,
+						const int pixels_per_voxel)
+{
+  bool ok = true;
+  int nangles = (int)angle_array.shape()[0];
+  if (nangles < 1) {
+    report_error("Bad angle array");
+    ok = false;
+  } else {
+    const pixel_data::size_type *s = pix_array.shape();
+    int na = (int)s[0];
+    int nh_pixels = (int)s[1];
+    int nv_pixels = (int)s[2];
+    if (na != nangles) {
+      report_error("Number of projections doesn't match angle array");
+      ok = false;
+    } else if (nh_pixels < 1 or nv_pixels < 1) {
+      report_error("Bad array index for pixels");
+      ok = false;
+    } else {
+      // dummy
+      real hsize = 1.0;
+      real vsize = 1.0;
+      // copied from read_data_size
+      nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
+      real shift = 0.0;
+      if (rotation_centre > 0.0) {
+	// shift h_pixels
+	// if 4 pixels and centre = 2.0 nothing happens
+	real pixel_shift = rotation_centre - real(nh_pixels) / 2.0;
+	shift = hsize * pixel_shift;
+      }
+      // store data in class
+      real_1d &h_pixels = set_h_pixels(nh_pixels);
+      h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0) - shift;
+      for (int i = 1; i < nh_pixels; i++)
+	h_pixels[i] = h_pixels[0] + real(i) * hsize;
+      real_1d &v_pixels = set_v_pixels(nv_pixels);
+      v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
+      for (int i = 1; i < nv_pixels; i++)
+	v_pixels[i] = v_pixels[0] + real(i) * vsize;
+      real_1d &angles = set_phi(nangles);
+      for (int i = 0; i < nangles; i++)
+	angles[i] = angle_array[i];
+    }
+  }
+  return ok;
 }
 
 bool CCPi::Diamond::create_phantom()
@@ -194,12 +247,14 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
   bool ok = false;
   std::string fullname;
   combine_path_and_name(path, name,fullname);
-  int nh_pixels = 0;
-  int nv_pixels = 0;
-  std::vector<real> angles(2 * get_num_angles());
-  int nangles = 0;
+#ifdef HAS_NEXUS
   real hsize = 0.0;
   real vsize = 0.0;
+  int nh_pixels = 0;
+  int nv_pixels = 0;
+#endif // HAS_NEXUS
+  std::vector<real> angles(2 * get_num_angles());
+  int nangles = 0;
   int nv = get_num_v_pixels();
   int nh = get_num_h_pixels();
   if (first)
@@ -307,6 +362,44 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
     //normalise_intensity();
   }
   return ok;
+}
+
+bool CCPi::Diamond::read_scans(const numpy_3d &pixel_array,
+			       const int offset, const int block_size)
+{
+  // bits from read_data
+  int nv = get_num_v_pixels();
+  int nh = get_num_h_pixels();
+  int nangles = get_num_angles();
+  int v_offset = get_data_v_offset();
+  int v_size = get_data_v_size();
+  int v_end = v_offset + v_size;
+  /*
+  int bsize = block_size;
+  if (block_size > v_size)
+    bsize = v_size;
+  else if (offset + bsize > v_end)
+    bsize = v_end - offset;
+  else if (offset == 0)
+    bsize = block_size - v_offset;
+  */
+  set_v_offset(offset);
+  // Copy pixels
+  pixel_data &pixels = create_pixel_data();
+  for (int i = 0; i < nangles; i++) {
+    for (sl_int j = 0; j < nh; j++) {
+      // initialise aligned bits that don't contain data
+      for (sl_int k = 0; k < v_offset; k++) {
+	pixels[i][j][k] = 0.0;
+      }
+      for (sl_int k = v_offset; k < v_end; k++)
+	pixels[i][j][k] = - std::log(pixel_array[i][j][k - v_offset]);
+      for (sl_int k = v_end; k < nv; k++) {
+	pixels[i][j][k] = 0.0;
+      }
+    }
+  }
+  return true;
 }
 
 bool CCPi::Diamond::finish_voxel_geometry(real voxel_origin[3],

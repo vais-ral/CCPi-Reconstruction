@@ -43,7 +43,7 @@ parallel.o: ../src/parallel.cpp ../src/instruments.hpp ../src/parallel_f.hpp \
 cone.o: ../src/cone.cpp ../src/instruments.hpp ../src/cone_f.hpp \
 	../src/project_line.hpp ../src/timer.hpp
 
-diamond.o: ../src/diamond.cpp ../src/instruments.hpp ../src/nexus.hpp \
+diamond.o: ../src/diamond.cpp ../src/instruments.hpp \
 	../src/utils.hpp ../src/ui_calls.hpp
 
 xtek.o: ../src/xtek.cpp ../src/instruments.hpp ../src/tiff.hpp \
@@ -63,8 +63,6 @@ p2D.o: ../src/p2D.cpp ../src/instruments.hpp ../src/ui_calls.hpp
 c2D.o: ../src/c2D.cpp ../src/instruments.hpp ../src/ui_calls.hpp
 
 tiff.o: ../src/tiff.cpp ../src/tiff.hpp ../src/timer.hpp ../src/ui_calls.hpp
-
-nexus.o: ../src/nexus.cpp ../src/nexus.hpp ../src/timer.hpp ../src/ui_calls.hpp
 
 timer.o: ../src/timer.cpp ../src/timer.hpp ../src/ui_calls.hpp
 

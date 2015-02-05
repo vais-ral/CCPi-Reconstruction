@@ -42,16 +42,9 @@ numpy_boost<float, 3> reconstruct_cgls(const numpy_boost<float, 3> &pixels,
   //  recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
   machine::initialise();
   // instrument setup from pixels/angles will probably copy
-  /*
   voxel_data *voxels = reconstruct(instrument, algorithm, pixels, angles,
 				   rotation_centre, resolution,
 				   blocking_factor, beam_harden);
-  */
-  voxel_data *voxels = new voxel_data(boost::extents[2][2][2]);
-  for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++)
-      for (int k = 0; k < 2; k++)
-	(*voxels)[i][j][k] = i + j + k;
   machine::exit();
   delete algorithm;
   delete instrument;

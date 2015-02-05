@@ -45,6 +45,15 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const std::string path,
     return read_config_file(path, file, pixels_per_voxel);
 }
 
+bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
+						   const numpy_1d &angle_array,
+						   const real rotation_centre,
+						   const int pixels_per_voxel)
+{
+  report_error("XTek python SAVU interface not implemented");
+  return false;
+}
+
 bool CCPi::Nikon_XTek::create_phantom()
 {
   set_source(-250.0, 0.0, 0.0);
@@ -424,6 +433,13 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;
+}
+
+bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
+				  const int offset, const int block_size)
+{
+  report_error("Python SAVU, XTek read scans not implemented");
+  return false;
 }
 
 pixel_type linear(const real x1, const real x2, const pixel_type f1,
