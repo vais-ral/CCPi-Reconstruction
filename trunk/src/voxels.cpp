@@ -96,7 +96,7 @@ void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
 	voxel_origin[2] = full_vox_origin[2]
 	  + block_offset * voxel_size[2];
 	if (device->read_scans(path, z_data_offset,
-				   z_data_size, first, phantom)) {
+			       z_data_size, first, phantom)) {
 	  voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
 	  init_data(voxels, nx_voxels, ny_voxels, nz_voxels);
 	  if (beam_harden)
@@ -136,14 +136,10 @@ voxel_data *reconstruct(CCPi::instrument *device,
 			const real rotation_centre, const int pixels_per_voxel,
 			const int blocking_factor, const bool beam_harden)
 {
-  bool phantom = false;
   int num_processors = machine::get_number_of_processors();
   voxel_data *voxels = 0;
-  // dummy
-  std::string path;
-  std::string filename;
-  if (device->setup_experimental_geometry(path, filename, rotation_centre,
-					  pixels_per_voxel, phantom)) {
+  if (device->setup_experimental_geometry(pixels, angles, rotation_centre,
+					  pixels_per_voxel)) {
     int nx_voxels = 0;
     int ny_voxels = 0;
     int maxz_voxels = 0;
@@ -166,7 +162,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
       // can modify offsets and end if parallel beam to solve subregion
       int end_value = device->total_num_v_pixels();
       bool ok = false;
-      bool first = true;
+      //bool first = true;
       do {
 	ok = false;
 	if (block_offset + block_size > maxz_voxels)
@@ -181,8 +177,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	voxel_origin[1] = full_vox_origin[1];
 	voxel_origin[2] = full_vox_origin[2]
 	  + block_offset * voxel_size[2];
-	if (device->read_scans(path, z_data_offset,
-				   z_data_size, first, phantom)) {
+	if (device->read_scans(pixels, z_data_offset, z_data_size)) {
 	  voxels =
 	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
 	  init_data(*voxels, nx_voxels, ny_voxels, nz_voxels);
@@ -203,11 +198,18 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	  }
 	} else
 	  ok = false;
-	first = false;
+	//first = false;
 	block_offset += block_step;
 	z_data_offset += z_data_step;
       } while (ok and z_data_offset < end_value);
     }
   }
+  /*
+  voxel_data *voxels = new voxel_data(boost::extents[2][2][2]);
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++)
+	(*voxels)[i][j][k] = i + j + k;
+  */
   return voxels;
 }
