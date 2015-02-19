@@ -2,6 +2,7 @@
 #include <map>
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <float.h>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
@@ -10,12 +11,14 @@
 #endif // mex
 #include "instruments.hpp"
 #include "ui_calls.hpp"
+#include "accel.hpp"
 #ifdef TEST2D
 #  include <iostream>
 #endif // TEST2D
 #if defined(__AVX__)
 #  include <immintrin.h>
 #endif // AVX etc
+#include <omp.h>
 
 static const recon_type epsilon = FLT_EPSILON;
 
@@ -219,15 +222,14 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 				      const int a, const int h, const int nv,
 				      const recon_type d_conv, const real cphi,
 				      const real sphi, const sl_int ij_base,
-				      const sl_int nyz, const int_1d &mapping,
-				      const int map_type)
+				      const sl_int nyz, recon_1d &l_xy,
+				      voxel_ptr_1d &ij_arr, int_1d &ij_index,
+				      const sl_int block_yz, const int xy_base,
+				      int &count)
 {
   // Todo? In parallel beam some of this should be common in a since
   // all h within a have same angle to voxels.
-  int max_n = std::max(nx, ny);
-  recon_1d l_xy(2 * max_n);
-  voxel_ptr_1d ij_arr(2 * max_n + 1);
-  int count = 0;
+  count = 0;
   //sl_int nyz = sl_int(ny) * sl_int(nz);
   if (std::abs(cphi) < epsilon) {
     if (std::abs(sphi) < epsilon) {
@@ -240,18 +242,24 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	if (sphi < 0.0) {
 	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(i) * nyz
 	    + sl_int(ny - 1) * sl_int(nz);
+	  int xy_offset = xy_base + i * block_yz + (ny - 1) * nz;
 	  for (int j = ny - 1; j >= 0; j--) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
+	    ij_index[count] = xy_offset;
 	    ij_offset -= nz;
+	    xy_offset -= nz;
 	    count++;
 	  }
 	} else {
 	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(i) * nyz;
+	  int xy_offset = xy_base + i * block_yz;
 	  for (int j = 0; j < ny; j++) {
 	    l_xy[count] = d_y;
 	    ij_arr[count] = ij_offset;
+	    ij_index[count] = xy_offset;
 	    ij_offset += nz;
+	    xy_offset += nz;
 	    count++;
 	  }
 	}
@@ -264,18 +272,24 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
       if (cphi < 0.0) {
 	voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(nx - 1) * nyz
 	  + sl_int(j) * sl_int(nz);
+	int xy_offset = xy_base + (nx - 1) * block_yz + j * nz;
 	for (int i = nx - 1; i >= 0; i--) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
+	  ij_index[count] = xy_offset;
 	  ij_offset -= nyz;
+	  xy_offset -= block_yz;
 	  count++;
 	}
       } else {
 	voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(j) * sl_int(nz);
+	int xy_offset = xy_base + j * nz;
 	for (int i = 0; i < nx; i++) {
 	  l_xy[count] = d_x;
 	  ij_arr[count] = ij_offset;
+	  ij_index[count] = xy_offset;
 	  ij_offset += nyz;
+	  xy_offset += block_yz;
 	  count++;
 	}
       }
@@ -324,18 +338,22 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	    report_error("something wrong in x+ y+");
 	  // could do x_next/y_next here and only calc the one that changes
 	  // inside the if statements below, which would reduce the flops
-	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(x) * nyz
 	    + sl_int(y) * sl_int(nz);
+	  int xy_offset = xy_base + x * block_yz + y * nz;
 	  while (x < nx and y < ny) {
-	    ij_arr[count] = xy_offset;
+	    ij_arr[count] = ij_offset;
+	    ij_index[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y + 1] - epsilon) {
 	      l_xy[count] = (alpha_x[x + 1] - alpha_p);
 	      alpha_p = alpha_x[x + 1];
-	      xy_offset += nyz;
+	      ij_offset += nyz;
+	      xy_offset += block_yz;
 	      x++;
 	    } else if (alpha_y[y + 1] < alpha_x[x + 1] - epsilon) {
 	      l_xy[count] = (alpha_y[y + 1] - alpha_p);
 	      alpha_p = alpha_y[y + 1];
+	      ij_offset += nz;
 	      xy_offset += nz;
 	      y++;
 	    } else {
@@ -343,7 +361,8 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	      l_xy[count] = (mx - alpha_p);
 	      x++;
 	      y++;
-	      xy_offset += nyz + nz;
+	      ij_offset += nyz + nz;
+	      xy_offset += block_yz + nz;
 	      alpha_p = mx;
 	    }
 	    count++;
@@ -357,18 +376,22 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	    y = int(std::floor((p2_y + alpha_min * delta_y - b_y) / d_y));
 	  } else
 	    report_error("something wrong in x+ y-");
-	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(x) * nyz
 	    + sl_int(y) * sl_int(nz);
+	  int xy_offset = xy_base + x * block_yz + y * nz;
 	  while (x < nx and y >= 0) {
-	    ij_arr[count] = xy_offset;
+	    ij_arr[count] = ij_offset;
+	    ij_index[count] = xy_offset;
 	    if (alpha_x[x + 1] < alpha_y[y] - epsilon) {
 	      l_xy[count] = (alpha_x[x + 1] - alpha_p);
 	      alpha_p = alpha_x[x + 1];
-	      xy_offset += nyz;
+	      ij_offset += nyz;
+	      xy_offset += block_yz;
 	      x++;
 	    } else if (alpha_y[y] < alpha_x[x + 1] - epsilon) {
 	      l_xy[count] = (alpha_y[y] - alpha_p);
 	      alpha_p = alpha_y[y];
+	      ij_offset -= nz;
 	      xy_offset -= nz;
 	      y--;
 	    } else {
@@ -376,7 +399,8 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	      l_xy[count] = (mx - alpha_p);
 	      x++;
 	      y--;
-	      xy_offset += nyz - nz;
+	      ij_offset += nyz - nz;
+	      xy_offset += block_yz - nz;
 	      alpha_p = mx;
 	    }
 	    count++;
@@ -392,18 +416,22 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	    y = 0;
 	  } else
 	    report_error("something wrong in x- y+");
-	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(x) * nyz
 	    + sl_int(y) * sl_int(nz);
+	  int xy_offset = xy_base + x * block_yz + y * nz;
 	  while (x >= 0 and y < ny) {
-	    ij_arr[count] = xy_offset;
+	    ij_arr[count] = ij_offset;
+	    ij_index[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y + 1] - epsilon) {
 	      l_xy[count] = (alpha_x[x] - alpha_p);
 	      alpha_p = alpha_x[x];
-	      xy_offset -= nyz;
+	      ij_offset -= nyz;
+	      xy_offset -= block_yz;
 	      x--;
 	    } else if (alpha_y[y + 1] < alpha_x[x] - epsilon) {
 	      l_xy[count] = (alpha_y[y + 1] - alpha_p);
 	      alpha_p = alpha_y[y + 1];
+	      ij_offset += nz;
 	      xy_offset += nz;
 	      y++;
 	    } else {
@@ -411,7 +439,8 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	      l_xy[count] = (mx - alpha_p);
 	      x--;
 	      y++;
-	      xy_offset += -nyz + nz;
+	      ij_offset += -nyz + nz;
+	      xy_offset += -block_yz + nz;
 	      alpha_p = mx;
 	    }
 	    count++;
@@ -428,18 +457,22 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	    y = ny - 1;
 	  } else
 	    report_error("something wrong in x- y-");
-	  voxel_ptr xy_offset = voxels.data() + ij_base + sl_int(x) * nyz
+	  voxel_ptr ij_offset = voxels.data() + ij_base + sl_int(x) * nyz
 	    + sl_int(y) * sl_int(nz);
+	  int xy_offset = xy_base + x * block_yz + y * nz;
 	  while (x >= 0 and y >= 0) {
-	    ij_arr[count] = xy_offset;
+	    ij_arr[count] = ij_offset;
+	    ij_index[count] = xy_offset;
 	    if (alpha_x[x] < alpha_y[y] - epsilon) {
 	      l_xy[count] = (alpha_x[x] - alpha_p);
 	      alpha_p = alpha_x[x];
-	      xy_offset -= nyz;
+	      ij_offset -= nyz;
+	      xy_offset -= block_yz;
 	      x--;
 	    } else if (alpha_y[y] < alpha_x[x] - epsilon) {
 	      l_xy[count] = (alpha_y[y] - alpha_p);
 	      alpha_p = alpha_y[y];
+	      ij_offset -= nz;
 	      xy_offset -= nz;
 	      y--;
 	    } else {
@@ -447,7 +480,8 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 	      l_xy[count] = (mx - alpha_p);
 	      x--;
 	      y--;
-	      xy_offset -= (nyz + nz);
+	      ij_offset -= (nyz + nz);
+	      xy_offset -= (block_yz + nz);
 	      alpha_p = mx;
 	    }
 	    count++;
@@ -456,20 +490,16 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
       }
     }
   }
-  if (count > 2 * max_n + 1)
-    report_error("forward project overflow");
-  if (count > 0) {
-    calc_xy_z(&(pixels[a][h][0]), ij_arr, l_xy, count, nv, nz,
-	      mapping, map_type);
-  }    
 }
 
-void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
-			      const real_1d &angles, const int n_angles,
-			      const int nh_pixels, const int nv_pixels,
-			      const real vox_origin[3], const real vox_size[3],
-			      const int nx, const int ny, const int nz,
-			      pixel_data &pixels, voxel_data &voxels)
+void CCPi::parallel_beam::f2D_cpu(const real_1d &h_pixels,
+				  const real_1d &v_pixels,
+				  const real_1d &angles, const int n_angles,
+				  const int nh_pixels, const int nv_pixels,
+				  const real vox_origin[3],
+				  const real vox_size[3],
+				  const int nx, const int ny, const int nz,
+				  pixel_data &pixels, voxel_data &voxels)
 {
   // set detector z to 2* the yz limits of the voxels, so it misses
   // longest voxel dim should be sqrt(3), so 2 should be safe
@@ -488,10 +518,15 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   int map_type = 0;
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
-  
+
   const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
   const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
   sl_int nyz = sl_int(ny) * sl_int(nz);
+  int max_n = std::max(nx, ny);
+  recon_1d l_xy(2 * max_n);
+  voxel_ptr_1d ij_arr(2 * max_n + 1);
+  int_1d ij_offsets(2 * max_n + 1);
+  int nwork = 0;
 
   const int a_block = n_angles;
   const int x_block = 32;
@@ -514,7 +549,7 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
 	  y_step = ny - block_y;
 	sl_int ij_base = i_base + sl_int(block_y) * sl_int(nz);
 	real vy = vox_origin[1] + real(block_y) * vox_size[1];
-	real wy = vox_origin[1] + real(block_y + y_step) * vox_size[1];	  
+	real wy = vox_origin[1] + real(block_y + y_step) * vox_size[1];
 
 #pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, detector_x, ihp_step, h_pix0, nyz, ij_base, vx, vy, wx, wy, map_type) schedule(dynamic)
 	for (int ax = 0; ax < a_step; ax++) {
@@ -601,12 +636,35 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
 	    //real p1_y = p2_y - real(3.0) * sphi * detector_x;
 	    fproject_xy(p2_x, p2_y, pixels, voxels, vx, vy, vox_size[0],
 			vox_size[1], x_step, y_step, nz, a, h, nv_pixels,
-			d_conv, cphi, sphi, ij_base, nyz, mapping, map_type);
+			d_conv, cphi, sphi, ij_base, nyz, l_xy, ij_arr,
+			ij_offsets, nz, nz, nwork);
+	    if (nwork > 0) {
+	      if (nwork > 2 * max_n + 1)
+		report_error("forward project overflow");
+	      else
+		calc_xy_z(&(pixels[a][h][0]), ij_arr, l_xy, nwork, nv_pixels,
+			  nz, mapping, map_type);
+	    }
 	  }
 	}
       }
     }
   }
+}
+
+void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
+			      const real_1d &angles, const int n_angles,
+			      const int nh_pixels, const int nv_pixels,
+			      const real vox_origin[3], const real vox_size[3],
+			      const int nx, const int ny, const int nz,
+			      pixel_data &pixels, voxel_data &voxels)
+{
+  if (machine::has_accelerator())
+    f2D_accel(h_pixels, v_pixels, angles, n_angles, nh_pixels, nv_pixels,
+	      vox_origin, vox_size, nx, ny, nz, pixels, voxels);
+  else
+    f2D_cpu(h_pixels, v_pixels, angles, n_angles, nh_pixels, nv_pixels,
+	    vox_origin, vox_size, nx, ny, nz, pixels, voxels);
 }
 
 void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
@@ -802,21 +860,20 @@ void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
 				      const real_1d &i_offset,
 				      const real_1d &length, const real h_pix0,
 				      const real ihp_step, const int a_off,
-				      const int_1d &mapping, const int map_type)
+				      pixel_ptr_1d &ah_arr, recon_1d &l_xy,
+				      int_1d &ah_index, const sl_int a_base,
+				      int &count)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
-  const int pix_per_vox = n_v / (nz - 1);
-  // How big should the array be - Todo - use mapping for pix_per_vox?
-  int count = 0;
-  pixel_ptr_1d ah_arr(2 * pix_per_vox * (n_angles + 10));
-  recon_1d l_xy(2 * pix_per_vox * (n_angles + 10));
+  count = 0;
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   // Todo - in parallel we can probably make a better guess at which 2 corners
   // we need for the upper and lower limits.
   //real pixel_step = h_pixels[1] - h_pixels[0];
   sl_int nah = sl_int(n_h) * sl_int(n_v);
   pixel_ptr ah_offset = pixels.data() + sl_int(a_off) * nah;
+  int ah_pos = a_base * nah;
   for (int ax = 0; ax < n_angles; ax++) {
     int a = a_off + ax;
     real cphi = cangle[a];
@@ -832,14 +889,17 @@ void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
 	int hmax = int(std::floor((x_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
+	int h_pos = ah_pos + hmin * n_v;
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= x_0 and h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
 	    ah_arr[count] = h_offset;
+	    ah_index[count] = h_pos;
 	    count++;
 	  }
 	  h_offset += n_v;
+	  h_pos += n_v;
 	}
       } else {
 	int hmin = int(std::ceil((- x_n + epsilon) * ihp_step - h_pix0));
@@ -849,14 +909,17 @@ void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
 	int hmax = int(std::ceil((- x_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
+	int h_pos = ah_pos + hmin * n_v;
 	for (int h = hmin; h <= hmax; h++) {
 	  if (-h_pixels[h] >= x_0 and -h_pixels[h] < x_n) {
 	    l_xy[count] = d_y;
 	    ah_arr[count] = h_offset;
+	    ah_index[count] = h_pos;
 	    count++;
 	  }
 	  h_offset += n_v;
+	  h_pos += n_v;
 	}
       }
     } else if (std::abs(sphi) < epsilon) {
@@ -868,14 +931,17 @@ void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
 	int hmax = int(std::ceil((- y_0) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
+	int h_pos = ah_pos + hmin * n_v;
 	for (int h = hmin; h <= hmax; h++) {
 	  if (- h_pixels[h] >= y_0 and - h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
 	    ah_arr[count] = h_offset;
+	    ah_index[count] = h_pos;
 	    count++;
 	  }
 	  h_offset += n_v;
+	  h_pos += n_v;
 	}
       } else {
 	int hmin = int(std::floor(y_0 * ihp_step - h_pix0));
@@ -885,14 +951,17 @@ void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
 	int hmax = int(std::floor((y_n - epsilon) * ihp_step - h_pix0));
 	if (hmax >= n_h)
 	  hmax = n_h - 1;
-	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v); 
+	pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
+	int h_pos = ah_pos + hmin * n_v;
 	for (int h = hmin; h <= hmax; h++) {
 	  if (h_pixels[h] >= y_0 and h_pixels[h] < y_n) {
 	    l_xy[count] = d_x;
 	    ah_arr[count] = h_offset;
+	    ah_index[count] = h_pos;
 	    count++;
 	  }
 	  h_offset += n_v;
+	  h_pos += n_v;
 	}
       }
     } else {
@@ -934,42 +1003,44 @@ void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
       real ytop = ymax - y_offset[a];
       const real l = length[a];
       pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
+      int h_pos = ah_pos + hmin * n_v;
       for (int h = hmin; h <= hmax; h++) {
 	if (h_pixels[h] > ymin + epsilon) {
 	  if (h_pixels[h] < ybot) {
 	    l_xy[count] = l * (h_pixels[h] - ymin) * i_offset[a];
 	    ah_arr[count] = h_offset;
+	    ah_index[count] = h_pos;
 	    count++;
 	  } else if (h_pixels[h] <= ytop) {
 	    l_xy[count] = l;
 	    ah_arr[count] = h_offset;
+	    ah_index[count] = h_pos;
 	    count++;
 	  } else if (h_pixels[h] < ymax - epsilon) {
 	    l_xy[count] = l * (ymax - h_pixels[h]) * i_offset[a];
 	    ah_arr[count] = h_offset;
+	    ah_index[count] = h_pos;
 	    count++;
 	  } else
 	    break;
 	}
 	h_offset += n_v;
+	h_pos += n_v;
       }
     }
     ah_offset += nah;
-  }
-  if (count > 2 * pix_per_vox * (n_angles + 10))
-    report_error("back project overflow");
-  if (count > 0) {
-    calc_ah_z(ah_arr, &(voxels[i][j][0]), l_xy, count, n_v, nz,
-	      mapping, map_type);
+    ah_pos += nah;
   }
 }
 
-void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
-			      const real_1d &angles, pixel_data &pixels,
-			      voxel_data &voxels, const int n_angles,
-			      const int nh_pixels, const int nv_pixels,
-			      const real vox_origin[3], const real vox_size[3],
-			      const int nx, const int ny, const int nz)
+void CCPi::parallel_beam::b2D_cpu(const real_1d &h_pixels,
+				  const real_1d &v_pixels,
+				  const real_1d &angles, pixel_data &pixels,
+				  voxel_data &voxels, const int n_angles,
+				  const int nh_pixels, const int nv_pixels,
+				  const real vox_origin[3],
+				  const real vox_size[3],
+				  const int nx, const int ny, const int nz)
 {
   // Todo - 1d arrays of x,y,p1x.p1y positions and 2d p2x/p2y?
 
@@ -1066,6 +1137,13 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
   }
   const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
   const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+  // from bproject_ah
+  const int pix_per_vox = nv_pixels / (nz - 1);
+  // How big should the array be - Todo - use mapping for pix_per_vox?
+  int nwork = 0;
+  pixel_ptr_1d ah_arr(2 * pix_per_vox * (n_angles + 10));
+  int_1d ah_offsets(2 * pix_per_vox * (n_angles + 10));
+  recon_1d l_xy(2 * pix_per_vox * (n_angles + 10));
 
   const int x_block = 32;
   const int y_block = 32;
@@ -1095,10 +1173,540 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
 			x_n, yvals[j + 1], vox_size[0], vox_size[1], nz,
 			i, j, a_step, nh_pixels, nv_pixels, h_pixels,
 			c_angle, s_angle, y_offset, i_offset, length,
-			h_pix0, ihp_step, block_a, mapping, map_type);
+			h_pix0, ihp_step, block_a, ah_arr, l_xy, ah_offsets,
+			nv_pixels, nwork);
+	    if (nwork > 0) {
+	      if (nwork > 2 * pix_per_vox * (n_angles + 10))
+		report_error("back project overflow");
+	      else
+		calc_ah_z(ah_arr, &(voxels[i][j][0]), l_xy, nwork,
+			  nv_pixels, nz, mapping, map_type);
+	    }
 	  }
 	}
       }
     }
-  }      
+  }
 }
+
+void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
+			      const real_1d &angles, pixel_data &pixels,
+			      voxel_data &voxels, const int n_angles,
+			      const int nh_pixels, const int nv_pixels,
+			      const real vox_origin[3], const real vox_size[3],
+			      const int nx, const int ny, const int nz)
+{
+  if (machine::has_accelerator())
+    b2D_accel(h_pixels, v_pixels, angles, pixels, voxels, n_angles, nh_pixels,
+	      nv_pixels, vox_origin, vox_size, nx, ny, nz);
+  else
+    b2D_cpu(h_pixels, v_pixels, angles, pixels, voxels, n_angles, nh_pixels,
+	    nv_pixels, vox_origin, vox_size, nx, ny, nz);
+}
+
+#ifdef USE_OPENCL
+
+void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
+				    const real_1d &v_pixels,
+				    const real_1d &angles, const int n_angles,
+				    const int nh_pixels, const int nv_pixels,
+				    const real vox_origin[3],
+				    const real vox_size[3],
+				    const int nx, const int ny, const int nz,
+				    pixel_data &pixels, voxel_data &voxels)
+{
+  int_1d mapping(nv_pixels);
+  int map_type = 0;
+  gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
+	      nv_pixels);
+  if (map_type != 1 and map_type != 2)
+    f2D_cpu(h_pixels, v_pixels, angles, n_angles, nh_pixels, nv_pixels,
+	    vox_origin, vox_size, nx, ny, nz, pixels, voxels);
+  else {
+    // run a thread for each device
+    int nthreads = machine::number_of_accelerators();
+#pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz,map_type) num_threads(nthreads)
+    {
+      int thread_id = omp_get_thread_num();
+      char kernel_name[32];
+      if (map_type == 2)
+	strcpy(kernel_name, "parallel_xy_z2");
+      else
+	strcpy(kernel_name, "parallel_xy_z1");
+      if (!machine::check_accelerator_kernel(kernel_name, thread_id))
+	report_error("forward kernel problem");
+      else {
+	real detector_x =
+	  real(2.0) * std::max(std::abs(vox_origin[0]),
+			       std::max(std::abs(vox_origin[1]),
+					std::abs(vox_origin[2])));
+	recon_type d_conv = recon_type(3.0 * detector_x);
+      
+	const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+	const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+	sl_int nyz = sl_int(ny) * sl_int(nz);
+	int max_n = std::max(nx, ny);
+	int xy_size = 2 * max_n + 2;
+	recon_1d l_xy(xy_size);
+	voxel_ptr_1d ij_arr(xy_size);
+	int_1d ij_offsets(xy_size);
+	int nwork = 0;
+      
+	// calc space on accelerator for copy
+	sl_int accel_size =
+	  machine::largest_alloc(thread_id) / sizeof(voxel_type);
+	double xy_accel = double(accel_size) / double(nz);
+	int xy_proj = (int)std::sqrt(xy_accel);
+	if (xy_proj > max_n)
+	  xy_proj = max_n;
+
+	accel_size = machine::largest_alloc(thread_id) / sizeof(pixel_type);
+	sl_int accel_proj = accel_size / (nh_pixels * nv_pixels);
+	if (accel_proj > n_angles)
+	  accel_proj = n_angles;
+
+	const int a_block = accel_proj;
+	const int x_block = 32;
+	const int y_block = 32;
+
+	dev_ptr pix_buf = machine::device_allocate(a_block * sl_int(nh_pixels)
+						   * sl_int(nv_pixels)
+						   * sizeof(pixel_type), false,
+						   thread_id);
+	dev_ptr vox_buf = machine::device_allocate(sl_int(xy_proj)
+						   * sl_int(xy_proj)
+						   * sl_int(nz)
+						   * sizeof(voxel_type), true,
+						   thread_id);
+	dev_ptr xy_offsets = machine::device_allocate(xy_size * sizeof(int),
+						      true, thread_id);
+	dev_ptr xy_buff = machine::device_allocate(xy_size * sizeof(recon_type),
+						   true, thread_id);
+	long counter = 0;
+	for (int xp = 0; xp < nx; xp += xy_proj) {
+	  int x_proj = xy_proj;
+	  if (xp + x_proj > nx)
+	    x_proj = nx - xp;
+	  for (int yp = 0; yp < ny; yp += xy_proj) {
+	    int y_proj = xy_proj;
+	    if (yp + y_proj > ny)
+	      y_proj = ny - yp;
+	    // Its not contiguous, since not a full y range
+	    for (int ix = 0; ix < x_proj; ix++)
+	      machine::copy_to_device(&voxels[xp][yp][0],
+				      vox_buf, sl_int(ix * y_proj)
+				      * sl_int(nz) * sizeof(voxel_type),
+				      sl_int(y_proj)
+				      * sl_int(nz) * sizeof(voxel_type),
+				      thread_id);
+	    sl_int block_yz = y_proj * nz;
+	    for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+	      int a_step = a_block;
+	      if (block_a + a_step > n_angles)
+		a_step = n_angles - block_a;
+	      if (counter % nthreads == thread_id) {
+		// Todo - do we really want to copy all?
+		machine::copy_to_device(&pixels[block_a][0][0], pix_buf,
+					a_step * sl_int(nh_pixels)
+					* sl_int(nv_pixels)
+					* sizeof(pixel_type), thread_id);
+		// we don't block h since we have a min/max from the x/y blocks
+		for (int block_x = 0; block_x < x_proj; block_x += x_block) {
+		  int x_step = x_block;
+		  if (block_x + x_step > x_proj)
+		    x_step = x_proj - block_x;
+		  sl_int i_base = sl_int(xp + block_x) * nyz;
+		  sl_int x_base = sl_int(block_x) * block_yz;
+		  real vx = vox_origin[0] + real(xp + block_x) * vox_size[0];
+		  real wx = vox_origin[0] + real(xp + block_x + x_step)
+		    * vox_size[0];
+		  for (int block_y = 0; block_y < y_proj; block_y += y_block) {
+		    int y_step = y_block;
+		    if (block_y + y_step > y_proj)
+		      y_step = y_proj - block_y;
+		    sl_int ij_base = i_base + sl_int(yp + block_y) * sl_int(nz);
+		    real vy = vox_origin[1] + real(yp + block_y) * vox_size[1];
+		    real wy = vox_origin[1] + real(yp + block_y + y_step)
+		      * vox_size[1];
+		    sl_int xy_base = x_base + sl_int(block_y) * sl_int(nz);
+
+		    for (int ax = 0; ax < a_step; ax++) {
+		      int a = block_a + ax;
+		      // rotate source and detector positions by current angle
+		      real cphi = std::cos(angles[a]);
+		      real sphi = std::sin(angles[a]);
+	      
+		      // from bproject
+		      int hmin = 0;
+		      int hmax = nh_pixels - 1;
+		      if (std::abs(cphi) < epsilon) {
+			if (sphi < 0.0) {
+			  hmin = int(std::floor(vx * ihp_step - h_pix0));
+			  if (hmin < 0)
+			    hmin = 0;
+			  hmax = int(std::floor((wx - epsilon) * ihp_step
+						- h_pix0));
+			  if (hmax >= nh_pixels)
+			    hmax = nh_pixels - 1;
+			} else {
+			  hmin = int(std::ceil((- wx + epsilon) * ihp_step
+					       - h_pix0));
+			  if (hmin < 0)
+			    hmin = 0;
+			  hmax = int(std::ceil((- vx) * ihp_step - h_pix0));
+			  if (hmax >= nh_pixels)
+			    hmax = nh_pixels - 1;
+			}
+		      } else if (std::abs(sphi) < epsilon) {
+			if (cphi < 0.0) {
+			  hmin = int(std::ceil((- wy + epsilon) * ihp_step
+					       - h_pix0));
+			  if (hmin < 0)
+			    hmin = 0;
+			  hmax = int(std::ceil((- vy) * ihp_step - h_pix0));
+			  if (hmax >= nh_pixels)
+			    hmax = nh_pixels - 1;
+			} else {
+			  hmin = int(std::floor(vy * ihp_step - h_pix0));
+			  if (hmin < 0)
+			    hmin = 0;
+			  hmax = int(std::floor((wy - epsilon) * ihp_step
+						- h_pix0));
+			  if (hmax >= nh_pixels)
+			    hmax = nh_pixels - 1;
+			}
+		      } else {
+			real ymin;
+			real ymax;
+			// Todo - pass in arrays of vy * cphi etc?
+			if (cphi > 0.0) {
+			  if (sphi > 0.0) {
+			    ymin = vy * cphi - wx * sphi; //y10;
+			    ymax = wy * cphi - vx * sphi; //y01;
+			  } else {
+			    ymin = vy * cphi - vx * sphi; //y00;
+			    ymax = wy * cphi - wx * sphi; //y11;
+			  }
+			} else {
+			  if (sphi > 0.0) {
+			    ymin = wy * cphi - wx * sphi; //y11;
+			    ymax = vy * cphi - vx * sphi; //y00;
+			  } else {
+			    ymin = wy * cphi - vx * sphi; //y01;
+			    ymax = vy * cphi - wx * sphi; //y10;
+			  }
+			}
+			if (ymin < h_pixels[0])
+			  hmin = 0;
+			else
+			  hmin = int(std::floor(ymin * ihp_step - h_pix0));
+			//if (ymax >= h_pixels[nh]) Todo
+			hmax = std::min(int(std::floor(ymax * ihp_step
+						       - h_pix0)),
+					nh_pixels-1);
+		      }
+		      // end bproject
+		
+		      for (int h = hmin; h <= hmax; h++) {
+			real p2_x = cphi * detector_x - sphi * h_pixels[h];
+			real p2_y = sphi * detector_x + cphi * h_pixels[h];
+			//real p1_x = p2_x - real(3.0) * cphi * detector_x;
+			//real p1_y = p2_y - real(3.0) * sphi * detector_x;
+			fproject_xy(p2_x, p2_y, pixels, voxels, vx, vy,
+				    vox_size[0], vox_size[1], x_step, y_step,
+				    nz, a, h, nv_pixels, d_conv, cphi, sphi,
+				    ij_base, nyz, l_xy, ij_arr, ij_offsets,
+				    block_yz, xy_base, nwork);
+			if (nwork > 0) {
+			  if (nwork > xy_size)
+			    report_error("forward project overflow");
+			  else {
+			    machine::copy_to_device(ij_offsets.data(),
+						    xy_offsets,
+						    nwork * sizeof(int),
+						    thread_id);
+			    machine::copy_to_device(l_xy.data(), xy_buff,
+						    nwork * sizeof(recon_type),
+						    thread_id);
+			    int pix_offset = (a * nh_pixels + h) * nv_pixels;
+			    machine::run_parallel_xy(kernel_name, pix_buf,
+						     pix_offset, vox_buf,
+						     xy_buff, xy_offsets,
+						     nwork, nv_pixels, nz,
+						     nz, thread_id);
+			  }
+			}
+		      }
+		    }
+		  }
+		}
+		machine::copy_from_device(pix_buf, &pixels[block_a][0][0],
+					  a_step * sl_int(nh_pixels)
+					  * sl_int(nv_pixels)
+					  * sizeof(pixel_type), thread_id);
+	      }
+	    }
+	  }
+	}
+	machine::device_free(xy_buff, thread_id);
+	machine::device_free(xy_offsets, thread_id);
+	machine::device_free(vox_buf, thread_id);
+	machine::device_free(pix_buf, thread_id);
+      }
+    }
+  }
+}
+
+void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
+				    const real_1d &v_pixels,
+				    const real_1d &angles, pixel_data &pixels,
+				    voxel_data &voxels, const int n_angles,
+				    const int nh_pixels, const int nv_pixels,
+				    const real vox_origin[3],
+				    const real vox_size[3],
+				    const int nx, const int ny, const int nz)
+{
+  int_1d mapping(nv_pixels);
+  int map_type = 0;
+  gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
+	      nv_pixels);
+  if (map_type != 1 and map_type != 2)
+    b2D_cpu(h_pixels, v_pixels, angles, pixels, voxels, n_angles, nh_pixels,
+	    nv_pixels, vox_origin, vox_size, nx, ny, nz);
+  else {
+    // run a thread for each device
+    int nthreads = machine::number_of_accelerators();
+#pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, map_type, nthreads) num_threads(nthreads)
+    {
+      int thread_id = omp_get_thread_num();
+      char kernel_name[32];
+      if (map_type == 2)
+	strcpy(kernel_name, "parallel_ah_z2");
+      else
+	strcpy(kernel_name, "parallel_ah_z1");
+      if (!machine::check_accelerator_kernel(kernel_name, thread_id))
+	report_error("Back kernel problem");
+      else {
+	real_1d c_angle(n_angles);
+	real_1d s_angle(n_angles);
+	for (int a = 0; a < n_angles; a++) {
+	  real cos_phi = std::cos(angles[a]);
+	  real sin_phi = std::sin(angles[a]);
+	  c_angle[a] = cos_phi;
+	  s_angle[a] = sin_phi;
+	}
+
+	recon_1d vox_z(nz + 1);
+	for (int i = 0; i <= nz; i++)
+	  vox_z[i] = vox_origin[2] + real(i) * vox_size[2];
+	real_1d yvals(ny + 1);
+	for (int j = 0; j <= ny; j++)
+	  yvals[j] = vox_origin[1] + real(j) * vox_size[1];
+
+	// rotation of voxel for offsets is same for all voxels
+	real_1d y_offset(n_angles);
+	real_1d i_offset(n_angles);
+	real_1d length(n_angles);
+	for (int a = 0; a < n_angles; a++) {
+	  real cphi = c_angle[a];
+	  real sphi = s_angle[a];
+	  // use values for 0,0 voxel x_0 = b_x, x_1 = b_x + d_x etc
+	  real y00 = vox_origin[1] * cphi - vox_origin[0] * sphi;
+	  real y01 = (vox_origin[1] + vox_size[1]) * cphi - vox_origin[0] * sphi;
+	  real y10 = vox_origin[1] * cphi - (vox_origin[0] + vox_size[0]) * sphi;
+	  real y11 = (vox_origin[1] + vox_size[1]) * cphi
+	    - (vox_origin[0] + vox_size[0]) * sphi;
+	  real ymin;
+	  real ybot;
+	  if (cphi > 0.0) {
+	    if (sphi > 0.0) {
+	      ymin = y10;
+	      if (y11 < y00) {
+		ybot = y11;
+	      } else {
+		ybot = y00;
+	      }
+	    } else {
+	      ymin = y00;
+	      if (y01 < y10) {
+		ybot = y01;
+	      } else {
+		ybot = y10;
+	      }
+	    }
+	  } else {
+	    if (sphi > 0.0) {
+	      ymin = y11;
+	      if (y01 < y10) {
+		ybot = y01;
+	      } else {
+		ybot = y10;
+	      }
+	    } else {
+	      ymin = y01;
+	      if (y11 < y00) {
+		ybot = y11;
+	      } else {
+		ybot = y00;
+	      }
+	    }
+	  }
+	  y_offset[a] = ybot - ymin;
+	  i_offset[a] = 1.0 / y_offset[a];
+	  if (std::abs(cphi) > std::abs(sphi))
+	    length[a] = vox_size[0] / std::abs(cphi);
+	  else
+	    length[a] = vox_size[1] / std::abs(sphi);
+	}
+	const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+	const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+	// from bproject_ah
+	const int pix_per_vox = nv_pixels / (nz - 1);
+	// How big should the array be - Todo - use mapping for pix_per_vox?
+	int nwork = 0;
+	int xy_size = 2 * pix_per_vox * (n_angles + 10);
+	pixel_ptr_1d ah_arr(xy_size);
+	int_1d ah_offsets(xy_size);
+	recon_1d l_xy(xy_size);
+
+	// calc space on accelerator for copy
+	sl_int accel_size =
+	  machine::largest_alloc(thread_id) / sizeof(pixel_type);
+	sl_int accel_proj = accel_size / (nh_pixels * nv_pixels);
+	if (accel_proj > n_angles)
+	  accel_proj = n_angles;
+
+	const int x_block = 32;
+	const int y_block = 32;
+	const int a_block = 40;
+
+	dev_ptr pix_buf = machine::device_allocate(accel_proj
+						   * sl_int(nh_pixels)
+						   * sl_int(nv_pixels)
+						   * sizeof(pixel_type), true,
+						   thread_id);
+	dev_ptr vox_buf = machine::device_allocate(sl_int(x_block)
+						   * sl_int(y_block)
+						   * sl_int(nz)
+						   * sizeof(voxel_type), false,
+						   thread_id);
+	dev_ptr xy_offsets = machine::device_allocate(xy_size * sizeof(int),
+						      true, thread_id);
+	dev_ptr xy_buff = machine::device_allocate(xy_size * sizeof(recon_type),
+						   true, thread_id);
+
+	long counter = 0;
+	for (int ap = 0; ap < n_angles; ap += accel_proj) {
+	  int p_step = accel_proj;
+	  if (ap + p_step > n_angles)
+	    p_step = n_angles - ap;
+	  // Todo - should be contiguous as block of ap
+	  machine::copy_to_device(&pixels[ap][0][0], pix_buf,
+				  p_step * sl_int(nh_pixels) * sl_int(nv_pixels)
+				  * sizeof(pixel_type), thread_id);
+	  for (int block_x = 0; block_x < nx; block_x += x_block) {
+	    int x_step = x_block;
+	    if (block_x + x_step > nx)
+	      x_step = nx - block_x;
+	    for (int block_y = 0; block_y < ny; block_y += y_block) {
+	      int y_step = y_block;
+	      if (block_y + y_step > ny)
+		y_step = ny - block_y;
+	      if (counter % nthreads == thread_id) {
+		// Its not contiguous, since not a full y range
+		for (int ix = 0; ix < x_step; ix++)
+		  machine::copy_to_device(&voxels[block_x + ix][block_y][0],
+					  vox_buf, sl_int(ix * y_step)
+					  * sl_int(nz) * sizeof(voxel_type),
+					  sl_int(y_step)
+					  * sl_int(nz) * sizeof(voxel_type),
+					  thread_id);
+		for (int block_a = 0; block_a < p_step; block_a += a_block) {
+		  int a_step = a_block;
+		  if (block_a + a_step > p_step)
+		    a_step = p_step - block_a;
+		  // we don't block h since we have a min/max from the
+		  // x/y blocks
+		
+		  for (int ix = 0; ix < x_step; ix++) {
+		    int i = block_x + ix;
+		    const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+		    const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
+		    for (int jx = 0; jx < y_step; jx++) {
+		      int j = block_y + jx;
+		      bproject_ah(pixels, voxels, x_0, yvals[j],
+				  x_n, yvals[j + 1], vox_size[0], vox_size[1],
+				  nz, i, j, a_step, nh_pixels, nv_pixels,
+				  h_pixels, c_angle, s_angle, y_offset,
+				  i_offset, length, h_pix0, ihp_step,
+				  ap + block_a, ah_arr, l_xy, ah_offsets,
+				  block_a, nwork);
+		      if (nwork > 0) {
+			if (nwork > 2 * pix_per_vox * (n_angles + 10))
+			  report_error("back project overflow");
+			else {
+			  machine::copy_to_device(ah_offsets.data(), xy_offsets,
+						  nwork * sizeof(int),
+						  thread_id);
+			  machine::copy_to_device(l_xy.data(), xy_buff,
+						  nwork * sizeof(recon_type),
+						  thread_id);
+			  int vox_offset = (ix * y_step + jx) * nz;
+			  machine::run_parallel_ah(kernel_name, pix_buf,
+						   vox_buf, vox_offset, xy_buff,
+						   xy_offsets, nwork, nv_pixels,
+						   nz, nz, thread_id);
+			}
+		      }
+		    }
+		  }
+		}
+		for (int ix = 0; ix < x_step; ix++)
+		  machine::copy_from_device(vox_buf,
+					    &voxels[block_x + ix][block_y][0],
+					    sl_int(ix * y_step)
+					    * sl_int(nz) * sizeof(voxel_type),
+					    sl_int(y_step)
+					    * sl_int(nz) * sizeof(voxel_type),
+					    thread_id);
+	      }
+	      counter++;
+	    }
+	  }
+	}
+	machine::device_free(xy_buff, thread_id);
+	machine::device_free(xy_offsets, thread_id);
+	machine::device_free(vox_buf, thread_id);
+	machine::device_free(pix_buf, thread_id);
+      }
+    }
+  }
+}
+
+#else
+
+void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
+				    const real_1d &v_pixels,
+				    const real_1d &angles, const int n_angles,
+				    const int nh_pixels, const int nv_pixels,
+				    const real vox_origin[3],
+				    const real vox_size[3],
+				    const int nx, const int ny, const int nz,
+				    pixel_data &pixels, voxel_data &voxels)
+{
+  report_error("BUG: attempt to run on accelerator");
+}
+
+void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
+				    const real_1d &v_pixels,
+				    const real_1d &angles, pixel_data &pixels,
+				    voxel_data &voxels, const int n_angles,
+				    const int nh_pixels, const int nv_pixels,
+				    const real vox_origin[3],
+				    const real vox_size[3],
+				    const int nx, const int ny, const int nz)
+{
+  report_error("BUG: attempt to run on accelerator");
+}
+
+#endif // USE_OPENCL

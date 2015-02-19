@@ -10,11 +10,14 @@ void report_error(const std::string message);
 void report_error(const std::string message, const std::string arg);
 void report_error(const std::string message, const std::string arg1,
 		  const std::string arg2);
+void report_error(const std::string message, const int err);
 void add_output(const std::string str);
 void add_output(const char c);
 void add_output(const int i);
-void add_output(const int i, const int w, const bool fill);
 void add_output(const sl_int i);
+void add_output(const unsigned int i);
+void add_output(const unsigned long i);
+void add_output(const int i, const int w, const bool fill);
 void add_output(const real r);
 void send_output();
 

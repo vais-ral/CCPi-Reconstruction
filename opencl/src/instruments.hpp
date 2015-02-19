@@ -279,7 +279,9 @@ namespace CCPi {
 			    const int nv, const recon_type d_conv,
 			    const real cphi, const real sphi,
 			    const sl_int ij_base, const sl_int nyz,
-			    const int_1d &mapping, const int map_type);
+			    recon_1d &l_xy, voxel_ptr_1d &ij_arr,
+			    int_1d &ij_index, const sl_int block_yz,
+			    const int xy_base,int &count);
     static void bproject_ah(pixel_data &pixels, voxel_data &voxels,
 			    const real x_0, const real y_0, const real x_n,
 			    const real y_n, const real d_x, const real d_y,
@@ -289,8 +291,35 @@ namespace CCPi {
 			    const real_1d &sangle, const real_1d &y_offset,
 			    const real_1d &i_offset, const real_1d &length,
 			    const real h_pix0, const real ihp_step,
-			    const int a_off, const int_1d &mapping,
-			    const int map_type);
+			    const int a_off, pixel_ptr_1d &ah_arr,
+			    recon_1d &l_xy, int_1d &ah_index,
+			    const sl_int a_base, int &count);
+    static void f2D_cpu(const real_1d &h_pixels, const real_1d &v_pixels,
+			const real_1d &angles, const int n_angles,
+			const int nh_pixels, const int nv_pixels,
+			const real vox_origin[3], const real vox_size[3],
+			const int nx, const int ny, const int nz,
+			pixel_data &pixels, voxel_data &voxels);
+    static void f2D_accel(const real_1d &h_pixels, const real_1d &v_pixels,
+			  const real_1d &angles, const int n_angles,
+			  const int nh_pixels, const int nv_pixels,
+			  const real vox_origin[3], const real vox_size[3],
+			  const int nx, const int ny, const int nz,
+			  pixel_data &pixels, voxel_data &voxels);
+    static void b2D_cpu(const real_1d &h_pixels, const real_1d &v_pixels,
+			const real_1d &angles, pixel_data &pixels,
+			voxel_data &voxels, const int n_angles,
+			const int nh_pixels, const int nv_pixels,
+			const real grid_offset[3], const real voxel_size[3],
+			const int nx_voxels, const int ny_voxels,
+			const int nz_voxels);
+    static void b2D_accel(const real_1d &h_pixels, const real_1d &v_pixels,
+			  const real_1d &angles, pixel_data &pixels,
+			  voxel_data &voxels, const int n_angles,
+			  const int nh_pixels, const int nv_pixels,
+			  const real grid_offset[3], const real voxel_size[3],
+			  const int nx_voxels, const int ny_voxels,
+			  const int nz_voxels);
     static void gen_mapping(int_1d &mapping, int &map_type,
 			    const real_1d &v_pixels, const real vox_z,
 			    const real size_z, const int nv);

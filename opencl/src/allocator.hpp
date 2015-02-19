@@ -20,7 +20,7 @@ public:
 
   // must be >= sizeof(pointer) = 8 typically
   // and multiple of which is usually the case with powers of 2
-#ifdef NVIDIAGPU
+#ifdef USE_OPENCL
   static const int alignment = 32 * 4; // warp size
 #elif defined(__MIC__)
   static const int alignment = 64;

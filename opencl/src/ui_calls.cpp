@@ -38,6 +38,11 @@ void report_error(const std::string message, const std::string arg1,
   std::cerr << message << arg1 << arg2 << '\n';
 }
 
+void report_error(const std::string message, const int err)
+{
+  std::cerr << message << err << '\n';
+}
+
 void add_output(const std::string str)
 {
   buffer += str;
@@ -59,6 +64,20 @@ void add_output(const sl_int i)
 {
   char buff[32];
   snprintf(buff, 32, "%1ld", i);
+  buffer += buff;
+}
+
+void add_output(const unsigned int i)
+{
+  char buff[32];
+  snprintf(buff, 32, "%1u", i);
+  buffer += buff;
+}
+
+void add_output(const unsigned long i)
+{
+  char buff[32];
+  snprintf(buff, 32, "%1lu", i);
   buffer += buff;
 }
 

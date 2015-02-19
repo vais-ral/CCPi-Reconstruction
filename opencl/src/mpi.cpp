@@ -1,5 +1,14 @@
 
+#ifdef MATLAB_MEX_FILE
+#  ifdef WIN32
+#    define snprintf _snprintf
+#  endif // WIN32
+#  include "mex_types.hpp"
+#else
+#  include "base_types.hpp"
+#endif // MEX_FILE
 #include "mpi.hpp"
+#include "accel.hpp"
 
 #ifdef USE_MPI
 
@@ -10,10 +19,12 @@ void machine::initialise()
   int argc = 0;
   char **argv = 0;
   MPI_Init(&argc, &argv);
+  init_accelerator();
 }
 
 void machine::exit()
 {
+  close_accelerator();
   MPI_Finalize();
 }
 
@@ -35,10 +46,12 @@ int machine::get_processor_id()
 
 void machine::initialise()
 {
+  init_accelerator();
 }
 
 void machine::exit()
 {
+  close_accelerator();
 }
 
 int machine::get_number_of_processors()
