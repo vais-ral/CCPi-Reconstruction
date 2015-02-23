@@ -1434,6 +1434,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 						     xy_buff, xy_offsets,
 						     nwork, nv_pixels, nz,
 						     nz, thread_id);
+			    machine::accelerator_barrier(thread_id);
 			  }
 			}
 		      }
@@ -1656,6 +1657,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 						   vox_buf, vox_offset, xy_buff,
 						   xy_offsets, nwork, nv_pixels,
 						   nz, nz, thread_id);
+			  machine::accelerator_barrier(thread_id);
 			}
 		      }
 		    }

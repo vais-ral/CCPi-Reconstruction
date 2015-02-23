@@ -31,6 +31,7 @@ namespace machine {
 		       dev_ptr vox_buf, dev_ptr xy_buff,
 		       dev_ptr xy_offsets, const int n, const int nv,
 		       const int nz, const int size, const int device);
+  void accelerator_barrier(const int device);
 
 }
 

@@ -22,6 +22,7 @@ namespace machine {
   int num_devices = 0;
   int max_work0 = 1000000;
   int max_work01 = 10000000;
+  int max_work2 = 1000000;
   cl::Context context;
   cl::Program program;
   cl::Kernel kernel;
@@ -161,7 +162,11 @@ void machine::init_accelerator()
 		max_work0 = wval[0];
 	      if (int(wval[0] * wval[1]) < max_work01)
 		max_work01 = wval[0] * wval[1];
+	      if (val == 3 and int(wval[2]) < max_work2)
+		max_work2 = wval[2];
 	    }
+	    if (val < 3)
+	      report_error("Only 2 work dims supported");
 	    size_t tval;
 	    err = devices[i].getInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE, &tval);
 	    if (err != CL_SUCCESS)
@@ -391,11 +396,9 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
 	status = kernel.setArg(7, nz);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
-						globalThreads, 0)
-	    != CL_SUCCESS) {
+						globalThreads) != CL_SUCCESS) {
 	  report_error("Failed to queue job");
 	}
-	// Todo get event and wait on it to make synchronous?
       }
       if (status != CL_SUCCESS)
 	report_error("Failed to setup job args");
@@ -438,8 +441,10 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
       if (status == CL_SUCCESS)
 	status = kernel.setArg(7, nz);
       if (status == CL_SUCCESS) {
+	cl::Event event;
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
-						globalThreads, 0)
+						globalThreads, cl::NullRange,
+						NULL, &event)
 	    != CL_SUCCESS) {
 	  report_error("Failed to queue job");
 	}
@@ -450,6 +455,11 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
   }
 }
 
+void machine::accelerator_barrier(const int device)
+{
+  queue[device]->enqueueBarrier();
+}
+ 
 #else
 
 void machine::init_accelerator()
@@ -518,6 +528,10 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 			      dev_ptr xy_buff, dev_ptr xy_offsets, const int n,
 			      const int nv, const int nz, const int size,
 			      const int device)
+{
+}
+
+void machine::accelerator_barrier(const int device)
 {
 }
 
