@@ -43,34 +43,45 @@ __kernel void parallel_xy_z2(__global float *pixels, const int offset,
 __kernel void parallel_ah_z1(const __global float *pixels,
 			     __global float *voxels, const int offset,
 			     const __global float *l_xy,
-			     const __global int *index, const int n,
-			     const int nv, const int nz)
+			     const __global int *index,
+			     const __global int *lengths,
+			     const int nv, const int nz, const int xy_size,
+			     const int ix)
 {
   // ? Index in work set to vectorize z - nz total!
-  size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0); 
+  size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0);
+  size_t jobid = get_global_id(2);
+  int xpos = ix * get_global_size(2) * xy_size + jobid * xy_size;
   // voxel ptr should be i/j column or needs an offset
   float vox = 0.0;
+  int n = lengths[ix * get_global_size(2) + jobid];
   for (int m = 0; m < n; m++) {
     // pixels needs m to be an a/h offset
-    vox += pixels[index[m] + id] * l_xy[m];
+    vox += pixels[index[xpos + m] + id] * l_xy[xpos + m];
   }
-  voxels[offset + id] += vox;
+  voxels[offset + jobid * nz + id] += vox;
 }
 
 __kernel void parallel_ah_z2(const __global float *pixels,
 			     __global float *voxels, const int offset,
 			     const __global float *l_xy,
-			     const __global int *index, const int n,
-			     const int nv, const int nz)
+			     const __global int *index,
+			     const __global int *lengths,
+			     const int nv, const int nz, const int xy_size,
+			     const int ix)
 {
   // ? Index in work set to vectorize z - nz total!
   size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0); 
+  size_t jobid = get_global_id(2);
   int idx = id + id;
+  int xpos = ix * get_global_size(2) * xy_size + jobid * xy_size;
   // voxel ptr should be i/j column or needs an offset
   float vox = 0.0;
+  int n = lengths[ix * get_global_size(2) + jobid];
   for (int m = 0; m < n; m++) {
     // pixels needs m to be an a/h offset
-    vox += (pixels[index[m] + idx] + pixels[index[m] + idx + 1]) * l_xy[m];
+    vox += (pixels[index[xpos + m] + id] + pixels[index[xpos + m] + id + 1])
+      * l_xy[xpos + m];
   }
-  voxels[offset + id] += vox;
+  voxels[offset + jobid * nz + id] += vox;
 }

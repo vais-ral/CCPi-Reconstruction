@@ -1561,14 +1561,6 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	}
 	const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
 	const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
-	// from bproject_ah
-	const int pix_per_vox = nv_pixels / (nz - 1);
-	// How big should the array be - Todo - use mapping for pix_per_vox?
-	int nwork = 0;
-	int xy_size = 2 * pix_per_vox * (n_angles + 10);
-	pixel_ptr_1d ah_arr(xy_size);
-	int_1d ah_offsets(xy_size);
-	recon_1d l_xy(xy_size);
 
 	// calc space on accelerator for copy
 	sl_int accel_size =
@@ -1579,7 +1571,22 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 
 	const int x_block = 32;
 	const int y_block = 32;
-	const int a_block = 40;
+	const int a_block = accel_proj;
+
+	// from bproject_ah
+	const int pix_per_vox = nv_pixels / (nz - 1);
+	// How big should the array be - Todo - use mapping for pix_per_vox?
+	int nwork = 0;
+	int xy_size = 2 * pix_per_vox * (a_block + 10);
+	if (xy_size % 32 != 0)
+	  xy_size += 32 - (xy_size % 32);
+	pixel_ptr_1d ah_arr(xy_size);
+	int_1d ah_offsets(xy_size);
+	recon_1d l_xy(xy_size);
+	// Need 3D as can't overwrite 1D ones while doing async copy.
+	boost::multi_array<int, 3> ah3_offsets(boost::extents[x_block][y_block][xy_size]);
+	boost::multi_array<recon_type, 3> l3_xy(boost::extents[x_block][y_block][xy_size]);
+	boost::multi_array<int, 2> work_sizes(boost::extents[x_block][y_block]);
 
 	dev_ptr pix_buf = machine::device_allocate(accel_proj
 						   * sl_int(nh_pixels)
@@ -1591,20 +1598,30 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 						   * sl_int(nz)
 						   * sizeof(voxel_type), false,
 						   thread_id);
-	dev_ptr xy_offsets = machine::device_allocate(xy_size * sizeof(int),
+	dev_ptr xy_offsets = machine::device_allocate(sl_int(x_block)
+						      * sl_int(y_block)
+						      * xy_size * sizeof(int),
 						      true, thread_id);
-	dev_ptr xy_buff = machine::device_allocate(xy_size * sizeof(recon_type),
+	dev_ptr xy_buff = machine::device_allocate(sl_int(x_block)
+						   * sl_int(y_block) * xy_size
+						   * sizeof(recon_type),
+						   true, thread_id);
+	dev_ptr xy_work = machine::device_allocate(sl_int(x_block)
+						   * sl_int(y_block)
+						   * sizeof(int),
 						   true, thread_id);
 
 	long counter = 0;
+	std::vector<event_t> vox_x_ev(x_block);
 	for (int ap = 0; ap < n_angles; ap += accel_proj) {
 	  int p_step = accel_proj;
 	  if (ap + p_step > n_angles)
 	    p_step = n_angles - ap;
 	  // Todo - should be contiguous as block of ap
+	  event_t pixel_ev;
 	  machine::copy_to_device(&pixels[ap][0][0], pix_buf,
 				  p_step * sl_int(nh_pixels) * sl_int(nv_pixels)
-				  * sizeof(pixel_type), thread_id);
+				  * sizeof(pixel_type), thread_id, &pixel_ev);
 	  for (int block_x = 0; block_x < nx; block_x += x_block) {
 	    int x_step = x_block;
 	    if (block_x + x_step > nx)
@@ -1621,15 +1638,17 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 					  * sl_int(nz) * sizeof(voxel_type),
 					  sl_int(y_step)
 					  * sl_int(nz) * sizeof(voxel_type),
-					  thread_id);
+					  thread_id, &vox_x_ev[ix]);
 		for (int block_a = 0; block_a < p_step; block_a += a_block) {
 		  int a_step = a_block;
 		  if (block_a + a_step > p_step)
 		    a_step = p_step - block_a;
 		  // we don't block h since we have a min/max from the
 		  // x/y blocks
-		
+		  int offset = 0;
+		  std::vector<std::vector<event_t> *> ev(x_block);
 		  for (int ix = 0; ix < x_step; ix++) {
+		    ev[ix] = new std::vector<event_t>(5);
 		    int i = block_x + ix;
 		    const real x_0 = vox_origin[0] + real(i) * vox_size[0];
 		    const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
@@ -1642,27 +1661,51 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 				  i_offset, length, h_pix0, ihp_step,
 				  ap + block_a, ah_arr, l_xy, ah_offsets,
 				  block_a, nwork);
+		      offset += xy_size;
 		      if (nwork > 0) {
-			if (nwork > 2 * pix_per_vox * (n_angles + 10))
+			if (nwork > xy_size) {
 			  report_error("back project overflow");
-			else {
-			  machine::copy_to_device(ah_offsets.data(), xy_offsets,
-						  nwork * sizeof(int),
-						  thread_id);
-			  machine::copy_to_device(l_xy.data(), xy_buff,
-						  nwork * sizeof(recon_type),
-						  thread_id);
-			  int vox_offset = (ix * y_step + jx) * nz;
-			  machine::run_parallel_ah(kernel_name, pix_buf,
-						   vox_buf, vox_offset, xy_buff,
-						   xy_offsets, nwork, nv_pixels,
-						   nz, nz, thread_id);
-			  machine::accelerator_barrier(thread_id);
+			  nwork = 0;
+			} else {
+			  for (int d = 0; d < nwork; d++)
+			    ah3_offsets[ix][jx][d] = ah_offsets[d];
+			  for (int d = 0; d < nwork; d++)
+			    l3_xy[ix][jx][d] = l_xy[d];
 			}
 		      }
+		      work_sizes[ix][jx] = nwork;
 		    }
+		    // Todo - can we use a local event array or do we need
+		    // to keep each one while the async run might occur?
+		    // e.g. does opencl have its own copy
+		    machine::copy_to_device(&ah3_offsets[ix][0][0], xy_offsets,
+					    ix * y_step * xy_size * sizeof(int),
+					    y_step * xy_size * sizeof(int),
+					    thread_id, &((*(ev[ix]))[0]));
+		    machine::copy_to_device(&l3_xy[ix][0][0], xy_buff,
+					    ix * y_step * xy_size
+					    * sizeof(recon_type),
+					    y_step * xy_size
+					    * sizeof(recon_type),
+					    thread_id, &((*(ev[ix]))[1]));
+		    machine::copy_to_device(&work_sizes[ix][0], xy_work,
+					    ix * y_step * sizeof(int),
+					    y_step * sizeof(int), thread_id,
+					    &((*(ev[ix]))[2]));
+		    (*(ev[ix]))[3] = pixel_ev;
+		    (*(ev[ix]))[4] = vox_x_ev[ix];
+		    int vox_offset = (ix * y_step) * nz;
+		    machine::run_parallel_ah(kernel_name, pix_buf,
+					     vox_buf, vox_offset, xy_buff,
+					     xy_offsets, xy_work, nv_pixels,
+					     nz, xy_size, ix, nz, y_step,
+					     thread_id, ev[ix]);
 		  }
+		  machine::accelerator_barrier(thread_id);
+		  for (int ix = 0; ix < x_step; ix++)
+		    delete ev[ix];
 		}
+		// no events copy is blocking
 		for (int ix = 0; ix < x_step; ix++)
 		  machine::copy_from_device(vox_buf,
 					    &voxels[block_x + ix][block_y][0],
@@ -1671,6 +1714,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 					    sl_int(y_step)
 					    * sl_int(nz) * sizeof(voxel_type),
 					    thread_id);
+		//machine::accelerator_barrier(thread_id);
 	      }
 	      counter++;
 	    }

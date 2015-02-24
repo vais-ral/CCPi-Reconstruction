@@ -212,7 +212,9 @@ void machine::init_accelerator()
 	      send_output();
 	    }
 
-	    queue[k] = new cl::CommandQueue(context, devices[i], 0, &err);
+	    queue[k] = new cl::CommandQueue(context, devices[i],
+				       CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
+					    &err);
 	    if (err == CL_SUCCESS)
 	      k++;
 	    else
@@ -295,62 +297,100 @@ dev_ptr machine::device_allocate(const sl_int size, const bool read_only,
   cl_mem_flags flags = CL_MEM_READ_WRITE;
   if (read_only)
     flags = CL_MEM_READ_ONLY;
-  cl::Buffer *data = new cl::Buffer(context, flags, size, 0, &status);
+  cl::Buffer data(context, flags, size, 0, &status);
   if (status == CL_SUCCESS)
-    return (void *)data;
+    return data;
   else {
     report_error("Accelerator allocation failed");
-    delete data;
-    return 0;
+    //return 0;
+    return data;
   }
 }
 
-// Todo - switch to CL_FALSE non-blocking transfers + events.
+// Todo - pass buffers by reference
 void machine::copy_to_device(void *ptr, dev_ptr buffer, const sl_int size,
 			     const int device)
 {
   cl_int err;
-  cl::Buffer *buf = (cl::Buffer *)buffer;
-  err = queue[device]->enqueueWriteBuffer(*buf, CL_TRUE, 0, size, ptr);
+  err = queue[device]->enqueueWriteBuffer(buffer, CL_TRUE, 0, size, ptr);
   if (err != CL_SUCCESS)
-    report_error("Copy to accelerator failed");
+    report_error("Copy to accelerator failed ", err);
 }
 
 void machine::copy_to_device(void *ptr, dev_ptr buffer, const sl_int offset,
 			     const sl_int size, const int device)
 {
   cl_int err;
-  cl::Buffer *buf = (cl::Buffer *)buffer;
-  err = queue[device]->enqueueWriteBuffer(*buf, CL_TRUE, offset, size, ptr);
+  err = queue[device]->enqueueWriteBuffer(buffer, CL_TRUE, offset, size, ptr);
   if (err != CL_SUCCESS)
-    report_error("Copy to accelerator failed");
+    report_error("Copy to accelerator failed ", err);
 }
 
 void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int size,
 			       const int device)
 {
   cl_int err;
-  cl::Buffer *buf = (cl::Buffer *)buffer;
-  err = queue[device]->enqueueReadBuffer(*buf, CL_TRUE, 0, size, ptr);
+  err = queue[device]->enqueueReadBuffer(buffer, CL_TRUE, 0, size, ptr);
   if (err != CL_SUCCESS)
-    report_error("Copy from accelerator failed");
+    report_error("Copy from accelerator failed ", err);
 }
 
 void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int offset,
 			       const sl_int size, const int device)
 {
   cl_int err;
-  cl::Buffer *buf = (cl::Buffer *)buffer;
-  err = queue[device]->enqueueReadBuffer(*buf, CL_TRUE, offset, size, ptr);
+  err = queue[device]->enqueueReadBuffer(buffer, CL_TRUE, offset, size, ptr);
   if (err != CL_SUCCESS)
-    report_error("Copy from accelerator failed");
+    report_error("Copy from accelerator failed ", err);
+}
+
+void machine::copy_to_device(void *ptr, dev_ptr buffer, const sl_int size,
+			     const int device, event_t *event)
+{
+  cl_int err;
+  err = queue[device]->enqueueWriteBuffer(buffer, CL_FALSE, 0, size, ptr,
+					  NULL, event);
+  if (err != CL_SUCCESS)
+    report_error("Copy to accelerator failed ", err);
+}
+
+void machine::copy_to_device(void *ptr, dev_ptr buffer, const sl_int offset,
+			     const sl_int size, const int device,
+			     event_t *event)
+{
+  cl_int err;
+  err = queue[device]->enqueueWriteBuffer(buffer, CL_FALSE, offset, size, ptr,
+					  NULL, event);
+  if (err != CL_SUCCESS)
+    report_error("Copy to accelerator failed ", err);
+}
+
+void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int size,
+			       const int device, event_t *event)
+{
+  cl_int err;
+  err = queue[device]->enqueueReadBuffer(buffer, CL_FALSE, 0, size, ptr,
+					 NULL, event);
+  if (err != CL_SUCCESS)
+    report_error("Copy from accelerator failed ", err);
+}
+
+void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int offset,
+			       const sl_int size, const int device,
+			       event_t *event)
+{
+  cl_int err;
+  err = queue[device]->enqueueReadBuffer(buffer, CL_FALSE, offset, size, ptr,
+					 0, event);
+  if (err != CL_SUCCESS)
+    report_error("Copy from accelerator failed ", err);
 }
 
 void machine::device_free(dev_ptr data, const int device)
 {
   // destructor should tidy
-  cl::Buffer *buf = (cl::Buffer *)data;
-  delete buf;
+  //cl::Buffer *buf = (cl::Buffer *)data;
+  //delete buf;
 }
 
 bool machine::check_accelerator_kernel(const char name[], const int device)
@@ -363,10 +403,12 @@ bool machine::check_accelerator_kernel(const char name[], const int device)
 void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
 			      dev_ptr vox_buf, const int vox_offset,
 			      dev_ptr xy_buff, dev_ptr xy_offsets,
-			      const int n, const int nv,
-			      const int nz, const int size, const int device)
+			      dev_ptr nlengths, const int nv,
+			      const int nz, const int xy_size, const int ix,
+			      const int size, const int dim3, const int device,
+			      std::vector<event_t> *events)
 {
-  if (n > max_work01)
+  if (size > max_work01)
     report_error("Too much work for device");
   else {
     cl_int err;
@@ -377,26 +419,31 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
       // It should be a multiple of 32 in the allocator, so group
       // based on that and use the 3rd dim if we want to submit
       // multiple jobs? not sure its ideal usage of the available space
-      cl::NDRange globalThreads(32, size / 32, 1);
+      cl::NDRange globalThreads(32, size / 32, dim3);
       cl_int status = CL_SUCCESS;
-      status = kernel.setArg(0, *((cl::Buffer *)pix_buf));
+      status = kernel.setArg(0, pix_buf);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(1, *((cl::Buffer *)vox_buf));
+	status = kernel.setArg(1, vox_buf);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(2, vox_offset);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(3, *((cl::Buffer *)xy_buff));
+	status = kernel.setArg(3, xy_buff);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(4, *((cl::Buffer *)xy_offsets));
+	status = kernel.setArg(4, xy_offsets);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(5, n);
+	status = kernel.setArg(5, nlengths);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(6, nv);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(7, nz);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(8, xy_size);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(9, ix);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
-						globalThreads) != CL_SUCCESS) {
+						globalThreads, cl::NullRange,
+						events) != CL_SUCCESS) {
 	  report_error("Failed to queue job");
 	}
       }
@@ -412,7 +459,7 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 			      const int nv, const int nz, const int size,
 			      const int device)
 {
-  if (n > max_work01)
+  if (size > max_work01)
     report_error("Too much work for device");
   else {
     cl_int err;
@@ -425,15 +472,15 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
       // multiple jobs? not sure its ideal usage of the available space
       cl::NDRange globalThreads(32, size / 32, 1);
       cl_int status = CL_SUCCESS;
-      status = kernel.setArg(0, *((cl::Buffer *)pix_buf));
+      status = kernel.setArg(0, pix_buf);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(1, offset);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(2, *((cl::Buffer *)vox_buf));
+	status = kernel.setArg(2, vox_buf);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(3, *((cl::Buffer *)xy_buff));
+	status = kernel.setArg(3, xy_buff);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(4, *((cl::Buffer *)xy_offsets));
+	status = kernel.setArg(4, xy_offsets);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(5, n);
       if (status == CL_SUCCESS)
@@ -441,11 +488,8 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
       if (status == CL_SUCCESS)
 	status = kernel.setArg(7, nz);
       if (status == CL_SUCCESS) {
-	cl::Event event;
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
-						globalThreads, cl::NullRange,
-						NULL, &event)
-	    != CL_SUCCESS) {
+						globalThreads) != CL_SUCCESS) {
 	  report_error("Failed to queue job");
 	}
       }
@@ -506,6 +550,28 @@ void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int offset,
 {
 }
 
+void machine::copy_to_device(void *ptr, dev_ptr buffer, const sl_int size,
+			     const int device, event_t *event)
+{
+}
+
+void machine::copy_to_device(void *ptr, dev_ptr buffer, const sl_int offset,
+			     const sl_int size, const int device,
+			     event_t *event)
+{
+}
+
+void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int size,
+			       const int device, event_t *event)
+{
+}
+
+void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int offset,
+			       const sl_int size, const int device,
+			       event_t *event)
+{
+}
+
 void machine::device_free(dev_ptr data, const int device)
 {
 }
@@ -518,8 +584,10 @@ bool machine::check_accelerator_kernel(const char name[], const int device)
 void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
 			      dev_ptr vox_buf, const int vox_offset,
 			      dev_ptr xy_buff, dev_ptr xy_offsets,
-			      const int n, const int nv,
-			      const int nz, const int size, const int device)
+			      dev_ptr nlengths, const int nv,
+			      const int nz, const int xy_size, const int ix,
+			      const int size, const int dim3, const int device,
+			      std::vector<event_t> *events)
 {
 }
 
