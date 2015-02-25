@@ -45,10 +45,13 @@ namespace machine {
 		       const int nz, const int xy_size, const int ix,
 		       const int size, const int dim3, const int device,
 		       std::vector<event_t> *events);
-  void run_parallel_xy(const char name[], dev_ptr pix_buf, const int offset,
-		       dev_ptr vox_buf, dev_ptr xy_buff,
-		       dev_ptr xy_offsets, const int n, const int nv,
-		       const int nz, const int size, const int device);
+  void run_parallel_xy(const char name[], dev_ptr pix_buf,
+		       const int offset, dev_ptr vox_buf,
+		       dev_ptr xy_buff, dev_ptr xy_offsets,
+		       dev_ptr h, dev_ptr lengths, const int nv,
+		       const int nz, const int start, const int ah_size,
+		       const int size, const int dim3, const int device,
+		       std::vector<event_t> *events);
   void accelerator_barrier(const int device);
 
 }

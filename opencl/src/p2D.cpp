@@ -1246,10 +1246,12 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
 	sl_int nyz = sl_int(ny) * sl_int(nz);
 	int max_n = std::max(nx, ny);
-	int xy_size = 2 * max_n + 2;
-	recon_1d l_xy(xy_size);
-	voxel_ptr_1d ij_arr(xy_size);
-	int_1d ij_offsets(xy_size);
+	int ah_size = 2 * max_n + 2;
+	if (ah_size % 32 != 0)
+	  ah_size += 32 - (ah_size % 32);
+	recon_1d l_xy(ah_size);
+	voxel_ptr_1d ij_arr(ah_size);
+	int_1d ij_offsets(ah_size);
 	int nwork = 0;
       
 	// calc space on accelerator for copy
@@ -1259,6 +1261,12 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	int xy_proj = (int)std::sqrt(xy_accel);
 	if (xy_proj > max_n)
 	  xy_proj = max_n;
+	int proj_x = xy_proj;
+	if (proj_x > nx)
+	  proj_x = nx;
+	int proj_y = xy_proj;
+	if (proj_y > ny)
+	  proj_y = ny;
 
 	accel_size = machine::largest_alloc(thread_id) / sizeof(pixel_type);
 	sl_int accel_proj = accel_size / (nh_pixels * nv_pixels);
@@ -1269,31 +1277,50 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	const int x_block = 32;
 	const int y_block = 32;
 
+	// Need 3D as can't overwrite 1D ones while doing async copy.
+	// nh_pixels or 2 * max(x_block, y_block)?
+	boost::multi_array<int, 2> ah3_offsets(boost::extents[a_block * nh_pixels][ah_size]);
+	boost::multi_array<recon_type, 2> l3_xy(boost::extents[a_block * nh_pixels][ah_size]);
+	boost::multi_array<int, 1> work_sizes(boost::extents[a_block * nh_pixels]);
+	boost::multi_array<int, 1> h_arr(boost::extents[a_block * nh_pixels]);
+
 	dev_ptr pix_buf = machine::device_allocate(a_block * sl_int(nh_pixels)
 						   * sl_int(nv_pixels)
 						   * sizeof(pixel_type), false,
 						   thread_id);
-	dev_ptr vox_buf = machine::device_allocate(sl_int(xy_proj)
-						   * sl_int(xy_proj)
+	dev_ptr vox_buf = machine::device_allocate(sl_int(proj_x)
+						   * sl_int(proj_y)
 						   * sl_int(nz)
 						   * sizeof(voxel_type), true,
 						   thread_id);
-	dev_ptr xy_offsets = machine::device_allocate(xy_size * sizeof(int),
+	dev_ptr xy_offsets = machine::device_allocate(sl_int(a_block)
+						      * sl_int(nh_pixels)
+						      * ah_size * sizeof(int),
 						      true, thread_id);
-	dev_ptr xy_buff = machine::device_allocate(xy_size * sizeof(recon_type),
+	dev_ptr ij_buff = machine::device_allocate(sl_int(a_block)
+						   * sl_int(nh_pixels) * ah_size
+						   * sizeof(recon_type),
 						   true, thread_id);
+	dev_ptr ij_work = machine::device_allocate(sl_int(a_block)
+						   * sl_int(nh_pixels)
+						   * sizeof(int),
+						   true, thread_id);
+	dev_ptr h_work = machine::device_allocate(sl_int(a_block)
+						  * sl_int(nh_pixels)
+						  * sizeof(int),
+						  true, thread_id);
 	long counter = 0;
-	for (int xp = 0; xp < nx; xp += xy_proj) {
-	  int x_proj = xy_proj;
+	for (int xp = 0; xp < nx; xp += proj_x) {
+	  int x_proj = proj_x;
 	  if (xp + x_proj > nx)
 	    x_proj = nx - xp;
-	  for (int yp = 0; yp < ny; yp += xy_proj) {
-	    int y_proj = xy_proj;
+	  for (int yp = 0; yp < ny; yp += proj_y) {
+	    int y_proj = proj_y;
 	    if (yp + y_proj > ny)
 	      y_proj = ny - yp;
 	    // Its not contiguous, since not a full y range
 	    for (int ix = 0; ix < x_proj; ix++)
-	      machine::copy_to_device(&voxels[xp][yp][0],
+	      machine::copy_to_device(&voxels[xp + ix][yp][0],
 				      vox_buf, sl_int(ix * y_proj)
 				      * sl_int(nz) * sizeof(voxel_type),
 				      sl_int(y_proj)
@@ -1306,10 +1333,12 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 		a_step = n_angles - block_a;
 	      if (counter % nthreads == thread_id) {
 		// Todo - do we really want to copy all?
+		event_t ah_ev;
 		machine::copy_to_device(&pixels[block_a][0][0], pix_buf,
 					a_step * sl_int(nh_pixels)
 					* sl_int(nv_pixels)
-					* sizeof(pixel_type), thread_id);
+					* sizeof(pixel_type), thread_id,
+					&ah_ev);
 		// we don't block h since we have a min/max from the x/y blocks
 		for (int block_x = 0; block_x < x_proj; block_x += x_block) {
 		  int x_step = x_block;
@@ -1328,8 +1357,9 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 		    real vy = vox_origin[1] + real(yp + block_y) * vox_size[1];
 		    real wy = vox_origin[1] + real(yp + block_y + y_step)
 		      * vox_size[1];
-		    sl_int xy_base = x_base + sl_int(block_y) * sl_int(nz);
-
+		    sl_int ah_base = x_base + sl_int(block_y) * sl_int(nz);
+		    std::vector<std::vector<event_t > *> ev(a_step);
+		    int cx = 0;
 		    for (int ax = 0; ax < a_step; ax++) {
 		      int a = block_a + ax;
 		      // rotate source and detector positions by current angle
@@ -1406,7 +1436,9 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 					nh_pixels-1);
 		      }
 		      // end bproject
-		
+
+		      int csize = 0;
+		      int cstart = cx;
 		      for (int h = hmin; h <= hmax; h++) {
 			real p2_x = cphi * detector_x - sphi * h_pixels[h];
 			real p2_y = sphi * detector_x + cphi * h_pixels[h];
@@ -1416,31 +1448,62 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 				    vox_size[0], vox_size[1], x_step, y_step,
 				    nz, a, h, nv_pixels, d_conv, cphi, sphi,
 				    ij_base, nyz, l_xy, ij_arr, ij_offsets,
-				    block_yz, xy_base, nwork);
+				    block_yz, ah_base, nwork);
 			if (nwork > 0) {
-			  if (nwork > xy_size)
+			  if (nwork > ah_size) {
 			    report_error("forward project overflow");
-			  else {
-			    machine::copy_to_device(ij_offsets.data(),
-						    xy_offsets,
-						    nwork * sizeof(int),
-						    thread_id);
-			    machine::copy_to_device(l_xy.data(), xy_buff,
-						    nwork * sizeof(recon_type),
-						    thread_id);
-			    int pix_offset = (a * nh_pixels + h) * nv_pixels;
-			    machine::run_parallel_xy(kernel_name, pix_buf,
-						     pix_offset, vox_buf,
-						     xy_buff, xy_offsets,
-						     nwork, nv_pixels, nz,
-						     nz, thread_id);
-			    machine::accelerator_barrier(thread_id);
+			    nwork = 0;
+			  } else {
+			    for (int d = 0; d < nwork; d++)
+			      ah3_offsets[cx][d] = ij_offsets[d];
+			    for (int d = 0; d < nwork; d++)
+			      l3_xy[cx][d] = l_xy[d];
+			    work_sizes[cx] = nwork;
+			    h_arr[cx] = h;
+			    cx++;
+			    csize++;
 			  }
 			}
 		      }
+		      if (csize > 0) {
+			ev[ax] = new std::vector<event_t>(5);
+			machine::copy_to_device(&ah3_offsets[cstart][0],
+						xy_offsets,
+						cstart * ah_size * sizeof(int),
+						csize * ah_size * sizeof(int),
+						thread_id, &((*(ev[ax]))[0]));
+			machine::copy_to_device(&l3_xy[cstart][0], ij_buff,
+						cstart * ah_size
+						* sizeof(recon_type),
+						csize * ah_size
+						* sizeof(recon_type),
+						thread_id, &((*(ev[ax]))[1]));
+			machine::copy_to_device(&work_sizes[cstart], ij_work,
+						cstart * sizeof(int),
+						csize * sizeof(int), thread_id,
+						&((*(ev[ax]))[2]));
+			machine::copy_to_device(&h_arr[cstart], h_work,
+						cstart * sizeof(int),
+						csize * sizeof(int), thread_id,
+						&((*(ev[ax]))[3]));
+			(*(ev[ax]))[4] = ah_ev;
+			int pix_offset = (ax * nh_pixels) * nv_pixels;
+			machine::run_parallel_xy(kernel_name, pix_buf,
+						 pix_offset, vox_buf,
+						 ij_buff, xy_offsets, h_work,
+						 ij_work, nv_pixels, nz, cstart,
+						 ah_size, nz, csize, thread_id,
+						 ev[ax]);
+		      } else
+			ev[ax] = 0;
 		    }
+		    machine::accelerator_barrier(thread_id);
+		    for (int ix = 0; ix < a_step; ix++)
+		      if (ev[ix] != 0)
+			delete ev[ix];
 		  }
 		}
+		// blocking so no barrier
 		machine::copy_from_device(pix_buf, &pixels[block_a][0][0],
 					  a_step * sl_int(nh_pixels)
 					  * sl_int(nv_pixels)
@@ -1449,7 +1512,9 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	    }
 	  }
 	}
-	machine::device_free(xy_buff, thread_id);
+	machine::device_free(h_work, thread_id);
+	machine::device_free(ij_work, thread_id);
+	machine::device_free(ij_buff, thread_id);
 	machine::device_free(xy_offsets, thread_id);
 	machine::device_free(vox_buf, thread_id);
 	machine::device_free(pix_buf, thread_id);
@@ -1720,6 +1785,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	    }
 	  }
 	}
+	machine::device_free(xy_work, thread_id);
 	machine::device_free(xy_buff, thread_id);
 	machine::device_free(xy_offsets, thread_id);
 	machine::device_free(vox_buf, thread_id);

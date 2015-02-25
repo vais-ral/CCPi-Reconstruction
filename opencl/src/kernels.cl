@@ -5,39 +5,51 @@
 __kernel void parallel_xy_z1(__global float *pixels, const int offset,
 			     const __global float *voxels,
 			     const __global float *l_xy,
-			     const __global int *index, const int n,
-			     const int nv, const int nz)
+			     const __global int *index,
+			     const __global int *h,
+			     const __global int *lengths,
+			     const int nv, const int nz, const int start,
+			     const int ah_size)
 {
   // ? Index in work set to vectorize z - nz/nv total
   size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0); 
+  size_t jobid = get_global_id(2);
   // pixel ptr should be ah column or needs an offset
   float pix = 0.0;
+  int n = lengths[start + jobid];
+  int pos = (start + jobid) * ah_size;
   for (int m = 0; m < n; m++) {
     // voxels needs m to be an i/j offset
-    pix += voxels[index[m] + id] * l_xy[m];
+    pix += voxels[index[pos + m] + id] * l_xy[pos + m];
   }
-  pixels[offset + id] += pix;
+  pixels[offset + h[start + jobid] * nv + id] += pix;
 }
 
 __kernel void parallel_xy_z2(__global float *pixels, const int offset,
 			     const __global float *voxels,
 			     const __global float *l_xy,
-			     const __global int *index, const int n,
-			     const int nv, const int nz)
+			     const __global int *index,
+			     const __global int *h,
+			     const __global int *lengths,
+			     const int nv, const int nz, const int start,
+			     const int ah_size)
 {
   // ? Index in work set to vectorize z - nz total!
   size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0); 
+  size_t jobid = get_global_id(2);
   // pixel ptr should be ah column or needs an offset
   int idx = id + id;
+  int n = lengths[start + jobid];
+  int pos = (start + jobid) * ah_size;
   float pix1 = 0.0;
   float pix2 = 0.0;
   for (int m = 0; m < n; m++) {
     // voxels needs m to be an i/j offset
-    pix1 += voxels[index[m] + id] * l_xy[m];
-    pix2 += voxels[index[m] + id] * l_xy[m];
+    pix1 += voxels[index[pos + m] + id] * l_xy[pos + m];
+    pix2 += voxels[index[pos + m] + id] * l_xy[pos + m];
   }
-  pixels[offset + idx] += pix1;
-  pixels[offset + idx + 1] += pix2;
+  pixels[offset + h[start + jobid] * nv + idx] += pix1;
+  pixels[offset + h[start + jobid] * nv + idx + 1] += pix2;
 }
 
 __kernel void parallel_ah_z1(const __global float *pixels,
