@@ -1274,8 +1274,8 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	  accel_proj = n_angles;
 
 	const int a_block = accel_proj;
-	const int x_block = 32;
-	const int y_block = 32;
+	const int x_block = proj_x;
+	const int y_block = proj_y;
 
 	// Need 3D as can't overwrite 1D ones while doing async copy.
 	// nh_pixels or 2 * max(x_block, y_block)?
@@ -1459,7 +1459,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 			    for (int d = 0; d < nwork; d++)
 			      l3_xy[cx][d] = l_xy[d];
 			    work_sizes[cx] = nwork;
-			    h_arr[cx] = h;
+			    h_arr[cx] = ax * nh_pixels + h;
 			    cx++;
 			    csize++;
 			  }
@@ -1487,9 +1487,9 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 						csize * sizeof(int), thread_id,
 						&((*(ev[ax]))[3]));
 			(*(ev[ax]))[4] = ah_ev;
-			int pix_offset = (ax * nh_pixels) * nv_pixels;
+			//int pix_offset = (ax * nh_pixels) * nv_pixels;
 			machine::run_parallel_xy(kernel_name, pix_buf,
-						 pix_offset, vox_buf,
+						 vox_buf,
 						 ij_buff, xy_offsets, h_work,
 						 ij_work, nv_pixels, nz, cstart,
 						 ah_size, nz, csize, thread_id,
@@ -1634,8 +1634,8 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	if (accel_proj > n_angles)
 	  accel_proj = n_angles;
 
-	const int x_block = 32;
-	const int y_block = 32;
+	const int x_block = 128;
+	const int y_block = 128;
 	const int a_block = accel_proj;
 
 	// from bproject_ah

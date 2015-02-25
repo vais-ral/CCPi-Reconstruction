@@ -2,7 +2,7 @@
 // OpenCL kernels - only use 2 dims for global workspace - should ids be local?
 // should l_xy/index be __constant?
 
-__kernel void parallel_xy_z1(__global float *pixels, const int offset,
+__kernel void parallel_xy_z1(__global float *pixels,
 			     const __global float *voxels,
 			     const __global float *l_xy,
 			     const __global int *index,
@@ -22,10 +22,10 @@ __kernel void parallel_xy_z1(__global float *pixels, const int offset,
     // voxels needs m to be an i/j offset
     pix += voxels[index[pos + m] + id] * l_xy[pos + m];
   }
-  pixels[offset + h[start + jobid] * nv + id] += pix;
+  pixels[h[start + jobid] * nv + id] += pix;
 }
 
-__kernel void parallel_xy_z2(__global float *pixels, const int offset,
+__kernel void parallel_xy_z2(__global float *pixels,
 			     const __global float *voxels,
 			     const __global float *l_xy,
 			     const __global int *index,
@@ -48,8 +48,8 @@ __kernel void parallel_xy_z2(__global float *pixels, const int offset,
     pix1 += voxels[index[pos + m] + id] * l_xy[pos + m];
     pix2 += voxels[index[pos + m] + id] * l_xy[pos + m];
   }
-  pixels[offset + h[start + jobid] * nv + idx] += pix1;
-  pixels[offset + h[start + jobid] * nv + idx + 1] += pix2;
+  pixels[h[start + jobid] * nv + idx] += pix1;
+  pixels[h[start + jobid] * nv + idx + 1] += pix2;
 }
 
 __kernel void parallel_ah_z1(const __global float *pixels,

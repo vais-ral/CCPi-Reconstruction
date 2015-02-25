@@ -160,10 +160,14 @@ void machine::init_accelerator()
 	      send_output();
 	      if ((int)wval[0] < max_work0)
 		max_work0 = wval[0];
-	      if (int(wval[0] * wval[1]) < max_work01)
-		max_work01 = wval[0] * wval[1];
-	      if (val == 3 and int(wval[2]) < max_work2)
-		max_work2 = wval[2];
+	      if (val == 3) {
+		if (int(wval[0] * wval[2]) < max_work01)
+		  max_work01 = wval[0] * wval[2];
+	      } else {
+		max_work01 = max_work0;
+	      }
+	      if (int(wval[1]) < max_work2)
+		max_work2 = wval[1];
 	    }
 	    if (val < 3)
 	      report_error("Only 2 work dims supported");
@@ -419,7 +423,13 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
       // It should be a multiple of 32 in the allocator, so group
       // based on that and use the 3rd dim if we want to submit
       // multiple jobs? not sure its ideal usage of the available space
-      cl::NDRange globalThreads(32, size / 32, dim3);
+      int size1 = 1;
+      int size0 = size;
+      while (size > max_work0) {
+	size1 *= 2;
+	size0 /= 2;
+      }
+      cl::NDRange globalThreads(size0, dim3, size1);
       cl_int status = CL_SUCCESS;
       status = kernel.setArg(0, pix_buf);
       if (status == CL_SUCCESS)
@@ -454,11 +464,11 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
 }
 
 void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
-			      const int offset, dev_ptr vox_buf,
-			      dev_ptr xy_buff, dev_ptr xy_offsets,
-			      dev_ptr h, dev_ptr lengths, const int nv,
-			      const int nz, const int start, const int ah_size,
-			      const int size, const int dim3, const int device,
+			      dev_ptr vox_buf, dev_ptr xy_buff,
+			      dev_ptr xy_offsets, dev_ptr h, dev_ptr lengths,
+			      const int nv, const int nz, const int start,
+			      const int ah_size, const int size,
+			      const int dim3, const int device,
 			      std::vector<event_t> *events)
 {
   if (size > max_work01 or dim3 > max_work2)
@@ -472,29 +482,33 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
       // It should be a multiple of 32 in the allocator, so group
       // based on that and use the 3rd dim if we want to submit
       // multiple jobs? not sure its ideal usage of the available space
-      cl::NDRange globalThreads(32, size / 32, dim3);
+      int size1 = 1;
+      int size0 = size;
+      while (size > max_work0) {
+	size1 *= 2;
+	size0 /= 2;
+      }
+      cl::NDRange globalThreads(size0, dim3, size1);
       cl_int status = CL_SUCCESS;
       status = kernel.setArg(0, pix_buf);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(1, offset);
+	status = kernel.setArg(1, vox_buf);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(2, vox_buf);
+	status = kernel.setArg(2, xy_buff);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(3, xy_buff);
+	status = kernel.setArg(3, xy_offsets);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(4, xy_offsets);
+	status = kernel.setArg(4, h);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(5, h);
+	status = kernel.setArg(5, lengths);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(6, lengths);
+	status = kernel.setArg(6, nv);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(7, nv);
+	status = kernel.setArg(7, nz);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(8, nz);
+	status = kernel.setArg(8, start);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(9, start);
-      if (status == CL_SUCCESS)
-	status = kernel.setArg(10, ah_size);
+	status = kernel.setArg(9, ah_size);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
 						globalThreads, cl::NullRange,
@@ -601,10 +615,12 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
 }
 
 void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
-			      const int offset, dev_ptr vox_buf,
-			      dev_ptr xy_buff, dev_ptr xy_offsets, const int n,
-			      const int nv, const int nz, const int size,
-			      const int device, std::vector<event_t> *events)
+			      dev_ptr vox_buf, dev_ptr xy_buff,
+			      dev_ptr xy_offsets, dev_ptr h, dev_ptr lengths,
+			      const int nv, const int nz, const int start,
+			      const int ah_size, const int size,
+			      const int dim3, const int device,
+			      std::vector<event_t> *events);
 {
 }
 
