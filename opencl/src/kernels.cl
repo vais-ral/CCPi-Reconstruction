@@ -12,8 +12,8 @@ __kernel void parallel_xy_z1(__global float *pixels,
 			     const int ah_size)
 {
   // ? Index in work set to vectorize z - nz/nv total
-  size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0); 
-  size_t jobid = get_global_id(2);
+  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0); 
+  size_t jobid = get_global_id(1);
   // pixel ptr should be ah column or needs an offset
   float pix = 0.0;
   int n = lengths[start + jobid];
@@ -35,8 +35,8 @@ __kernel void parallel_xy_z2(__global float *pixels,
 			     const int ah_size)
 {
   // ? Index in work set to vectorize z - nz total!
-  size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0); 
-  size_t jobid = get_global_id(2);
+  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0); 
+  size_t jobid = get_global_id(1);
   // pixel ptr should be ah column or needs an offset
   int idx = id + id;
   int n = lengths[start + jobid];
@@ -61,12 +61,12 @@ __kernel void parallel_ah_z1(const __global float *pixels,
 			     const int ix)
 {
   // ? Index in work set to vectorize z - nz total!
-  size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0);
-  size_t jobid = get_global_id(2);
-  int xpos = ix * get_global_size(2) * xy_size + jobid * xy_size;
+  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0);
+  size_t jobid = get_global_id(1);
+  int xpos = ix * get_global_size(1) * xy_size + jobid * xy_size;
   // voxel ptr should be i/j column or needs an offset
   float vox = 0.0;
-  int n = lengths[ix * get_global_size(2) + jobid];
+  int n = lengths[ix * get_global_size(1) + jobid];
   for (int m = 0; m < n; m++) {
     // pixels needs m to be an a/h offset
     vox += pixels[index[xpos + m] + id] * l_xy[xpos + m];
@@ -83,13 +83,13 @@ __kernel void parallel_ah_z2(const __global float *pixels,
 			     const int ix)
 {
   // ? Index in work set to vectorize z - nz total!
-  size_t id = get_global_id(1) * get_global_size(0) + get_global_id(0); 
-  size_t jobid = get_global_id(2);
+  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0); 
+  size_t jobid = get_global_id(1);
   int idx = id + id;
-  int xpos = ix * get_global_size(2) * xy_size + jobid * xy_size;
+  int xpos = ix * get_global_size(1) * xy_size + jobid * xy_size;
   // voxel ptr should be i/j column or needs an offset
   float vox = 0.0;
-  int n = lengths[ix * get_global_size(2) + jobid];
+  int n = lengths[ix * get_global_size(1) + jobid];
   for (int m = 0; m < n; m++) {
     // pixels needs m to be an a/h offset
     vox += (pixels[index[xpos + m] + id] + pixels[index[xpos + m] + id + 1])
