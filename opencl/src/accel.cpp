@@ -29,6 +29,7 @@ namespace machine {
   std::vector<cl::CommandQueue *> queue;
 
   sl_int max_alloc = 1000000000000;
+  sl_int max_mem = 1000000000000;
 
 }
 
@@ -201,6 +202,8 @@ void machine::init_accelerator()
 	    if (err != CL_SUCCESS)
 	      /*std::cerr << "Constant args failed " << err << '\n'*/;
 	    else {
+	      if ((sl_int)lval < max_mem)
+		max_mem = (sl_int)lval;
 	      add_output("Max memory size = ");
 	      add_output(lval);
 	      send_output();
@@ -286,6 +289,12 @@ bool machine::has_accelerator()
 int machine::number_of_accelerators()
 {
   return num_devices;
+}
+
+sl_int machine::available_mem(const int device)
+{
+  // force all to be the same size for simplicity in the rest of the code
+  return max_mem;
 }
 
 sl_int machine::largest_alloc(const int device)
@@ -423,13 +432,7 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
       // It should be a multiple of 32 in the allocator, so group
       // based on that and use the 3rd dim if we want to submit
       // multiple jobs? not sure its ideal usage of the available space
-      int size1 = 1;
-      int size0 = size;
-      while (size > max_work0) {
-	size1 *= 2;
-	size0 /= 2;
-      }
-      cl::NDRange globalThreads(size0, dim3, size1);
+      cl::NDRange globalThreads(size, dim3);
       cl_int status = CL_SUCCESS;
       status = kernel.setArg(0, pix_buf);
       if (status == CL_SUCCESS)
@@ -482,13 +485,7 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
       // It should be a multiple of 32 in the allocator, so group
       // based on that and use the 3rd dim if we want to submit
       // multiple jobs? not sure its ideal usage of the available space
-      int size1 = 1;
-      int size0 = size;
-      while (size > max_work0) {
-	size1 *= 2;
-	size0 /= 2;
-      }
-      cl::NDRange globalThreads(size0, dim3, size1);
+      cl::NDRange globalThreads(size, dim3);
       cl_int status = CL_SUCCESS;
       status = kernel.setArg(0, pix_buf);
       if (status == CL_SUCCESS)
@@ -545,6 +542,11 @@ bool machine::has_accelerator()
 int machine::number_of_accelerators()
 {
   return 0;
+}
+
+sl_int machine::available_mem(const int device)
+{
+  return -1;
 }
 
 sl_int machine::largest_alloc(const int device)
@@ -620,7 +622,7 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 			      const int nv, const int nz, const int start,
 			      const int ah_size, const int size,
 			      const int dim3, const int device,
-			      std::vector<event_t> *events);
+			      std::vector<event_t> *events)
 {
 }
 

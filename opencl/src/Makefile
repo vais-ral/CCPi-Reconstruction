@@ -62,7 +62,7 @@ utils.o: utils.cpp utils.hpp
 
 ui_calls.o: ui_calls.cpp ui_calls.hpp
 
-mpi.o: mpi.cpp accel.hpp
+mpi.o: mpi.cpp mpi.hpp accel.hpp
 
 accel.o: accel.cpp accel.hpp ui_calls.hpp
 

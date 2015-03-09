@@ -17,6 +17,7 @@ namespace machine {
   void close_accelerator();
   bool has_accelerator();
   int number_of_accelerators();
+  sl_int available_mem(const int device);
   sl_int largest_alloc(const int device);
   dev_ptr device_allocate(const sl_int size, const bool read_only,
 			  const int device);

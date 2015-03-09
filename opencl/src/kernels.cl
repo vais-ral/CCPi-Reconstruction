@@ -12,7 +12,7 @@ __kernel void parallel_xy_z1(__global float *pixels,
 			     const int ah_size)
 {
   // ? Index in work set to vectorize z - nz/nv total
-  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0); 
+  size_t id = get_global_id(0); 
   size_t jobid = get_global_id(1);
   // pixel ptr should be ah column or needs an offset
   float pix = 0.0;
@@ -35,7 +35,7 @@ __kernel void parallel_xy_z2(__global float *pixels,
 			     const int ah_size)
 {
   // ? Index in work set to vectorize z - nz total!
-  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0); 
+  size_t id = get_global_id(0); 
   size_t jobid = get_global_id(1);
   // pixel ptr should be ah column or needs an offset
   int idx = id + id;
@@ -61,7 +61,7 @@ __kernel void parallel_ah_z1(const __global float *pixels,
 			     const int ix)
 {
   // ? Index in work set to vectorize z - nz total!
-  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0);
+  size_t id = get_global_id(0);
   size_t jobid = get_global_id(1);
   int xpos = ix * get_global_size(1) * xy_size + jobid * xy_size;
   // voxel ptr should be i/j column or needs an offset
@@ -83,7 +83,7 @@ __kernel void parallel_ah_z2(const __global float *pixels,
 			     const int ix)
 {
   // ? Index in work set to vectorize z - nz total!
-  size_t id = get_global_id(2) * get_global_size(0) + get_global_id(0); 
+  size_t id = get_global_id(0); 
   size_t jobid = get_global_id(1);
   int idx = id + id;
   int xpos = ix * get_global_size(1) * xy_size + jobid * xy_size;
