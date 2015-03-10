@@ -1289,19 +1289,25 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	*/
 	sl_int accel_proj = n_angles;
 	int ah_max = std::max(nv_pixels, ah_size);
-	sl_int mem_size = accel_proj * sl_int(nh_pixels) * sl_int(ah_max)
-	  * (sizeof(pixel_type) + sizeof(recon_type) + sizeof(int))
+	sl_int mem_size = (accel_proj * sl_int(nh_pixels))
+	  * (sl_int(nv_pixels) * sizeof(pixel_type)
+	     + sl_int(ah_size) * (sizeof(recon_type) + sizeof(int)))
 	  + sl_int(x_block) * sl_int(y_block) * sl_int(nz)
 	  * sizeof(voxel_type);
 	// this is really just 4
 	sl_int data_max = std::max(std::max(sizeof(voxel_type),
 					    sizeof(recon_type)), sizeof(int));
-	while (mem_size > machine::available_mem(thread_id) and
+	int factor = 1;
+	while (mem_size > machine::available_mem(thread_id) or
 	       sl_int(accel_proj) * sl_int(nh_pixels) * sl_int(ah_max)
 	       * data_max > machine::largest_alloc(thread_id)) {
-	  accel_proj /= 2;
-	  mem_size = accel_proj * sl_int(nh_pixels) * sl_int(ah_max)
-	    * (sizeof(pixel_type) + sizeof(recon_type) + sizeof(int))
+	  factor++;
+	  accel_proj = n_angles / factor;
+	  if (n_angles % factor != 0)
+	    accel_proj++;
+	  mem_size = (accel_proj * sl_int(nh_pixels))
+	    * (sl_int(nv_pixels) * sizeof(pixel_type)
+	       + sl_int(ah_size) * (sizeof(recon_type) + sizeof(int)))
 	    + sl_int(x_block) * sl_int(y_block) * sl_int(nz)
 	    * sizeof(voxel_type);
 	}
@@ -1312,6 +1318,8 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	add_output(x_block);
 	add_output(" ");
 	add_output(y_block);
+	add_output(" ");
+	add_output(ah_size);
 	send_output();
 
 	// Need 3D as can't overwrite 1D ones while doing async copy.
@@ -1668,8 +1676,13 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	sl_int accel_size =
 	  machine::largest_alloc(thread_id) / sizeof(pixel_type);
 	int accel_proj = n_angles;
-	while (accel_proj * sl_int(nh_pixels) * sl_int(nv_pixels) > accel_size)
-	  accel_proj /= 2;
+	int factor = 1;
+	while (accel_proj * sl_int(nh_pixels) * sl_int(nv_pixels) >accel_size) {
+	  factor++;
+	  accel_proj = n_angles / factor;
+	  if (n_angles % factor != 0)
+	    accel_proj++;
+	}
 	const int a_block = accel_proj;
 
 	// from bproject_ah
@@ -1694,7 +1707,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	sl_int data_max = std::max(std::max(sizeof(voxel_type),
 					    sizeof(recon_type)), sizeof(int));
 	bool flip = true;
-	while (mem_size > machine::available_mem(thread_id) and
+	while (mem_size > machine::available_mem(thread_id) or
 	       sl_int(x_block) * sl_int(y_block) * sl_int(xy_max) * data_max >
 	       machine::largest_alloc(thread_id)) {
 	  if (flip)
@@ -1713,6 +1726,8 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	add_output(x_block);
 	add_output(" ");
 	add_output(y_block);
+	add_output(" ");
+	add_output(xy_size);
 	send_output();
 
 	// Need 3D as can't overwrite 1D ones while doing async copy.
