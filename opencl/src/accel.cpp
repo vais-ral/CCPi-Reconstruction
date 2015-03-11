@@ -399,6 +399,65 @@ void machine::copy_from_device(dev_ptr buffer, void *ptr, const sl_int offset,
     report_error("Copy from accelerator failed ", err);
 }
 
+void machine::copy_to_device(void *ptr, dev_ptr buffer, const sl_int y_host,
+			     const sl_int z_host, const sl_int x_size,
+			     const sl_int y_size, const int z_size,
+			     const int device, event_t *event)
+{
+  cl_int err;
+  cl::size_t<3> dev_origin;
+  dev_origin[0] = 0;
+  dev_origin[1] = 0;
+  dev_origin[2] = 0;
+  cl::size_t<3> host_origin;
+  host_origin[0] = 0;
+  host_origin[1] = 0;
+  host_origin[2] = 0;
+  cl::size_t<3> region;
+  region[0] = z_size;
+  region[1] = y_size;
+  region[2] = x_size;
+  size_t host_1D = z_host;
+  size_t host_2D = y_host * z_host;
+  size_t dev_1D = z_size;
+  size_t dev_2D = y_size * z_size;
+  err = queue[device]->enqueueWriteBufferRect(buffer, CL_FALSE, dev_origin,
+					      host_origin, region,  dev_1D,
+					      dev_2D, host_1D, host_2D, ptr,
+					      NULL, event);
+  if (err != CL_SUCCESS)
+    report_error("Copy rect to accelerator failed ", err);
+}
+
+void machine::copy_from_device(void *ptr, dev_ptr buffer, const sl_int y_host,
+			     const sl_int z_host, const sl_int x_size,
+			     const sl_int y_size, const int z_size,
+			     const int device)
+{
+  cl_int err;
+  cl::size_t<3> dev_origin;
+  dev_origin[0] = 0;
+  dev_origin[1] = 0;
+  dev_origin[2] = 0;
+  cl::size_t<3> host_origin;
+  host_origin[0] = 0;
+  host_origin[1] = 0;
+  host_origin[2] = 0;
+  cl::size_t<3> region;
+  region[0] = z_size;
+  region[1] = y_size;
+  region[2] = x_size;
+  size_t host_1D = z_host;
+  size_t host_2D = y_host * z_host;
+  size_t dev_1D = z_size;
+  size_t dev_2D = y_size * z_size;
+  err = queue[device]->enqueueReadBufferRect(buffer, CL_TRUE, dev_origin,
+					     host_origin, region,  dev_1D,
+					     dev_2D, host_1D, host_2D, ptr);
+  if (err != CL_SUCCESS)
+    report_error("Copy rect from accelerator failed ", err);
+}
+
 void machine::device_free(dev_ptr data, const int device)
 {
   // destructor should tidy

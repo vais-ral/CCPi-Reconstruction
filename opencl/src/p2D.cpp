@@ -1355,6 +1355,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 						  * sizeof(int),
 						  true, thread_id);
 	long counter = 0;
+	event_t vox_ev;
 	for (int xp = 0; xp < nx; xp += proj_x) {
 	  int x_proj = proj_x;
 	  if (xp + x_proj > nx)
@@ -1363,14 +1364,10 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	    int y_proj = proj_y;
 	    if (yp + y_proj > ny)
 	      y_proj = ny - yp;
-	    // Its not contiguous, since not a full y range
-	    for (int ix = 0; ix < x_proj; ix++)
-	      machine::copy_to_device(&voxels[xp + ix][yp][0],
-				      vox_buf, sl_int(ix * y_proj)
-				      * sl_int(nz) * sizeof(voxel_type),
-				      sl_int(y_proj)
-				      * sl_int(nz) * sizeof(voxel_type),
-				      thread_id);
+	    machine::copy_to_device(&voxels[xp][yp][0], vox_buf,
+				    y_proj, nz * sizeof(voxel_type),
+				    x_proj, y_proj, nz * sizeof(float),
+				    thread_id, &vox_ev);
 	    sl_int block_yz = y_proj * nz;
 	    for (int block_a = 0; block_a < n_angles; block_a += a_block) {
 	      int a_step = a_block;
@@ -1511,7 +1508,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 			}
 		      }
 		      if (csize > 0) {
-			ev[ax] = new std::vector<event_t>(5);
+			ev[ax] = new std::vector<event_t>(6);
 			machine::copy_to_device(&ah3_offsets[cstart][0],
 						xy_offsets,
 						cstart * ah_size * sizeof(int),
@@ -1532,6 +1529,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 						csize * sizeof(int), thread_id,
 						&((*(ev[ax]))[3]));
 			(*(ev[ax]))[4] = ah_ev;
+			(*(ev[ax]))[5] = vox_ev;
 			//int pix_offset = (ax * nh_pixels) * nv_pixels;
 			machine::run_parallel_xy(kernel_name, pix_buf,
 						 vox_buf,
@@ -1759,7 +1757,6 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 						   true, thread_id);
 
 	long counter = 0;
-	std::vector<event_t> vox_x_ev(x_block);
 	for (int ap = 0; ap < n_angles; ap += accel_proj) {
 	  int p_step = accel_proj;
 	  if (ap + p_step > n_angles)
@@ -1778,14 +1775,11 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	      if (block_y + y_step > ny)
 		y_step = ny - block_y;
 	      if (counter % nthreads == thread_id) {
-		// Its not contiguous, since not a full y range
-		for (int ix = 0; ix < x_step; ix++)
-		  machine::copy_to_device(&voxels[block_x + ix][block_y][0],
-					  vox_buf, sl_int(ix * y_step)
-					  * sl_int(nz) * sizeof(voxel_type),
-					  sl_int(y_step)
-					  * sl_int(nz) * sizeof(voxel_type),
-					  thread_id, &vox_x_ev[ix]);
+		event_t vox_ev;
+		machine::copy_to_device(&voxels[block_x][block_y][0], vox_buf,
+					ny, nz * sizeof(voxel_type),
+					x_step, y_step, nz * sizeof(float),
+					thread_id, &vox_ev);
 		for (int block_a = 0; block_a < p_step; block_a += a_block) {
 		  int a_step = a_block;
 		  if (block_a + a_step > p_step)
@@ -1840,7 +1834,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 					    y_step * sizeof(int), thread_id,
 					    &((*(ev[ix]))[2]));
 		    (*(ev[ix]))[3] = pixel_ev;
-		    (*(ev[ix]))[4] = vox_x_ev[ix];
+		    (*(ev[ix]))[4] = vox_ev;
 		    int vox_offset = (ix * y_step) * nz;
 		    machine::run_parallel_ah(kernel_name, pix_buf,
 					     vox_buf, vox_offset, xy_buff,
@@ -1853,14 +1847,10 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 		    delete ev[ix];
 		}
 		// no events copy is blocking
-		for (int ix = 0; ix < x_step; ix++)
-		  machine::copy_from_device(vox_buf,
-					    &voxels[block_x + ix][block_y][0],
-					    sl_int(ix * y_step)
-					    * sl_int(nz) * sizeof(voxel_type),
-					    sl_int(y_step)
-					    * sl_int(nz) * sizeof(voxel_type),
-					    thread_id);
+		machine::copy_from_device(&voxels[block_x][block_y][0], vox_buf,
+					  ny, nz * sizeof(voxel_type),
+					  x_step, y_step, nz * sizeof(float),
+					  thread_id);
 		//machine::accelerator_barrier(thread_id);
 	      }
 	      counter++;

@@ -37,6 +37,14 @@ namespace machine {
 			const int device, event_t *event);
   void copy_from_device(dev_ptr buffer, void *ptr, const sl_int offset,
 			const sl_int size, const int device, event_t *event);
+  void copy_to_device(void *ptr, dev_ptr buffer, const sl_int y_host,
+		      const sl_int z_host, const sl_int x_size,
+		      const sl_int y_size, const int z_size,
+		      const int device, event_t *event);
+  void copy_from_device(void *ptr, dev_ptr buffer, const sl_int y_host,
+			const sl_int z_host, const sl_int x_size,
+			const sl_int y_size, const int z_size,
+			const int device);
   void device_free(dev_ptr data, const int device);
   bool check_accelerator_kernel(const char name[], const int device);
   void run_parallel_ah(const char name[], dev_ptr pix_buf,
