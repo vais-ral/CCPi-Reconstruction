@@ -1561,6 +1561,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 	machine::device_free(xy_offsets, thread_id);
 	machine::device_free(vox_buf, thread_id);
 	machine::device_free(pix_buf, thread_id);
+	machine::accelerator_complete(thread_id);
       }
     }
   }
@@ -1862,6 +1863,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	machine::device_free(xy_offsets, thread_id);
 	machine::device_free(vox_buf, thread_id);
 	machine::device_free(pix_buf, thread_id);
+	machine::accelerator_complete(thread_id);
       }
     }
   }

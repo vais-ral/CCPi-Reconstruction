@@ -8,17 +8,20 @@
 #  include "base_types.hpp"
 #endif // MEX_FILE
 #include "mpi.hpp"
+#include "omp.h"
 #include "accel.hpp"
 
 #ifdef USE_MPI
 
 #  include "mpi.h"
 
-void machine::initialise()
+void machine::initialise(const int nthreads)
 {
   int argc = 0;
   char **argv = 0;
   MPI_Init(&argc, &argv);
+  if (nthreads > 0)
+    omp_set_num_threads(nthreads);
   init_accelerator();
 }
 
@@ -44,8 +47,10 @@ int machine::get_processor_id()
 
 #else
 
-void machine::initialise()
+void machine::initialise(const int nthreads)
 {
+  if (nthreads > 0)
+    omp_set_num_threads(nthreads);
   init_accelerator();
 }
 

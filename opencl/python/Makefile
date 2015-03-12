@@ -14,7 +14,7 @@ LIBS = $(PYTHONLIB)
 PYOBJS = ccpi_wrapper.o
 OBJECTS = results.o instruments.o parallel.o cone.o diamond.o xtek.o cgls.o \
 	p2D.o tv_reg.o tv_core.o tiff.o timer.o utils.o ui_calls.o \
-	mpi.o c2D.o voxels.o
+	mpi.o c2D.o voxels.o accel.o
 
 ccpi.so: $(PYOBJS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(PYOBJS) $(OBJECTS) $(LIBS)
@@ -70,7 +70,9 @@ utils.o: ../src/utils.cpp ../src/utils.hpp
 
 ui_calls.o: ../src/ui_calls.cpp ../src/ui_calls.hpp
 
-mpi.o: ../src/mpi.cpp ../src/mpi.hpp
+mpi.o: ../src/mpi.cpp ../src/mpi.hpp ../src/accel.hpp
+
+accel.o: ../src/accel.cpp ../src/accel.hpp ../src/ui_calls.hpp
 
 voxels.o: ../src/voxels.cpp ../src/instruments.hpp ../src/utils.hpp \
 	../src/voxels.hpp ../src/algorithms.hpp ../src/mpi.hpp \

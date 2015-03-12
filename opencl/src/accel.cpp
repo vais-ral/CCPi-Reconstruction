@@ -582,7 +582,17 @@ void machine::accelerator_barrier(const int device)
 {
   queue[device]->enqueueBarrier();
 }
- 
+
+void machine::accelerator_flush(const int device)
+{
+  queue[device]->flush();
+}
+
+void machine::accelerator_complete(const int device)
+{
+  queue[device]->finish();
+}
+
 #else
 
 void machine::init_accelerator()
@@ -686,6 +696,14 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 }
 
 void machine::accelerator_barrier(const int device)
+{
+}
+
+void machine::accelerator_flush(const int device)
+{
+}
+
+void machine::accelerator_complete(const int device)
 {
 }
 

@@ -11,6 +11,13 @@ namespace CCPi {
   enum ring_artefact_alg { no_ring_artefacts, ring_artefacts_column,
 			   ring_artefacts_aml };
 
+  void remove_column_ring_artefacts(pixel_data &pixels, const sl_int nangles,
+				    const sl_int nh, const sl_int nv);
+  void remove_aml_ring_artefacts(pixel_data &pixels, const sl_int nangles,
+				 const sl_int nh, const sl_int nv,
+				 const real param_n, const real param_r,
+				 const int num_series);
+
   class instrument {
   public:
     instrument();
@@ -371,9 +378,6 @@ namespace CCPi {
     void high_peaks_before(const real jump, const int num_pix);
     void ring_artefact_removal(const ring_artefact_alg alg, const real param_n,
 			       const real param_r, const int num_series);
-    void remove_column_ring_artefacts();
-    void remove_aml_ring_artefacts(const real param_n, const real param_r,
-				   const int num_series);
   };
 
   class Nikon_XTek : public cone_beam {

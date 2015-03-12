@@ -61,6 +61,8 @@ namespace machine {
 		       const int dim3, const int device,
 		       std::vector<event_t> *events);
   void accelerator_barrier(const int device);
+  void accelerator_flush(const int device);
+  void accelerator_complete(const int device);
 
 }
 
