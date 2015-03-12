@@ -568,14 +568,14 @@ void CCPi::Diamond::high_peaks_before(const real jump, const int num_pix)
   }
 }
 
-void CCPi::Diamond::remove_column_ring_artefacts(/*const real param_n,
-						 const real param_r,
-						 const int num_series*/)
+void CCPi::remove_column_ring_artefacts(pixel_data &pixels,
+					const sl_int nangles, const sl_int nh,
+					const sl_int nv)
 {
-  sl_int nh = get_num_h_pixels(); // nxi
-  sl_int nv = get_num_v_pixels();
-  sl_int nangles = get_num_angles(); // ny
-  pixel_data &pixels = get_pixel_data();
+  //sl_int nh = get_num_h_pixels(); // nxi
+  //sl_int nv = get_num_v_pixels();
+  //sl_int nangles = get_num_angles(); // ny
+  //pixel_data &pixels = get_pixel_data();
   const int crop_left = 0;
   const int crop_right = 0;
   const int nx = nh - (crop_left + crop_right);
@@ -609,13 +609,14 @@ void CCPi::Diamond::remove_column_ring_artefacts(/*const real param_n,
   }
 }
 
-void CCPi::Diamond::remove_aml_ring_artefacts(const real param_n,
-					      const real param_r,
-					      const int num_series)
+void CCPi::remove_aml_ring_artefacts(pixel_data &pixels, const sl_int nangles,
+				     const sl_int nh, const sl_int nv,
+				     const real param_n, const real param_r,
+				     const int num_series)
 {
-  sl_int nh = get_num_h_pixels(); // nxi
-  sl_int nv = get_num_v_pixels();
-  sl_int nangles = get_num_angles(); // ny
+  //sl_int nh = get_num_h_pixels(); // nxi
+  //sl_int nv = get_num_v_pixels();
+  //sl_int nangles = get_num_angles(); // ny
   if (param_n < -1e-10) {
     report_error("Ring artefacts - wrong param N");
     return;
@@ -628,7 +629,7 @@ void CCPi::Diamond::remove_aml_ring_artefacts(const real param_n,
     report_error("High peaks - num series out of range");
     return;
   }
-  pixel_data &pixels = get_pixel_data();
+  //pixel_data &pixels = get_pixel_data();
   const int crop_left = 0;
   const int crop_right = 0;
   const int nx = nh - (crop_left + crop_right);
@@ -763,7 +764,10 @@ void CCPi::Diamond::ring_artefact_removal(const ring_artefact_alg alg,
 {
   // ported from ring_artefacts routine in Manchester/Diamond FBP code
   if (alg == ring_artefacts_column)
-    remove_column_ring_artefacts();
+    remove_column_ring_artefacts(get_pixel_data(), get_num_angles(),
+				 get_num_h_pixels(), get_num_v_pixels());
   else if (alg == ring_artefacts_aml)
-    remove_aml_ring_artefacts(param_n, param_r, num_series);
+    remove_aml_ring_artefacts(get_pixel_data(), get_num_angles(),
+			      get_num_h_pixels(), get_num_v_pixels(),
+			      param_n, param_r, num_series);
 }

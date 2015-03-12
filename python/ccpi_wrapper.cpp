@@ -23,6 +23,7 @@ BOOST_PYTHON_MODULE(ccpi)
   //numpy_boost_python_register_type<float, 2>();
   numpy_boost_python_register_type<float, 3>();
   //def("test", test);
+  def("aml_ring_artefacts", ring_artefacts_aml);
   def("cgls", reconstruct_cgls);
   def("tvreg", reconstruct_tvreg);
 }
