@@ -25,7 +25,7 @@ numpy_boost<float, 2> test(const numpy_boost<float, 3> &pixels,
 numpy_boost<float, 3> reconstruct_cgls(const numpy_boost<float, 3> &pixels,
 				       const numpy_boost<float, 1> &angles,
 				       double rotation_centre, int resolution,
-				       int niterations)
+				       int niterations, int nthreads)
 {
   // Todo ring artefacts choice etc.
 
@@ -40,7 +40,7 @@ numpy_boost<float, 3> reconstruct_cgls(const numpy_boost<float, 3> &pixels,
   CCPi::reconstruction_alg *algorithm = new CCPi::cgls_3d(niterations);
   //if (blocking_factor > 0 and instrument->supports_blocks())
   //  recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
-  machine::initialise();
+  machine::initialise(nthreads);
   // instrument setup from pixels/angles will probably copy
   voxel_data *voxels = reconstruct(instrument, algorithm, pixels, angles,
 				   rotation_centre, resolution,
