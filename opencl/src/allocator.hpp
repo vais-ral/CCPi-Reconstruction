@@ -25,7 +25,7 @@ public:
 #elif defined(__MIC__)
   static const int alignment = 64;
 #elif defined(__AVX__)
-  static const int alignment = 32;
+  static const int alignment = 64; // cache length
 #else
   static const int alignment = 16;
 #endif // x86 alignments
