@@ -195,7 +195,8 @@ namespace CCPi {
 			  const recon_type pzbz, const recon_type inv_dz,
 			  const int nv, const int nz, const int midp,
 			  const recon_1d &delta_z, const recon_1d &inv_delz,
-			  const recon_1d &vox_z);
+			  const recon_1d &vox_z, recon_1d &alpha_inv,
+			  int_1d &kv);
     static void calc_ah_z(const pixel_ptr_1d &pixels, voxel_type *const voxels,
 			  const recon_1d &alpha_xy_0,
 			  const recon_1d &alpha_xy_1, const int n,
@@ -203,7 +204,8 @@ namespace CCPi {
 			  const int nv, const int nz, const int midp,
 			  const recon_1d &delta_z, const recon_1d &inv_delz,
 			  const recon_1d &vox_z, const recon_type pzdv,
-			  const recon_type z_1, const recon_type z_nm);
+			  const recon_type z_1, const recon_type z_nm,
+			  int_1d &kv);
     static void fproject_xy(const real p1_x, const real p1_y, const real p2_x,
 			    const real p2_y, pixel_data &pixels,
 			    voxel_data &voxels, const real b_x, const real b_y,
@@ -213,7 +215,7 @@ namespace CCPi {
 			    const recon_1d &delta_z, const recon_1d &inv_delz,
 			    const recon_1d &vox_z, const recon_type pzbz,
 			    const recon_type inv_dz, const sl_int ij_base,
-			    const sl_int nyz);
+			    const sl_int nyz, recon_1d &alpha_inv, int_1d &kv);
     static void bproject_ah(const real source_x, const real source_y,
 			    pixel_data &pixels, voxel_data &voxels,
 			    const real x_0, const real y_0, const real x_n,
@@ -228,7 +230,7 @@ namespace CCPi {
 			    const recon_type z_nm, const real_1d &p1x,
 			    const real_1d &p1y, const real_1d &cdetx,
 			    const real_1d &sdetx, const real_1d &ilcphi,
-			    const real_1d &ilsphi, const int a_off);
+			    const real_1d &ilsphi, const int a_off, int_1d &kv);
     static void b2D(const real source_x, const real source_y,
 		    const real source_z, const real detector_x,
 		    const real_1d &h_pixels, const real_1d &v_pixels,

@@ -20,7 +20,8 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
 				const recon_type pzbz, const recon_type inv_dz,
 				const int nv, const int nz, const int midp,
 				const recon_1d &delta_z,
-				const recon_1d &inv_delz, const recon_1d &vox_z)
+				const recon_1d &inv_delz, const recon_1d &vox_z,
+				recon_1d &alpha_inv, int_1d &kv)
 {
   // alpha always increases
   // delta_z[i] = v_pixels[i] - source_z
@@ -41,7 +42,6 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
   recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
   recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
   recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
-  recon_1d alpha_inv(n);
   recon_type *ainv_ptr = assume_aligned(&(alpha_inv[0]), recon_type);
   for (int l = 0; l < n; l++)
     ainv_ptr[l] = axy_ptr[l] * inv_dz;
@@ -78,7 +78,6 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
     std::cerr << "Upper z extent wrong for cone-beam " << max_xy_all
 	      << ' ' << n << '\n';
 #endif // CBZCHECK
-  int_1d kv(nv);
   int *k_ptr = assume_aligned(&(kv[0]), int);
   pixel_type *const pix = assume_aligned(pixels, pixel_type);
   recon_type alpha_m0 = axy_ptr[0];
@@ -117,7 +116,8 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 				  const recon_1d &inv_delz,
 				  const recon_1d &vox_z, const recon_type pzbz,
 				  const recon_type inv_dz,
-				  const sl_int ij_base, const sl_int nyz)
+				  const sl_int ij_base, const sl_int nyz,
+				  recon_1d &alpha_inv, int_1d &kv)
 {
   // Find intercepts with voxels (x1,y1) (x2, y2)
   // line goes from (p1_x, p1_y) to (p2_x, p2_y) delta = p2 - p1
@@ -378,7 +378,7 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
     report_error("forward project overflow");
   if (count > 0) {
     calc_xy_z(&(pixels[a][h][0]), ij_arr, alpha_xy, count, pzbz,
-	      inv_dz, nv, nz, midp, delta_z, inv_delz, vox_z);
+	      inv_dz, nv, nz, midp, delta_z, inv_delz, vox_z, alpha_inv, kv);
   }    
 }
 
@@ -461,6 +461,9 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 	real wy = grid_offset[1] + real(block_y + y_step) * voxel_size[1];
 #pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels, pzbz, inv_dz, x_step, y_step, a_step, block_a, block_x, block_y, ipix_step, hpix0, l) schedule(dynamic)
 	for (int ax = 0; ax < a_step; ax++) {
+	  int max_n = std::max(nx_voxels, ny_voxels);
+	  recon_1d alpha_inv(2 * max_n);
+	  int_1d kv(n_v);
 	  int a = block_a + ax;
 	  real cphi = std::cos(angles[a]);
 	  real sphi = std::sin(angles[a]);
@@ -524,7 +527,7 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 	    fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vx, vy,
 			voxel_size[0], voxel_size[1], x_step, y_step, nz_voxels,
 			a, h, n_v, mid, delta_z, inv_delz, vox_z, pzbz,
-			inv_dz, ij_base, nyz);
+			inv_dz, ij_base, nyz, alpha_inv, kv);
 	  }
 	}
       }
@@ -562,7 +565,7 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
 				const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z,
 				const recon_type pzdv, const recon_type z_1,
-				const recon_type z_nm)
+				const recon_type z_nm, int_1d &kv)
 {
   // pzdv = (p1z - vpix[0]) / vpix_step
   // z_1 = (bz + 1 * dz - p1z) / vpix_step ,
@@ -595,7 +598,6 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
   if (max_v < nv)
     std::cerr << "Upper z range wrong for cone-beam " << max_v << '\n';
 #endif // CBZCHECK
-  int_1d kv(nv);
   int *k_ptr = assume_aligned(&kv[0], int);
   voxel_type *const vox = assume_aligned(voxels, voxel_type);
   for (int m = 0; m < n; m++) {
@@ -673,7 +675,8 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const recon_type z_nm, const real_1d &p1x,
 				  const real_1d &p1y, const real_1d &cdetx,
 				  const real_1d &sdetx, const real_1d &ilcphi,
-				  const real_1d &ilsphi, const int a_off)
+				  const real_1d &ilsphi, const int a_off,
+				  int_1d &kv)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
@@ -816,7 +819,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   if (count > 0) {
     calc_ah_z(ah_arr, &(voxels[i][j][0]), alpha_xy_0, alpha_xy_1, count,
 	      pzbz, inv_dz, n_v, nz, midp, delta_z, inv_delz, vox_z, pzdv,
-	      z_1, z_nm);
+	      z_1, z_nm, kv);
   }
 }
 
@@ -907,6 +910,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 
 #pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, inv_dz, pzdv, z_1, z_nm, a_step, x_step, y_step, block_x, block_y, block_a) schedule(dynamic)
 	for (int ix = 0; ix < x_step; ix++) {
+	  int_1d kv(n_v);
 	  int i = block_x + ix;
 	  const real x_0 = vox_origin[0] + real(i) * vox_size[0];
 	  const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
@@ -916,7 +920,7 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
 			yvals[j + 1], nz, i, j, a_step, n_h, n_v, h_pixels,
 			mid, c_angle, s_angle, delta_z, inv_delz, vox_z, pzbz,
 			inv_dz, pzdv, z_1, z_nm, p1x, p1y, cdetx, sdetx,
-			ilcphi, ilsphi, block_a);
+			ilcphi, ilsphi, block_a, kv);
 	  }
 	}
       }
