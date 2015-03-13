@@ -45,6 +45,7 @@ namespace CCPi {
 				       const int nx, const int ny,
 				       const int nz) const = 0;
     virtual void get_xy_size(int &nx, int &ny, const int pixels_per_voxel) = 0;
+    virtual int get_z_size(const int n, const int pixels_per_voxel) const = 0;
     virtual void apply_beam_hardening() = 0;
     virtual void forward_project(pixel_data &pixels, voxel_data &voxels,
 				 const real origin[3], const real width[3],
@@ -113,6 +114,7 @@ namespace CCPi {
     real_1d &set_v_pixels(const int n);
     void set_v_offset(const int offset);
     void adjust_h_pixels(const real centre);
+    int calc_v_alignment(const int n, const bool cone) const;
     int calc_v_alignment(const int n, const int pix_per_vox, const bool cone);
 
   private:
@@ -174,6 +176,8 @@ namespace CCPi {
 
     void set_source(const real x, const real y, const real z);
     void set_detector(const real x);
+
+    int get_z_size(const int n, const real hsize, const real vsize) const;
 
     void safe_forward_project(pixel_data &pixels, voxel_data &voxels,
 			      const real origin[3], const real width[3],
@@ -237,6 +241,7 @@ namespace CCPi {
 
   class parallel_beam : public instrument {
   public:
+    int get_z_size(const int n, const int pixels_per_voxel) const;
     void forward_project(pixel_data &pixels, voxel_data &voxels,
 			 const real origin[3], const real width[3],
 			 const int nx, const int ny, const int nz);
@@ -398,6 +403,7 @@ namespace CCPi {
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 			       const int nx, const int ny, const int nz) const;
     void get_xy_size(int &nx, int &ny, const int pixels_per_voxel);
+    int get_z_size(const int n, const int pixels_per_voxel) const;
     void apply_beam_hardening();
 
   private:

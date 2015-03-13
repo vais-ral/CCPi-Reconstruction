@@ -27,6 +27,15 @@ bool CCPi::parallel_beam::supports_blocks() const
   return true;
 }
 
+int CCPi::parallel_beam::get_z_size(const int n,
+				    const int pixels_per_voxel) const
+{
+  int nz = get_num_v_pixels() / pixels_per_voxel;
+  if (get_num_v_pixels() % pixels_per_voxel != 0)
+    nz++;
+  return calc_v_alignment(nz, false);
+}
+
 void CCPi::parallel_beam::safe_forward_project(pixel_data &pixels,
 					       voxel_data &voxels,
 					       const real origin[3],

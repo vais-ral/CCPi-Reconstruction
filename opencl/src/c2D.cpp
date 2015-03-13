@@ -8,7 +8,7 @@
 #include "instruments.hpp"
 #include "timer.hpp"
 #include "ui_calls.hpp"
-#ifdef TEST2D
+#if defined(TEST2D) || defined(CBZCHECK) 
 #  include <iostream>
 #endif // TEST2D
 
@@ -37,7 +37,6 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
   // k = int((p1_z - b_z) * inv_dz + (alpha_xy[m - 1] * delta_z[v]) * inv_dz)
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
-  const int nzm1 = nz - 1;
   recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
   recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
   recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
@@ -46,6 +45,8 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
   recon_type *ainv_ptr = assume_aligned(&(alpha_inv[0]), recon_type);
   for (int l = 0; l < n; l++)
     ainv_ptr[l] = axy_ptr[l] * inv_dz;
+#ifdef CBZCHECK
+  const int nzm1 = nz - 1;
   int min_xy_all = n;
   for (int m = 1; m < n; m++) {
     int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[0]));
@@ -54,13 +55,13 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
 	min_xy_all = m;
       else {
 	min_xy_all = 0;
-#ifdef TEST2D
-	std::cerr << "Lower miss " << a << ' ' << h << '\n';
-#endif // TEST2D
       }
       break;
     }
   }
+  if (min_xy_all < n)
+    std::cerr << "Upper z extent wrong for cone-beam " << min_xy_all
+	      << ' ' << n << '\n';
   int max_xy_all = n;
   for (int m = 1; m < n; m++) {
     int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[nv - 1]));
@@ -69,36 +70,19 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
 	max_xy_all = m;
       else {
 	max_xy_all = 0;
-#ifdef TEST2D
-	std::cerr << "Upper miss " << a << ' ' << h << '\n';
-#endif // TEST2D
       }
       break;
     }
   }
-  // Now find the range of v for which all m fit in the voxels
-  int min_v_all = midp;
-  for (int v = 0; v < midp; v++) {
-    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
-    if (k > 0) {
-      min_v_all = v;
-      break;
-    }
-  }
-  int max_v_all = midp - 1;
-  for (int v = nv - 1; v >= midp; v--) {
-    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
-    if (k < nzm1) {
-      max_v_all = v;
-      break;
-    }
-  }
+  if (max_xy_all < n)
+    std::cerr << "Upper z extent wrong for cone-beam " << max_xy_all
+	      << ' ' << n << '\n';
+#endif // CBZCHECK
   int_1d kv(nv);
   int *k_ptr = assume_aligned(&(kv[0]), int);
   pixel_type *const pix = assume_aligned(pixels, pixel_type);
-  int ncom = std::min(min_xy_all, max_xy_all);
   recon_type alpha_m0 = axy_ptr[0];
-  for (int m = 1; m < ncom; m++) {
+  for (int m = 1; m < n; m++) {
     const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
     const recon_type alpha_val = ainv_ptr[m - 1];
     for (int v = 0; v < nv; v++)
@@ -117,74 +101,6 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
       recon_type min_z = std::min(alpha_z, alpha_m1);
       pix[v] += (vox[k] * (min_z - alpha_m0)
 		 + vox[k + 1] * (alpha_m1 - min_z));
-    }
-    alpha_m0 = alpha_m1;
-  }
-  // Do the rest where its all inside
-  for (int m = ncom; m < n; m++) {
-    const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
-    const recon_type alpha_val = ainv_ptr[m - 1];
-    for (int v = min_v_all; v <= max_v_all; v++)
-      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
-    const recon_type alpha_m1 = axy_ptr[m];
-    for (int v = min_v_all; v < midp; v++) {
-      int k = k_ptr[v];
-      recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
-      recon_type min_z = std::min(alpha_z, alpha_m1);
-      pix[v] += (vox[k] * (min_z - alpha_m0)
-		 + vox[k - 1] * (alpha_m1 - min_z));
-    }
-    for (int v = midp; v <= max_v_all; v++) {
-      int k = k_ptr[v];
-      recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
-      recon_type min_z = std::min(alpha_z, alpha_m1);
-      pix[v] += (vox[k] * (min_z - alpha_m0)
-		 + vox[k + 1] * (alpha_m1 - min_z));
-    }
-    alpha_m0 = alpha_m1;
-  }
-  // The bits along the edge
-  alpha_m0 = axy_ptr[ncom - 1];
-  const recon_type pzbz1 = pzbz + 1.0;
-  for (int m = ncom; m < n; m++) {
-    const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
-    const recon_type alpha_val = ainv_ptr[m - 1];
-    const recon_type alpha_m1 = axy_ptr[m];
-    for (int v = min_v_all - 1; v >= 0; v--) {
-      int k = int(pzbz1 + alpha_val * dz_ptr[v]);
-      k--;
-      if (k > 0) {
-	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	pix[v] += (vox[k] * (min_z - alpha_m0)
-		   + vox[k - 1] * (alpha_m1 - min_z));
-      } else if (k == 0) {
-	recon_type alpha_z = vz_ptr[0] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	pix[v] += vox[0] * (min_z - alpha_m0);
-      } else
-	break;
-    }
-    alpha_m0 = alpha_m1;
-  }
-  alpha_m0 = axy_ptr[ncom - 1];
-  for (int m = ncom; m < n; m++) {
-    const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
-    const recon_type alpha_val = ainv_ptr[m - 1];
-    const recon_type alpha_m1 = axy_ptr[m];
-    for (int v = max_v_all + 1; v < nv; v++) {
-      int k = int(pzbz + alpha_val * dz_ptr[v]);
-      if (k < nzm1) {
-	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	pix[v] += (vox[k] * (min_z - alpha_m0)
-		   + vox[k + 1] * (alpha_m1 - min_z));
-      } else if (k == nzm1) {
-	recon_type alpha_z = vz_ptr[nz] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	pix[v] += vox[nzm1] * (min_z - alpha_m0);
-      } else
-	break;
     }
     alpha_m0 = alpha_m1;
   }
@@ -648,13 +564,9 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
 				const recon_type pzdv, const recon_type z_1,
 				const recon_type z_nm)
 {
-  const int nzm1 = nz - 1;
   // pzdv = (p1z - vpix[0]) / vpix_step
   // z_1 = (bz + 1 * dz - p1z) / vpix_step ,
   // z_nm = (bz + (nz - 1) * dz - p1z) / vpix_step
-  // find safe region where all m stay inside the main block
-  // like min_v_all/max_v_all in calc_xy
-  int min_v = 0;
   // We have rounding issues with pzdv, so add a small increment
   // since epsilon is 1 + epsilon, we need to scale so its meaningful
   recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
@@ -662,20 +574,27 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
   recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
   recon_type *axy0_ptr = assume_aligned(&(alpha_xy_0[0]), recon_type);
   recon_type *axy1_ptr = assume_aligned(&(alpha_xy_1[0]), recon_type);
+#ifdef CBZCHECK
+  // find safe region where all m stay inside the main block
+  // like min_v_all/max_v_all in calc_xy
   recon_type pzdeps = pzdv * (1.0 + epsilon);
+  int min_v = 0;
   for (int m = 0; m < n; m++) {
     int v = int(std::ceil(pzdeps + z_1 / axy0_ptr[m]));
     if (v > min_v)
       min_v = v;
   }
+  if (min_v > 0)
+    std::cerr << "Lower z range wrong for cone-beam " << min_v << '\n';
   int max_v = nv;
   for (int m = 0; m < n; m++) {
     int v = int(std::floor(pzdv + z_nm / axy0_ptr[m]));
     if (v < max_v)
       max_v = v;
   }
-  // Todo - is there anything equivalent to min/max_xy in calc_xy
-  const recon_type pzbz1 = pzbz + 1.0;
+  if (max_v < nv)
+    std::cerr << "Upper z range wrong for cone-beam " << max_v << '\n';
+#endif // CBZCHECK
   int_1d kv(nv);
   int *k_ptr = assume_aligned(&kv[0], int);
   voxel_type *const vox = assume_aligned(voxels, voxel_type);
@@ -684,68 +603,21 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
     const recon_type alpha_m0 = axy0_ptr[m];
     const recon_type alpha_m1 = axy1_ptr[m];
     const recon_type alpha_inv = alpha_m0 * inv_dz;
-    for (int v = min_v; v < max_v; v++)
+    for (int v = 0; v < nv; v++)
       k_ptr[v] = int(pzbz + alpha_inv * dz_ptr[v]);
-    for (int v = min_v; v < midp; v++) {
+    for (int v = 0; v < midp; v++) {
       int k = k_ptr[v];
       recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       vox[k] += pix[v] * (min_z - alpha_m0);
       vox[k - 1] += pix[v] * (alpha_m1 - min_z);
-#ifdef TEST2D
-      if (k < 1)
-	std::cerr << "Ooops min_v\n";
-#endif // TEST2D
     }
-    for (int v = midp; v < max_v; v++) {
+    for (int v = midp; v < nv; v++) {
       int k = k_ptr[v];
       recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
       recon_type min_z = std::min(alpha_z, alpha_m1);
       vox[k] += pix[v] * (min_z - alpha_m0);
       vox[k + 1] += pix[v] * (alpha_m1 - min_z);
-#ifdef TEST2D
-      if (k >= nzm1)
-	std::cerr << "Ooops max_v\n";
-#endif // TEST2D
-    }
-  }
-  for (int m = 0; m < n; m++) {
-    const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
-    const recon_type alpha_m0 = axy0_ptr[m];
-    const recon_type alpha_m1 = axy1_ptr[m];
-    const recon_type alpha_inv = alpha_m0 * inv_dz;
-    for (int v = min_v - 1; v >= 0; v--) {
-      int k = int(pzbz1 + alpha_inv * dz_ptr[v]);
-      k--;
-      if (k > 0) {
-	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	vox[k] += pix[v] * (min_z - alpha_m0);
-	vox[k - 1] += pix[v] * (alpha_m1 - min_z);
-      } else if (k == 0) {
-#ifdef TEST2D
-	if (pzbz + alpha_inv * dz_ptr[v] < 0.0)
-	  std::cerr << "Naughty\n";
-#endif // TEST2D
-	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	vox[k] += pix[v] * (min_z - alpha_m0);
-      } else
-	break;
-    }
-    for (int v = max_v; v < nv; v++) {
-      int k = int(pzbz + alpha_inv * dz_ptr[v]);
-      if (k < nzm1) {
-	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	vox[k] += pix[v] * (min_z - alpha_m0);
-	vox[k + 1] += pix[v] * (alpha_m1 - min_z);
-      } else if (k == nzm1) {
-	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
-	recon_type min_z = std::min(alpha_z, alpha_m1);
-	vox[k] += pix[v] * (min_z - alpha_m0);
-      } else
-	break;
     }
   }
 }
@@ -805,7 +677,10 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
-  const int pix_per_vox = n_v / (nz - 1);
+  int pix_per_vox = 1;
+  while (nz * pix_per_vox < n_v)
+    pix_per_vox++;
+  //const int pix_per_vox = n_v / (nz - 1);
   // How big should the array be
   int count = 0;
   pixel_ptr_1d ah_arr(2 * pix_per_vox * (n_angles + 10));

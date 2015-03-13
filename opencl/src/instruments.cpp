@@ -32,20 +32,41 @@ pixel_3d &CCPi::instrument::create_pixel_data()
   return *pixels;
 }
 
+int CCPi::instrument::calc_v_alignment(const int n, const bool cone) const
+{
+  int nvox = n;
+  int align = aligned_allocator<voxel_type>::alignment / sizeof(voxel_type);
+  int vox_blocks = nvox / align;
+  // make sure the cone can split into 2 equal aligned halves
+  if (cone) {
+    if (vox_blocks % 2 != 0)
+      vox_blocks++;
+    if (vox_blocks * align < nvox)
+      vox_blocks += 2;
+  } else {
+    if (nvox % align != 0)
+      vox_blocks++;
+  }
+  return vox_blocks * align;
+}
+
 int CCPi::instrument::calc_v_alignment(const int n, const int pix_per_vox,
 				       const bool cone)
 {
   data_v_size = n;
-  int nvox = n / pix_per_vox;
-  if (n % pix_per_vox != 0)
-    nvox++;
-  int align = aligned_allocator<voxel_type>::alignment / sizeof(voxel_type);
+  int nvox = n;
+  if (pix_per_vox > 0) {
+    nvox = n / pix_per_vox;
+    if (n % pix_per_vox != 0)
+      nvox++;
+  }
+  int align = aligned_allocator<pixel_type>::alignment / sizeof(pixel_type);
   int vox_blocks = nvox / align;
   if (nvox % align != 0)
     vox_blocks++;
   // make sure the cone can split into 2 equal aligned halves
   if (cone) {
-    if (vox_blocks %2 != 0)
+    if (vox_blocks % 2 != 0)
       vox_blocks++;
   }
   int npix = vox_blocks * align * pix_per_vox;

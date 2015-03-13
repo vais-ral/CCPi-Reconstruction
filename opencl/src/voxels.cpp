@@ -18,9 +18,15 @@ void calculate_block_sizes(int &nx_voxels, int &ny_voxels, int &nz_voxels,
 {
   // calculate blocks
   instrument->get_xy_size(nx_voxels, ny_voxels, pixels_per_voxel);
-  maxz_voxels = instrument->get_num_v_pixels() / pixels_per_voxel;
-  if (instrument->get_num_v_pixels() % pixels_per_voxel != 0)
-    maxz_voxels++;
+  maxz_voxels = instrument->get_z_size(std::max(nx_voxels, ny_voxels),
+				       pixels_per_voxel);
+  add_output("voxel sizes ");
+  add_output(nx_voxels);
+  add_output(" ");
+  add_output(ny_voxels);
+  add_output(" ");
+  add_output(maxz_voxels);
+  send_output();
   nz_voxels = 0;
   block_size = 0;
   block_step = 0;

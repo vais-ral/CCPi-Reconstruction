@@ -624,41 +624,19 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 void CCPi::Nikon_XTek::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
 {
   // Use the mask radius as an estimate of the x/y extent -> voxel size
-  // Then adjust this to make sure it intercepts the full vertical range
-  // of rays - derived from original finish_geometry
   int n = get_num_h_pixels() / pixels_per_voxel;
   if (get_num_h_pixels() % pixels_per_voxel != 0)
     n++;
   real vsize = real(2.0) * mask_radius / real(n);
-  real vox_x = vsize * real(n) / 2.0;
-  int nv = get_num_v_pixels();
-  int nz = nv / pixels_per_voxel;
-  if (nv % pixels_per_voxel != 0)
-    nz++;
-  // Todo - get v_range[] at vox_x pos not detector pos
-  real max_z = vsize * real(nz) / 2.0;
-  const real_1d &v_range = get_v_pixels();
-  real v_pos = v_range[nv - 1];
-  // Get vpixel height at vox_x position
-  v_pos *= (vox_x - get_source_x()) / (get_detector_x() - get_source_x());
-  if (max_z < v_pos) {
-    // attempt to solve for new value, vsize must be > this
-    vsize = -2.0 * get_source_x() * v_range[nv - 1] /
-      (nz * (get_detector_x() - get_source_x()) - n * v_range[nv - 1]);
-    // so scale by a little bit
-    vsize *= (1.0 + 1.0 / real(nv));
-    // check
-    vox_x = vsize * real(n) / 2.0;
-    v_pos = v_range[nv - 1] * (vox_x - get_source_x()) /
-      (get_detector_x() - get_source_x());
-    max_z = vsize * real(nz) / 2.0;
-    if (max_z < v_pos)
-      report_error("Voxel size error");
-  }
   h_vox_size = vsize;
   v_vox_size = vsize;
   nx = n;
   ny = n;
+}
+
+int CCPi::Nikon_XTek::get_z_size(const int n, const int pixels_per_voxel) const
+{
+  return cone_beam::get_z_size(n, h_vox_size, v_vox_size);
 }
 
 void CCPi::Nikon_XTek::apply_beam_hardening()
