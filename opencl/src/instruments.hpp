@@ -211,11 +211,11 @@ namespace CCPi {
 			    voxel_data &voxels, const real b_x, const real b_y,
 			    const real d_x, const real d_y, const int nx,
 			    const int ny, const int nz, const int a,
-			    const int h, const int nv, const int midp,
-			    const recon_1d &delta_z, const recon_1d &inv_delz,
-			    const recon_1d &vox_z, const recon_type pzbz,
-			    const recon_type inv_dz, const sl_int ij_base,
-			    const sl_int nyz, recon_1d &alpha_inv, int_1d &kv);
+			    const int h, const int nv, const sl_int ij_base,
+			    const sl_int nyz, recon_1d &alpha_xy,
+			    voxel_ptr_1d &ij_arr, int_1d &ij_index,
+			    const sl_int block_yz, const int xy_base,
+			    int &count);
     static void bproject_ah(const real source_x, const real source_y,
 			    pixel_data &pixels, voxel_data &voxels,
 			    const real x_0, const real y_0, const real x_n,
@@ -231,14 +231,38 @@ namespace CCPi {
 			    const real_1d &p1y, const real_1d &cdetx,
 			    const real_1d &sdetx, const real_1d &ilcphi,
 			    const real_1d &ilsphi, const int a_off, int_1d &kv);
-    static void b2D(const real source_x, const real source_y,
-		    const real source_z, const real detector_x,
-		    const real_1d &h_pixels, const real_1d &v_pixels,
-		    const real_1d &angles, pixel_data &pixels,
-		    voxel_data &voxels, const int n_angles, const int n_h,
-		    const int n_v, const real vox_origin[3],
-		    const real vox_size[3], const int nx, const int ny,
-		    const int nz, const recon_2d &d_conv);
+    static void f2D_cpu(const real source_x, const real source_y,
+			const real source_z, const real detector_x,
+			const real_1d &h_pixels, const real_1d &v_pixels,
+			const real_1d &angles, pixel_data &pixels,
+			voxel_data &voxels, const int n_angles, const int n_h,
+			const int n_v, const real grid_offset[3],
+			const real voxel_size[3], const int nx_voxels,
+			const int ny_voxels, const int nz_voxels);
+    static void f2D_accel(const real source_x, const real source_y,
+			  const real source_z, const real detector_x,
+			  const real_1d &h_pixels, const real_1d &v_pixels,
+			  const real_1d &angles, pixel_data &pixels,
+			  voxel_data &voxels, const int n_angles, const int n_h,
+			  const int n_v, const real grid_offset[3],
+			  const real voxel_size[3], const int nx_voxels,
+			  const int ny_voxels, const int nz_voxels);
+    static void b2D_cpu(const real source_x, const real source_y,
+			const real source_z, const real detector_x,
+			const real_1d &h_pixels, const real_1d &v_pixels,
+			const real_1d &angles, pixel_data &pixels,
+			voxel_data &voxels, const int n_angles, const int n_h,
+			const int n_v, const real vox_origin[3],
+			const real vox_size[3], const int nx, const int ny,
+			const int nz, const recon_2d &d_conv);
+    static void b2D_accel(const real source_x, const real source_y,
+			  const real source_z, const real detector_x,
+			  const real_1d &h_pixels, const real_1d &v_pixels,
+			  const real_1d &angles, pixel_data &pixels,
+			  voxel_data &voxels, const int n_angles, const int n_h,
+			  const int n_v, const real vox_origin[3],
+			  const real vox_size[3], const int nx, const int ny,
+			  const int nz, const recon_2d &d_conv);
   };
 
   class parallel_beam : public instrument {

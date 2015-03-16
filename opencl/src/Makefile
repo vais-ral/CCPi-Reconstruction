@@ -50,7 +50,7 @@ tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
 
 p2D.o: p2D.cpp instruments.hpp ui_calls.hpp accel.hpp
 
-c2D.o: c2D.cpp instruments.hpp ui_calls.hpp
+c2D.o: c2D.cpp instruments.hpp ui_calls.hpp accel.hpp
 
 tiff.o: tiff.cpp tiff.hpp timer.hpp ui_calls.hpp
 

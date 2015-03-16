@@ -578,6 +578,72 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
   }
 }
 
+void machine::run_cone_xy(const char name[], dev_ptr pix_buf,
+			  dev_ptr vox_buf, dev_ptr xy_buff,
+			  dev_ptr xy_offsets, dev_ptr h, dev_ptr lengths,
+			  const int nv, const int nz, const int start,
+			  const int ah_size, const float pzbz, const int midp,
+			  dev_ptr delta_z, const float inv_dz, dev_ptr inv_delz,
+			  dev_ptr vox_z, const int size, const int dim3,
+			  const int device, std::vector<event_t> *events)
+{
+  if (size > max_work01 or dim3 > max_work2)
+    report_error("Too much work for device");
+  else {
+    cl_int err;
+    cl::Kernel kernel(program, name, &err);
+    if (err != CL_SUCCESS)
+      report_error("Failed to setup OpenCL kernel");
+    else {
+      // It should be a multiple of 32 in the allocator, so group
+      // based on that and use the 3rd dim if we want to submit
+      // multiple jobs? not sure its ideal usage of the available space
+      cl::NDRange globalThreads(size, dim3);
+      cl_int status = CL_SUCCESS;
+      status = kernel.setArg(0, pix_buf);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(1, vox_buf);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(2, xy_buff);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(3, xy_offsets);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(4, h);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(5, lengths);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(6, nv);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(7, nz);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(8, start);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(9, ah_size);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(10, pzbz);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(11, midp);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(12, delta_z);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(13, inv_dz);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(14, inv_delz);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(15, vox_z);
+      if (status == CL_SUCCESS) {
+	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
+						globalThreads, cl::NullRange,
+						events) != CL_SUCCESS) {
+	  report_error("Failed to queue job");
+	}
+      }
+      if (status != CL_SUCCESS)
+	report_error("Failed to setup job args");
+    }
+  }
+}
+
 void machine::accelerator_barrier(const int device)
 {
   queue[device]->enqueueBarrier();

@@ -97,3 +97,115 @@ __kernel void parallel_ah_z2(const __global float *pixels,
   }
   voxels[offset + jobid * nz + id] += vox;
 }
+
+/*
+__kernel void cone_xy_z_l(__global float *pixels, 
+			  const __global float *voxels,
+			  const __global float *alpha_xy,
+			  const __global int *index,
+			  const __global int *h,
+			  const __global int *lengths,
+			  const int nv, const int nz, const int start,
+			  const int ah_size,
+			  const float pzbz, const float inv_dz,
+			  const int midp, const __global *delta_z,
+			  const __global *inv_delz, const global *vox_z)
+{
+  // lower cone - 0 - < midp (size nv / 2)
+  size_t id = get_global_id(0); // v
+  size_t jobid = get_global_id(1);
+  // pixel ptr should be ah column or needs an offset
+  float pix = 0.0;
+  int n = lengths[start + jobid];
+  int pos = (start + jobid) * ah_size;
+
+  // Todo - pass in from outside? 2D with pos?
+  for (int l = 0; l < n; l++)
+    alpha_inv[l] = alpha_xy[l] * inv_dz;
+
+  float alpha_m0 = alpha_xy[pos];
+  for (int m = 1; m < n; m++) {
+    int k = int(pzbz + alpha_inv[pos + m - 1] * dz_ptr[id]);
+    float alpha_m1 = alpha_xy[pos + m];
+    float alpha_z = vz_ptr[k] * iz_ptr[id];
+    float min_z = fmin(alpha_z, alpha_m1);
+    pix += (voxels[index[pos + m] + k] * (min_z - alpha_m0)
+	    + voxels[index[pos + m] + k - 1] * (alpha_m1 - min_z));
+    alpha_m0 = alpha_m1;
+  }
+  pixels[h[start + jobid] * nv + id] += pix;  
+}
+
+__kernel void cone_xy_z_u(__global float *pixels, 
+			  const __global float *voxels,
+			  const __global float *alpha_xy,
+			  const __global int *index,
+			  const __global int *h,
+			  const __global int *lengths,
+			  const int nv, const int nz, const int start,
+			  const int ah_size,
+			  const float pzbz, const float inv_dz,
+			  const int midp, const __global *delta_z,
+			  const __global *inv_delz, const global *vox_z)
+{
+  // upper cone - midp - < nv (size nv / 2)
+  size_t id = midp + get_global_id(0); // v
+  size_t jobid = get_global_id(1);
+  // pixel ptr should be ah column or needs an offset
+  float pix = 0.0;
+  int n = lengths[start + jobid];
+  int pos = (start + jobid) * ah_size;
+
+  // Todo - pass in from outside? 2D with pos?
+  for (int l = 0; l < n; l++)
+    alpha_inv[l] = alpha_xy[l] * inv_dz;
+
+  float alpha_m0 = alpha_xy[pos];
+  for (int m = 1; m < n; m++) {
+    int k = int(pzbz + alpha_inv[pos + m - 1] * dz_ptr[id]);
+    float alpha_m1 = alpha_xy[pos + m];
+    float alpha_z = vz_ptr[k + 1] * iz_ptr[id];
+    float min_z = fmin(alpha_z, alpha_m1);
+    pix += (voxels[index[pos + m] + k] * (min_z - alpha_m0)
+	    + voxels[index[pos + m] + k + 1] * (alpha_m1 - min_z));
+    alpha_m0 = alpha_m1;
+  }
+  pixels[h[start + jobid] * nv + id] += pix;
+}
+*/
+
+__kernel void cone_xy_z(__global float *pixels, 
+			const __global float *voxels,
+			const __global float *alpha_xy,
+			const __global int *index,
+			const __global int *h,
+			const __global int *lengths,
+			const int nv, const int nz, const int start,
+			const int ah_size, const float pzbz,
+			const int midp, const __global float *delta_z,
+			const float inv_dz, const __global float *inv_delz,
+			const global float *vox_z)
+{
+  size_t id = get_global_id(0); // v
+  size_t jobid = get_global_id(1);
+  // pixel ptr should be ah column or needs an offset
+  float pix = 0.0;
+  int n = lengths[start + jobid];
+  int pos = (start + jobid) * ah_size;
+  // hopefully this is -(1) + 0 or -0 + 1
+  int vshift = -(id < midp) + (id >= midp);
+  int zshift = (id >= midp);
+  float del_z = delta_z[id] * inv_dz;
+  float inv_z = inv_delz[id];
+  float alpha_m0 = alpha_xy[pos];
+  for (int m = 1; m < n; m++) {
+    int k = (int)(pzbz + alpha_m0 * del_z);
+    float alpha_m1 = alpha_xy[pos + m];
+    float alpha_z = vox_z[k + zshift] * inv_z;
+    float min_z = fmin(alpha_z, alpha_m1);
+    pix += (voxels[index[pos + m] + k] * (min_z - alpha_m0)
+	    + voxels[index[pos + m] + k + vshift] * (alpha_m1 - min_z));
+    alpha_m0 = alpha_m1;
+  }
+  pixels[h[start + jobid] * nv + id] += pix;
+}
