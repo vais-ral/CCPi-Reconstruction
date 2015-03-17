@@ -19,11 +19,11 @@ static const recon_type epsilon = FLT_EPSILON;
 void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
 				const voxel_ptr_1d &voxels,
 				const recon_1d &alpha_xy, const int n,
-				const recon_type pzbz, const recon_type inv_dz,
-				const int nv, const int nz, const int midp,
+				const recon_type pzbz, const int nv,
+				const int nz, const int midp,
 				const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z,
-				recon_1d &alpha_inv, int_1d &kv)
+				int_1d &kv)
 {
   // alpha always increases
   // delta_z[i] = v_pixels[i] - source_z
@@ -44,50 +44,13 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
   recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
   recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
   recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
-  recon_type *ainv_ptr = assume_aligned(&(alpha_inv[0]), recon_type);
-  for (int l = 0; l < n; l++)
-    ainv_ptr[l] = axy_ptr[l] * inv_dz;
-#ifdef CBZCHECK
-  const int nzm1 = nz - 1;
-  int min_xy_all = n;
-  for (int m = 1; m < n; m++) {
-    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[0]));
-    if (k <= 0) {
-      if (k == 0)
-	min_xy_all = m;
-      else {
-	min_xy_all = 0;
-      }
-      break;
-    }
-  }
-  if (min_xy_all < n)
-    std::cerr << "Upper z extent wrong for cone-beam " << min_xy_all
-	      << ' ' << n << '\n';
-  int max_xy_all = n;
-  for (int m = 1; m < n; m++) {
-    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[nv - 1]));
-    if (k >= nzm1) {
-      if (k == nzm1)
-	max_xy_all = m;
-      else {
-	max_xy_all = 0;
-      }
-      break;
-    }
-  }
-  if (max_xy_all < n)
-    std::cerr << "Upper z extent wrong for cone-beam " << max_xy_all
-	      << ' ' << n << '\n';
-#endif // CBZCHECK
   int *k_ptr = assume_aligned(&(kv[0]), int);
   pixel_type *const pix = assume_aligned(pixels, pixel_type);
   recon_type alpha_m0 = axy_ptr[0];
   for (int m = 1; m < n; m++) {
     const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
-    const recon_type alpha_val = ainv_ptr[m - 1];
     for (int v = 0; v < nv; v++)
-      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      k_ptr[v] = int(pzbz + alpha_m0 * dz_ptr[v]);
     const recon_type alpha_m1 = axy_ptr[m];
     for (int v = 0; v < midp; v++) {
       int k = k_ptr[v];
@@ -437,152 +400,202 @@ void CCPi::cone_beam::f2D_cpu(const real source_x, const real source_y,
       v_pixels[mid] < source_z + epsilon)
     report_error("Oops");
 
-  // path length from source to detector is independent of rotation
-  recon_2d d_conv(boost::extents[n_h][n_v]);
-  real x2 = (detector_x - source_x) * (detector_x - source_x);
-  for (int i = 0; i < n_h; i++) {
-    real xy2 = x2 + (h_pixels[i] - source_y) * (h_pixels[i] - source_y);
-    for (int j = 0; j < n_v; j++) {
-      d_conv[i][j] = std::sqrt(xy2 + (v_pixels[j] - source_z)
-			       * (v_pixels[j] - source_z));
+#pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels, mid)
+  {
+    int thread_id = omp_get_thread_num();
+    int nthreads = omp_get_num_threads();
+    // path length from source to detector is independent of rotation
+    recon_2d d_conv(boost::extents[n_h][n_v]);
+    real x2 = (detector_x - source_x) * (detector_x - source_x);
+    for (int i = 0; i < n_h; i++) {
+      real xy2 = x2 + (h_pixels[i] - source_y) * (h_pixels[i] - source_y);
+      for (int j = 0; j < n_v; j++) {
+	d_conv[i][j] = std::sqrt(xy2 + (v_pixels[j] - source_z)
+				 * (v_pixels[j] - source_z));
+      }
     }
-  }
 
-  const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
-  const recon_type pzbz = recon_type((source_z
-				      - grid_offset[2]) / voxel_size[2]);
-  recon_1d delta_z(n_v);
-  for (int i = 0; i < n_v; i++)
-    delta_z[i] = v_pixels[i] - source_z;
-  recon_1d inv_delz(n_v);
-  for (int i = 0; i < n_v; i++)
-    inv_delz[i] = 1.0 / delta_z[i];
-  recon_1d vox_z(nz_voxels + 1);
-  for (int i = 0; i <= nz_voxels; i++)
-    vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
+    const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
+    const recon_type pzbz = recon_type((source_z
+					- grid_offset[2]) / voxel_size[2]);
+    recon_1d delta_z(n_v);
+    for (int i = 0; i < n_v; i++)
+      delta_z[i] = v_pixels[i] - source_z;
+    recon_1d inv_delz(n_v);
+    for (int i = 0; i < n_v; i++)
+      inv_delz[i] = 1.0 / delta_z[i];
+    for (int i = 0; i < n_v; i++)
+      delta_z[i] *= inv_dz;
+    recon_1d vox_z(nz_voxels + 1);
+    for (int i = 0; i <= nz_voxels; i++)
+      vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
 
-  const real pixel_step = (h_pixels[1] - h_pixels[0]);
-  const real ipix_step = 1.0 / pixel_step;
-  const real hpix0 = (source_y - h_pixels[0]) / pixel_step;
-  const real l = detector_x - source_x;
-  sl_int nyz = sl_int(ny_voxels) * sl_int(nz_voxels);
-  int max_n = std::max(nx_voxels, ny_voxels);
-  recon_1d l_xy(2 * max_n);
-  voxel_ptr_1d ij_arr(2 * max_n + 1);
-  int_1d ij_offsets(2 * max_n + 1);
-  //sl_int nyz = sl_int(ny) * sl_int(nz);
-  int nwork = 0;
+    const real pixel_step = (h_pixels[1] - h_pixels[0]);
+    const real ipix_step = 1.0 / pixel_step;
+    const real hpix0 = (source_y - h_pixels[0]) / pixel_step;
+    const real l = detector_x - source_x;
+    sl_int nyz = sl_int(ny_voxels) * sl_int(nz_voxels);
+    int max_n = std::max(nx_voxels, ny_voxels);
+    recon_1d l_xy(2 * max_n + 2);
+    voxel_ptr_1d ij_arr(2 * max_n + 2);
+    int_1d ij_offsets(2 * max_n + 2);
+    //sl_int nyz = sl_int(ny) * sl_int(nz);
+    int nwork = 0;
 
-  const int a_block = n_angles;
-  const int x_block = nx_voxels;
-  const int y_block = ny_voxels;
-  for (int block_a = 0; block_a < n_angles; block_a += a_block) {
-    int a_step = a_block;
-    if (block_a + a_step > n_angles)
-      a_step = n_angles - block_a;
-    // we don't block h since we have a min/max from the x/y blocks
-    for (int block_x = 0; block_x < nx_voxels; block_x += x_block) {
-      int x_step = x_block;
-      if (block_x + x_step > nx_voxels)
-	x_step = nx_voxels - block_x;
-      sl_int i_base = sl_int(block_x) * nyz;
-      real vx = grid_offset[0] + real(block_x) * voxel_size[0];
-      real wx = grid_offset[0] + real(block_x + x_step) * voxel_size[0];
-      for (int block_y = 0; block_y < ny_voxels; block_y += y_block) {
-	int y_step = y_block;
-	if (block_y + y_step > ny_voxels)
-	  y_step = ny_voxels - block_y;
-	sl_int ij_base = i_base + sl_int(block_y) * sl_int(nz_voxels);
-	real vy = grid_offset[1] + real(block_y) * voxel_size[1];
-	real wy = grid_offset[1] + real(block_y + y_step) * voxel_size[1];
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, d_conv, delta_z, inv_delz, vox_z, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels, pzbz, inv_dz, x_step, y_step, a_step, block_a, block_x, block_y, ipix_step, hpix0, l) schedule(dynamic)
-	for (int ax = 0; ax < a_step; ax++) {
-	  int max_n = std::max(nx_voxels, ny_voxels);
-	  recon_1d alpha_inv(2 * max_n);
-	  int_1d kv(n_v);
-	  int a = block_a + ax;
-	  real cphi = std::cos(angles[a]);
-	  real sphi = std::sin(angles[a]);
-	  real p1_x = cphi * source_x - sphi * source_y;
-	  real p1_y = sphi * source_x + cphi * source_y;
+    const int a_block = n_angles;
+    const int x_block = nx_voxels;
+    const int y_block = ny_voxels;
+    long counter = 0;
+    for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+      int a_step = a_block;
+      if (block_a + a_step > n_angles)
+	a_step = n_angles - block_a;
+      // we don't block h since we have a min/max from the x/y blocks
+      for (int block_x = 0; block_x < nx_voxels; block_x += x_block) {
+	int x_step = x_block;
+	if (block_x + x_step > nx_voxels)
+	  x_step = nx_voxels - block_x;
+	sl_int i_base = sl_int(block_x) * nyz;
+	real vx = grid_offset[0] + real(block_x) * voxel_size[0];
+	real wx = grid_offset[0] + real(block_x + x_step) * voxel_size[0];
+	for (int block_y = 0; block_y < ny_voxels; block_y += y_block) {
+	  int y_step = y_block;
+	  if (block_y + y_step > ny_voxels)
+	    y_step = ny_voxels - block_y;
+	  sl_int ij_base = i_base + sl_int(block_y) * sl_int(nz_voxels);
+	  real vy = grid_offset[1] + real(block_y) * voxel_size[1];
+	  real wy = grid_offset[1] + real(block_y + y_step) * voxel_size[1];
+	  for (int ax = 0; ax < a_step; ax++) {
+	    int max_n = std::max(nx_voxels, ny_voxels);
+	    int_1d kv(n_v);
+	    int a = block_a + ax;
+	    real cphi = std::cos(angles[a]);
+	    real sphi = std::sin(angles[a]);
+	    real p1_x = cphi * source_x - sphi * source_y;
+	    real p1_y = sphi * source_x + cphi * source_y;
 
-	  // from bproj
-	  //int hmin = 0;
-	  //int hmax = n_h - 1;
-	  /**/
-	  real y00;
-	  real y01;
-	  real y10;
-	  real y11;
-	  const real delta_x_0 = vx - p1_x;
-	  const real delta_y_0 = vy - p1_y;
-	  const real delta_x_n = wx - p1_x;
-	  const real delta_y_n = wy - p1_y;
-	  const real cx_0 = cphi * vx - source_x; // Todo - could pass this in
-	  const real cx_n = cphi * wx - source_x; // cx_0 + cphi * d_x
-	  const real sy_0 = sphi * vy; // Todo could pass in as array
-	  const real sy_n = sphi * wy;
-	  if (std::abs(sphi) > std::abs(cphi)) {
-	    const real ilphi = l / sphi;
-	    real u = sy_0 + cx_0;
-	    y00 = (cphi - delta_x_0 / u) * ilphi;
-	    u = sy_n + cx_0;
-	    y01 = (cphi - delta_x_0 / u) * ilphi;
-	    u = sy_0 + cx_n;
-	    y10 = (cphi - delta_x_n / u) * ilphi;
-	    u = sy_n + cx_n;
-	    y11 = (cphi - delta_x_n / u) * ilphi;
-	  } else {
-	    real ilphi = l / cphi;
-	    real u = cx_0 + sy_0;
-	    y00 = (-sphi + delta_y_0 / u) * ilphi;
-	    u = cx_0 + sy_n;
-	    y01 = (-sphi + delta_y_n / u) * ilphi;
-	    u = cx_n + sy_0;
-	    y10 = (-sphi + delta_y_0 / u) * ilphi;
-	    u = cx_n + sy_n;
-	    y11 = (-sphi + delta_y_n / u) * ilphi;
-	  }
-	  int h00 = int(std::floor(y00 * ipix_step + hpix0));
-	  int h01 = int(std::floor(y01 * ipix_step + hpix0));
-	  int hmin = std::min(h00, h01);
-	  int hmax = std::max(h00, h01);
-	  int h10 = int(std::floor(y10 * ipix_step + hpix0));
-	  hmin = std::min(hmin, h10);
-	  hmax = std::max(hmax, h10);
-	  int h11 = int(std::floor(y11 * ipix_step + hpix0));
-	  hmin = std::max(std::min(hmin, h11), 0);
-	  hmax = std::min(std::max(hmax, h11), n_h - 1);
-	  /**/
-	  // end bproj
+	    // from bproj
+	    //int hmin = 0;
+	    //int hmax = n_h - 1;
+	    /**/
+	    real y00;
+	    real y01;
+	    real y10;
+	    real y11;
+	    const real delta_x_0 = vx - p1_x;
+	    const real delta_y_0 = vy - p1_y;
+	    const real delta_x_n = wx - p1_x;
+	    const real delta_y_n = wy - p1_y;
+	    const real cx_0 = cphi * vx - source_x; // Todo - could pass this in
+	    const real cx_n = cphi * wx - source_x; // cx_0 + cphi * d_x
+	    const real sy_0 = sphi * vy; // Todo could pass in as array
+	    const real sy_n = sphi * wy;
+	    if (std::abs(sphi) > std::abs(cphi)) {
+	      const real ilphi = l / sphi;
+	      real u = sy_0 + cx_0;
+	      y00 = (cphi - delta_x_0 / u) * ilphi;
+	      u = sy_n + cx_0;
+	      y01 = (cphi - delta_x_0 / u) * ilphi;
+	      u = sy_0 + cx_n;
+	      y10 = (cphi - delta_x_n / u) * ilphi;
+	      u = sy_n + cx_n;
+	      y11 = (cphi - delta_x_n / u) * ilphi;
+	    } else {
+	      real ilphi = l / cphi;
+	      real u = cx_0 + sy_0;
+	      y00 = (-sphi + delta_y_0 / u) * ilphi;
+	      u = cx_0 + sy_n;
+	      y01 = (-sphi + delta_y_n / u) * ilphi;
+	      u = cx_n + sy_0;
+	      y10 = (-sphi + delta_y_0 / u) * ilphi;
+	      u = cx_n + sy_n;
+	      y11 = (-sphi + delta_y_n / u) * ilphi;
+	    }
+	    int h00 = int(std::floor(y00 * ipix_step + hpix0));
+	    int h01 = int(std::floor(y01 * ipix_step + hpix0));
+	    int hmin = std::min(h00, h01);
+	    int hmax = std::max(h00, h01);
+	    int h10 = int(std::floor(y10 * ipix_step + hpix0));
+	    hmin = std::min(hmin, h10);
+	    hmax = std::max(hmax, h10);
+	    int h11 = int(std::floor(y11 * ipix_step + hpix0));
+	    hmin = std::max(std::min(hmin, h11), 0);
+	    hmax = std::min(std::max(hmax, h11), n_h - 1);
+	    /**/
+	    // end bproj
 	  
-	  for (int h = hmin; h <= hmax; h++) {
-	    // rotate source and detector positions by current angle
-	    real p2_x = cphi * detector_x - sphi * h_pixels[h];
-	    real p2_y = sphi * detector_x + cphi * h_pixels[h];
-	    fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vx, vy,
-			voxel_size[0], voxel_size[1], x_step, y_step, nz_voxels,
-			a, h, n_v, ij_base, nyz, l_xy, ij_arr, ij_offsets,
-			nyz, ij_base, nwork);
-	    if (nwork > 0) {
-	      if (nwork > 2 * max_n + 1)
-		report_error("forward project overflow");
-	      else
-		calc_xy_z(&(pixels[a][h][0]), ij_arr, l_xy, nwork, pzbz,
-			  inv_dz, n_v, nz_voxels, mid, delta_z, inv_delz, vox_z,
-			  alpha_inv, kv);
+	    for (int h = hmin; h <= hmax; h++) {
+	      if (counter % nthreads == thread_id) {
+		// rotate source and detector positions by current angle
+		real p2_x = cphi * detector_x - sphi * h_pixels[h];
+		real p2_y = sphi * detector_x + cphi * h_pixels[h];
+		fproject_xy(p1_x, p1_y, p2_x, p2_y, pixels, voxels, vx, vy,
+			    voxel_size[0], voxel_size[1], x_step, y_step,
+			    nz_voxels, a, h, n_v, ij_base, nyz, l_xy, ij_arr,
+			    ij_offsets, nyz, ij_base, nwork);
+		if (nwork > 0) {
+		  if (nwork > 2 * max_n + 2)
+		    report_error("forward project overflow", nwork);
+		  else {
+#ifdef CBZCHECK
+		    const int nzm1 = nz_voxels - 1;
+		    int min_xy_all = nwork;
+		    for (int m = 1; m < nwork; m++) {
+		      int k = int(std::floor(pzbz + l_xy[m - 1] * delta_z[0]));
+		      if (k <= 0) {
+			if (k == 0)
+			  min_xy_all = m;
+			else {
+			  min_xy_all = 0;
+			}
+			break;
+		      }
+		    }
+		    if (min_xy_all < nwork)
+		      std::cerr << "Upper z extent wrong for cone-beam "
+				<< min_xy_all << ' ' << nwork << '\n';
+		    int max_xy_all = nwork;
+		    for (int m = 1; m < nwork; m++) {
+		      int k = int(std::floor(pzbz + l_xy[m - 1]
+					     * delta_z[n_v - 1]));
+		      if (k >= nzm1) {
+			if (k == nzm1)
+			  max_xy_all = m;
+			else {
+			  max_xy_all = 0;
+			}
+			break;
+		      }
+		    }
+		    if (max_xy_all < nwork)
+		      std::cerr << "Upper z extent wrong for cone-beam "
+				<< max_xy_all << ' ' << nwork << '\n';
+#endif // CBZCHECK
+		    calc_xy_z(&(pixels[a][h][0]), ij_arr, l_xy, nwork, pzbz,
+			      n_v, nz_voxels, mid, delta_z, inv_delz, vox_z,
+			      kv);
+		  }
+		}
+	      }
+	      counter++;
 	    }
 	  }
 	}
       }
-    }
-#pragma omp parallel for shared(pixels, d_conv), firstprivate(n_angles, n_h, n_v) schedule(dynamic)
-    for (int ax = 0; ax < a_step; ax++) {
-      int a = block_a + ax;
-      const recon_type *const dc = assume_aligned(&(d_conv[0][0]), recon_type);
-      pixel_type *const pix = assume_aligned(&(pixels[a][0][0]), pixel_type);
-      for (int hv = 0; hv < n_h * n_v; hv++)
-	pix[hv] *= dc[hv];
+      int a_idx = a_step / nthreads;
+      if (a_step % nthreads != 0)
+	a_idx++;
+      int a_off = a_idx * thread_id;
+      if (a_off + a_idx > a_step)
+	a_idx = a_step - a_off;
+      for (int ax = 0; ax < a_idx; ax++) {
+	int a = block_a + a_off + ax;
+	const recon_type *const dc = assume_aligned(&(d_conv[0][0]),
+						    recon_type);
+	pixel_type *const pix = assume_aligned(&(pixels[a][0][0]), pixel_type);
+	for (int hv = 0; hv < n_h * n_v; hv++)
+	  pix[hv] *= dc[hv];
+      }
     }
   }
 }
@@ -624,12 +637,11 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
 				voxel_type *const voxels,
 				const recon_1d &alpha_xy_0,
 				const recon_1d &alpha_xy_1, const int n,
-				const recon_type pzbz, const recon_type inv_dz,
-				const int nv, const int nz, const int midp,
+				const recon_type pzbz, const int nv,
+				const int nz, const int midp,
 				const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z,
-				const recon_type pzdv, const recon_type z_1,
-				const recon_type z_nm, int_1d &kv)
+				int_1d &kv)
 {
   // pzdv = (p1z - vpix[0]) / vpix_step
   // z_1 = (bz + 1 * dz - p1z) / vpix_step ,
@@ -641,36 +653,14 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
   recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
   recon_type *axy0_ptr = assume_aligned(&(alpha_xy_0[0]), recon_type);
   recon_type *axy1_ptr = assume_aligned(&(alpha_xy_1[0]), recon_type);
-#ifdef CBZCHECK
-  // find safe region where all m stay inside the main block
-  // like min_v_all/max_v_all in calc_xy
-  recon_type pzdeps = pzdv * (1.0 + epsilon);
-  int min_v = 0;
-  for (int m = 0; m < n; m++) {
-    int v = int(std::ceil(pzdeps + z_1 / axy0_ptr[m]));
-    if (v > min_v)
-      min_v = v;
-  }
-  if (min_v > 0)
-    std::cerr << "Lower z range wrong for cone-beam " << min_v << '\n';
-  int max_v = nv;
-  for (int m = 0; m < n; m++) {
-    int v = int(std::floor(pzdv + z_nm / axy0_ptr[m]));
-    if (v < max_v)
-      max_v = v;
-  }
-  if (max_v < nv)
-    std::cerr << "Upper z range wrong for cone-beam " << max_v << '\n';
-#endif // CBZCHECK
   int *k_ptr = assume_aligned(&kv[0], int);
   voxel_type *const vox = assume_aligned(voxels, voxel_type);
   for (int m = 0; m < n; m++) {
     const pixel_type *const pix = assume_aligned(pixels[m], pixel_type);
     const recon_type alpha_m0 = axy0_ptr[m];
     const recon_type alpha_m1 = axy1_ptr[m];
-    const recon_type alpha_inv = alpha_m0 * inv_dz;
     for (int v = 0; v < nv; v++)
-      k_ptr[v] = int(pzbz + alpha_inv * dz_ptr[v]);
+      k_ptr[v] = int(pzbz + alpha_m0 * dz_ptr[v]);
     for (int v = 0; v < midp; v++) {
       int k = k_ptr[v];
       recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
@@ -734,7 +724,6 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const recon_1d &delta_z,
 				  const recon_1d &inv_delz,
 				  const recon_1d &vox_z, const recon_type pzbz,
-				  const recon_type inv_dz,
 				  const recon_type pzdv, const recon_type z_1,
 				  const recon_type z_nm, const real_1d &p1x,
 				  const real_1d &p1y, const real_1d &cdetx,
@@ -881,9 +870,29 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   if (count > 2 * pix_per_vox * (n_angles + 10))
     report_error("back project overflow");
   if (count > 0) {
+#ifdef CBZCHECK
+    // find safe region where all m stay inside the main block
+    // like min_v_all/max_v_all in calc_xy
+    recon_type pzdeps = pzdv * (1.0 + epsilon);
+    int min_v = 0;
+    for (int m = 0; m < count; m++) {
+      int v = int(std::ceil(pzdeps + z_1 / alpha_xy_0[m]));
+      if (v > min_v)
+	min_v = v;
+    }
+    if (min_v > 0)
+      std::cerr << "Lower z range wrong for cone-beam " << min_v << '\n';
+    int max_v = n_v;
+    for (int m = 0; m < count; m++) {
+      int v = int(std::floor(pzdv + z_nm / alpha_xy_0[m]));
+      if (v < max_v)
+	max_v = v;
+    }
+    if (max_v < n_v)
+      std::cerr << "Upper z range wrong for cone-beam " << max_v << '\n';
+#endif // CBZCHECK
     calc_ah_z(ah_arr, &(voxels[i][j][0]), alpha_xy_0, alpha_xy_1, count,
-	      pzbz, inv_dz, n_v, nz, midp, delta_z, inv_delz, vox_z, pzdv,
-	      z_1, z_nm, kv);
+	      pzbz, n_v, nz, midp, delta_z, inv_delz, vox_z, kv);
   }
 }
 
@@ -947,6 +956,8 @@ void CCPi::cone_beam::b2D_cpu(const real source_x, const real source_y,
   recon_1d inv_delz(n_v);
   for (int i = 0; i < n_v; i++)
     inv_delz[i] = 1.0 / delta_z[i];
+  for (int i = 0; i < n_v; i++)
+    delta_z[i] *= inv_dz;
   recon_1d vox_z(nz + 1);
   for (int i = 0; i <= nz; i++)
     vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
@@ -972,7 +983,7 @@ void CCPi::cone_beam::b2D_cpu(const real source_x, const real source_y,
 	  a_step = n_angles - block_a;
 	// we don't block h since we have a min/max from the x/y blocks
 
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, inv_dz, pzdv, z_1, z_nm, a_step, x_step, y_step, block_x, block_y, block_a) schedule(dynamic)
+#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, pzdv, z_1, z_nm, a_step, x_step, y_step, block_x, block_y, block_a) schedule(dynamic)
 	for (int ix = 0; ix < x_step; ix++) {
 	  int_1d kv(n_v);
 	  int i = block_x + ix;
@@ -983,7 +994,7 @@ void CCPi::cone_beam::b2D_cpu(const real source_x, const real source_y,
 	    bproject_ah(source_x, source_y, pixels, voxels, x_0, yvals[j], x_n,
 			yvals[j + 1], nz, i, j, a_step, n_h, n_v, h_pixels,
 			mid, c_angle, s_angle, delta_z, inv_delz, vox_z, pzbz,
-			inv_dz, pzdv, z_1, z_nm, p1x, p1y, cdetx, sdetx,
+			pzdv, z_1, z_nm, p1x, p1y, cdetx, sdetx,
 			ilcphi, ilsphi, block_a, kv);
 	  }
 	}
@@ -1490,6 +1501,8 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
   recon_1d inv_delz(n_v);
   for (int i = 0; i < n_v; i++)
     inv_delz[i] = 1.0 / delta_z[i];
+  for (int i = 0; i < n_v; i++)
+    delta_z[i] *= inv_dz;
   recon_1d vox_z(nz + 1);
   for (int i = 0; i <= nz; i++)
     vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
@@ -1526,7 +1539,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 	    bproject_ah(source_x, source_y, pixels, voxels, x_0, yvals[j], x_n,
 			yvals[j + 1], nz, i, j, a_step, n_h, n_v, h_pixels,
 			mid, c_angle, s_angle, delta_z, inv_delz, vox_z, pzbz,
-			inv_dz, pzdv, z_1, z_nm, p1x, p1y, cdetx, sdetx,
+			pzdv, z_1, z_nm, p1x, p1y, cdetx, sdetx,
 			ilcphi, ilsphi, block_a, kv);
 	  }
 	}
