@@ -74,6 +74,20 @@ bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
   return ok;
 }
 
+bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
+						const numpy_1d &angle_array,
+						const numpy_1d &h_offsets,
+						const numpy_1d &v_offsets,
+						const int pixels_per_voxel,
+						const real source_x,
+						const real detector_x,
+						const real pixel_h_size,
+						const real pixel_v_size)
+{
+  report_error("Diamond Avizo interface not implemented");
+  return false;
+}
+
 bool CCPi::Diamond::create_phantom()
 {
   //set_source(-250.0, 0.0, 0.0);

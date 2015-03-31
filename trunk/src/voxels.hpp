@@ -29,4 +29,15 @@ extern voxel_data *reconstruct(CCPi::instrument *device,
 			       const int blocking_factor,
 			       const bool beam_harden);
 
+extern voxel_data *reconstruct(CCPi::instrument *device,
+			       CCPi::reconstruction_alg *algorithm,
+			       const numpy_3d &pixels,
+			       const numpy_1d &angles,
+			       const numpy_1d &h_offsets,
+			       const numpy_1d &v_offsets,
+			       const int pixels_per_voxel,
+			       const real source_x, const real detector_x,
+			       const real pixel_h_size, const real pixel_v_size,
+			       const bool beam_harden);
+
 #endif // CCPI_VOXEL_SETUP
