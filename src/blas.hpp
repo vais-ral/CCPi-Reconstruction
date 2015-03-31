@@ -267,7 +267,7 @@ inline voxel_type dot_prod(const voxel_data &x, const voxel_data &y,
     for (sl_int j = 0; j < ny; j++) {
       voxel_type n2 = 0.0;
       const voxel_type *xptr = assume_aligned(&(x[i][j][0]), voxel_type);
-      voxel_type *yptr = assume_aligned(&(y[i][j][0]), voxel_type);
+      const voxel_type *yptr = assume_aligned(&(y[i][j][0]), voxel_type);
       for (sl_int k = 0; k < nz; k++)
 	n2 += xptr[k] * yptr[k];
       n1 += n2;
