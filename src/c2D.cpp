@@ -38,10 +38,10 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
   const int nzm1 = nz - 1;
-  recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
-  recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
-  recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
-  recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
+  const recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  const recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  const recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  const recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
   recon_1d alpha_inv(n);
   recon_type *ainv_ptr = assume_aligned(&(alpha_inv[0]), recon_type);
   for (int l = 0; l < n; l++)
@@ -657,12 +657,12 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
   int min_v = 0;
   // We have rounding issues with pzdv, so add a small increment
   // since epsilon is 1 + epsilon, we need to scale so its meaningful
-  recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
-  recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
-  recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
-  recon_type *axy0_ptr = assume_aligned(&(alpha_xy_0[0]), recon_type);
-  recon_type *axy1_ptr = assume_aligned(&(alpha_xy_1[0]), recon_type);
-  recon_type pzdeps = pzdv * (1.0 + epsilon);
+  const recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  const recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  const recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  const recon_type *axy0_ptr = assume_aligned(&(alpha_xy_0[0]), recon_type);
+  const recon_type *axy1_ptr = assume_aligned(&(alpha_xy_1[0]), recon_type);
+  const recon_type pzdeps = pzdv * (1.0 + epsilon);
   for (int m = 0; m < n; m++) {
     int v = int(std::ceil(pzdeps + z_1 / axy0_ptr[m]));
     if (v > min_v)

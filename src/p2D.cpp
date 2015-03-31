@@ -67,7 +67,7 @@ void CCPi::parallel_beam::calc_xy_z(pixel_type *const pixels,
 				    const int_1d &mapping, const int map_type)
 {
   pixel_type *const pix = assume_aligned(pixels, pixel_type);
-  recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
+  const recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
 #if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
@@ -616,7 +616,7 @@ void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
 				    const int_1d &mapping, const int map_type)
 {
   voxel_type *const vox = assume_aligned(voxels, voxel_type);
-  recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
+  const recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
   switch (map_type) {
   case 1:
 #if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
