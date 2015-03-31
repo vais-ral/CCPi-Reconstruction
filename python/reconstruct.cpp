@@ -33,6 +33,8 @@ void ring_artefacts_aml(numpy_boost<float, 3> &pixels, const real param_n,
   sl_int nh = (sl_int)pixels.shape()[1];
   sl_int nv = (sl_int)pixels.shape()[2];
   pixel_3d p(boost::extents[nangles][nh][nv]);
+  // Todo - if its normalised data not -log() then this needs to take the
+  // log and the copy back the exp()
   for (int i = 0; i < nangles; i++) {
     for (sl_int j = 0; j < nh; j++) {
       for (sl_int k = 0; k < nv; k++) {
