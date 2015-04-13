@@ -407,7 +407,7 @@ bool CCPi::Diamond::read_scans(const numpy_3d &pixel_array,
 	pixels[i][j][k] = 0.0;
       }
       for (sl_int k = v_offset; k < v_end; k++)
-	pixels[i][j][k] = - std::log(pixel_array[i][j][k - v_offset]);
+	pixels[i][j][k] = - std::log(pixel_array[i][k - v_offset][j]);
       for (sl_int k = v_end; k < nv; k++) {
 	pixels[i][j][k] = 0.0;
       }
