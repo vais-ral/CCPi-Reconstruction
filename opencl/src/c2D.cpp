@@ -415,7 +415,7 @@ void CCPi::cone_beam::f2D_cpu(const real source_x, const real source_y,
       }
     }
 
-    const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
+    //const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
     const recon_type pzbz = recon_type((source_z
 					- grid_offset[2]) / voxel_size[2]);
     recon_1d delta_z(n_v);
@@ -425,7 +425,7 @@ void CCPi::cone_beam::f2D_cpu(const real source_x, const real source_y,
     for (int i = 0; i < n_v; i++)
       inv_delz[i] = 1.0 / delta_z[i];
     for (int i = 0; i < n_v; i++)
-      delta_z[i] *= inv_dz;
+      delta_z[i] /= voxel_size[2];
     recon_1d vox_z(nz_voxels + 1);
     for (int i = 0; i <= nz_voxels; i++)
       vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
@@ -582,6 +582,7 @@ void CCPi::cone_beam::f2D_cpu(const real source_x, const real source_y,
 	  }
 	}
       }
+      // Todo - check that this is ok, 0.58 -> 0.63 in vis
       int a_idx = a_step / nthreads;
       if (a_step % nthreads != 0)
 	a_idx++;
@@ -729,26 +730,20 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 				  const real_1d &p1y, const real_1d &cdetx,
 				  const real_1d &sdetx, const real_1d &ilcphi,
 				  const real_1d &ilsphi, const int a_off,
-				  int_1d &kv)
+				  pixel_ptr_1d &ah_arr, recon_1d &alpha_xy_0,
+				  recon_1d &alpha_xy_1, int_1d &ah_index,
+				  const int a_base, int &count)
 {
   // Rather than using the centre just calculate for all 4 corners,
   // generate h values and loop from smallest to largest.
-  int pix_per_vox = 1;
-  while (nz * pix_per_vox < n_v)
-    pix_per_vox++;
-  //const int pix_per_vox = n_v / (nz - 1);
-  // How big should the array be
-  int count = 0;
-  pixel_ptr_1d ah_arr(2 * pix_per_vox * (n_angles + 10));
-  //int_1d h_arr(2 * pix_per_vox * n_angles);
-  recon_1d alpha_xy_0(2 * pix_per_vox * (n_angles + 10));
-  recon_1d alpha_xy_1(2 * pix_per_vox * (n_angles + 10));
+  count = 0;
   // corners (x0,y0), (x0,yn), (xn,y0), (xn,yn)
   const real pixel_step = h_pixels[1] - h_pixels[0];
   const real ipix_step = 1.0 / pixel_step;
   const real hpix0 = (source_y - h_pixels[0]) / pixel_step;
   sl_int nah = sl_int(n_h) * sl_int(n_v);
   pixel_ptr ah_offset = pixels.data() + sl_int(a_off) * nah;
+  int ah_pos = a_base * nah;
   for (int ax = 0; ax < n_angles; ax++) {
     int a = a_off + ax;
     const real cphi = cangle[a];
@@ -832,6 +827,7 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
     hmax = std::min(std::max(hmax, h11), n_h - 1);
     // If it intercepts voxel then calc alpha_xy_0, alpha_xy_1 and store
     pixel_ptr h_offset = ah_offset + sl_int(hmin) * sl_int(n_v);
+    int h_pos = ah_pos + hmin * n_v;
     for (int h = hmin; h <= hmax; h++) {
       const real p2_x = cdetx[a] - sphi * h_pixels[h];
       const real p2_y = sdetx[a] + cphi * h_pixels[h];
@@ -860,39 +856,15 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
 	  alpha_xy_0[count] = alpha_min;
 	  alpha_xy_1[count] = alpha_max;
 	  ah_arr[count] = h_offset;
+	  ah_index[count] = h_pos;
 	  count++;
 	}
       }
       h_offset += n_v;
+      h_pos += n_v;
     }
     ah_offset += nah;
-  }
-  if (count > 2 * pix_per_vox * (n_angles + 10))
-    report_error("back project overflow");
-  if (count > 0) {
-#ifdef CBZCHECK
-    // find safe region where all m stay inside the main block
-    // like min_v_all/max_v_all in calc_xy
-    recon_type pzdeps = pzdv * (1.0 + epsilon);
-    int min_v = 0;
-    for (int m = 0; m < count; m++) {
-      int v = int(std::ceil(pzdeps + z_1 / alpha_xy_0[m]));
-      if (v > min_v)
-	min_v = v;
-    }
-    if (min_v > 0)
-      std::cerr << "Lower z range wrong for cone-beam " << min_v << '\n';
-    int max_v = n_v;
-    for (int m = 0; m < count; m++) {
-      int v = int(std::floor(pzdv + z_nm / alpha_xy_0[m]));
-      if (v < max_v)
-	max_v = v;
-    }
-    if (max_v < n_v)
-      std::cerr << "Upper z range wrong for cone-beam " << max_v << '\n';
-#endif // CBZCHECK
-    calc_ah_z(ah_arr, &(voxels[i][j][0]), alpha_xy_0, alpha_xy_1, count,
-	      pzbz, n_v, nz, midp, delta_z, inv_delz, vox_z, kv);
+    ah_pos += nah;
   }
 }
 
@@ -915,92 +887,148 @@ void CCPi::cone_beam::b2D_cpu(const real source_x, const real source_y,
     }
   }
 
-  real_1d c_angle(n_angles);
-  real_1d s_angle(n_angles);
-  real_1d p1x(n_angles);
-  real_1d p1y(n_angles);
-  //real_1d cpy(n_angles);
-  //real_1d spy(n_angles);
-  real_1d cdetx(n_angles);
-  real_1d sdetx(n_angles);
-  real_1d ilcphi(n_angles);
-  real_1d ilsphi(n_angles);
-  const real l = detector_x - source_x;
-  for (int a = 0; a < n_angles; a++) {
-    real cos_phi = std::cos(angles[a]);
-    real sin_phi = std::sin(angles[a]);
-    c_angle[a] = cos_phi;
-    s_angle[a] = sin_phi;
-    real cpy = cos_phi * source_y;
-    real spy = sin_phi * source_y;
-    p1x[a] = cos_phi * source_x - spy;
-    p1y[a] = sin_phi * source_x + cpy;
-    cdetx[a] = cos_phi * detector_x;
-    sdetx[a] = sin_phi * detector_x;
-    ilcphi[a] = l / cos_phi;
-    ilsphi[a] = l / sin_phi;
-  }
+#pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin) firstprivate(n_angles, n_h, n_v, nx, ny, nz)
+  {
+    int thread_id = omp_get_thread_num();
+    int nthreads = omp_get_num_threads();
+    real_1d c_angle(n_angles);
+    real_1d s_angle(n_angles);
+    real_1d p1x(n_angles);
+    real_1d p1y(n_angles);
+    //real_1d cpy(n_angles);
+    //real_1d spy(n_angles);
+    real_1d cdetx(n_angles);
+    real_1d sdetx(n_angles);
+    real_1d ilcphi(n_angles);
+    real_1d ilsphi(n_angles);
+    const real l = detector_x - source_x;
+    for (int a = 0; a < n_angles; a++) {
+      real cos_phi = std::cos(angles[a]);
+      real sin_phi = std::sin(angles[a]);
+      c_angle[a] = cos_phi;
+      s_angle[a] = sin_phi;
+      real cpy = cos_phi * source_y;
+      real spy = sin_phi * source_y;
+      p1x[a] = cos_phi * source_x - spy;
+      p1y[a] = sin_phi * source_x + cpy;
+      cdetx[a] = cos_phi * detector_x;
+      sdetx[a] = sin_phi * detector_x;
+      ilcphi[a] = l / cos_phi;
+      ilsphi[a] = l / sin_phi;
+    }
 
-  const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
-  const recon_type pzbz = recon_type((source_z - vox_origin[2]) / vox_size[2]);
-  const real v_step = v_pixels[1] - v_pixels[0];
-  const recon_type pzdv = recon_type((source_z - v_pixels[0]) / v_step);
-  const recon_type z_1 = recon_type((vox_origin[2] + vox_size[2]
-				     - source_z) / v_step);
-  const recon_type z_nm = recon_type((vox_origin[2] + real(nz - 1) * vox_size[2]
-				      - source_z) / v_step);
+    //const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
+    const recon_type pzbz = recon_type((source_z - vox_origin[2]) / vox_size[2]);
+    const real v_step = v_pixels[1] - v_pixels[0];
+    const recon_type pzdv = recon_type((source_z - v_pixels[0]) / v_step);
+    const recon_type z_1 = recon_type((vox_origin[2] + vox_size[2]
+				       - source_z) / v_step);
+    const recon_type z_nm = recon_type((vox_origin[2] + real(nz - 1) * vox_size[2]
+					- source_z) / v_step);
 
-  recon_1d delta_z(n_v);
-  for (int i = 0; i < n_v; i++)
-    delta_z[i] = v_pixels[i] - source_z;
-  recon_1d inv_delz(n_v);
-  for (int i = 0; i < n_v; i++)
-    inv_delz[i] = 1.0 / delta_z[i];
-  for (int i = 0; i < n_v; i++)
-    delta_z[i] *= inv_dz;
-  recon_1d vox_z(nz + 1);
-  for (int i = 0; i <= nz; i++)
-    vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
+    recon_1d delta_z(n_v);
+    for (int i = 0; i < n_v; i++)
+      delta_z[i] = v_pixels[i] - source_z;
+    recon_1d inv_delz(n_v);
+    for (int i = 0; i < n_v; i++)
+      inv_delz[i] = 1.0 / delta_z[i];
+    for (int i = 0; i < n_v; i++)
+      delta_z[i] /= vox_size[2];
+    recon_1d vox_z(nz + 1);
+    for (int i = 0; i <= nz; i++)
+      vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
 
-  real_1d yvals(ny + 1);
-  for (int j = 0; j <= ny; j++)
-    yvals[j] = vox_origin[1] + real(j) * vox_size[1];
+    real_1d yvals(ny + 1);
+    for (int j = 0; j <= ny; j++)
+      yvals[j] = vox_origin[1] + real(j) * vox_size[1];
 
-  const int x_block = nx;
-  const int y_block = ny;
-  const int a_block = n_angles;
-  for (int block_x = 0; block_x < nx; block_x += x_block) {
-    int x_step = x_block;
-    if (block_x + x_step > nx)
-      x_step = nx - block_x;
-    for (int block_y = 0; block_y < ny; block_y += y_block) {
-      int y_step = y_block;
-      if (block_y + y_step > ny)
-	y_step = ny - block_y;
-      for (int block_a = 0; block_a < n_angles; block_a += a_block) {
-	int a_step = a_block;
-	if (block_a + a_step > n_angles)
-	  a_step = n_angles - block_a;
-	// we don't block h since we have a min/max from the x/y blocks
+    int pix_per_vox = 1;
+    while (nz * pix_per_vox < n_v)
+      pix_per_vox++;
+    //const int pix_per_vox = n_v / (nz - 1);
+    // How big should the array be
+    int xy_size = 2 * pix_per_vox * (n_angles + 10);
+    if (xy_size % 32 != 0)
+      xy_size += 32 - (xy_size % 32);
+    pixel_ptr_1d ah_arr(xy_size);
+    int_1d ah_index(xy_size);
+    //int_1d h_arr(2 * pix_per_vox * n_angles);
+    recon_1d alpha_xy_0(xy_size);
+    recon_1d alpha_xy_1(xy_size);
+    int nwork = 0;
 
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, pzdv, z_1, z_nm, a_step, x_step, y_step, block_x, block_y, block_a) schedule(dynamic)
-	for (int ix = 0; ix < x_step; ix++) {
-	  int_1d kv(n_v);
-	  int i = block_x + ix;
-	  const real x_0 = vox_origin[0] + real(i) * vox_size[0];
-	  const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
-	  for (int jx = 0; jx < y_step; jx++) {
-	    int j = block_y + jx;
-	    bproject_ah(source_x, source_y, pixels, voxels, x_0, yvals[j], x_n,
-			yvals[j + 1], nz, i, j, a_step, n_h, n_v, h_pixels,
-			mid, c_angle, s_angle, delta_z, inv_delz, vox_z, pzbz,
-			pzdv, z_1, z_nm, p1x, p1y, cdetx, sdetx,
-			ilcphi, ilsphi, block_a, kv);
+    const int x_block = nx;
+    const int y_block = ny;
+    const int a_block = n_angles;
+    long counter = 0;
+    for (int block_x = 0; block_x < nx; block_x += x_block) {
+      int x_step = x_block;
+      if (block_x + x_step > nx)
+	x_step = nx - block_x;
+      for (int block_y = 0; block_y < ny; block_y += y_block) {
+	int y_step = y_block;
+	if (block_y + y_step > ny)
+	  y_step = ny - block_y;
+	for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+	  int a_step = a_block;
+	  if (block_a + a_step > n_angles)
+	    a_step = n_angles - block_a;
+	  // we don't block h since we have a min/max from the x/y blocks
+
+	  for (int ix = 0; ix < x_step; ix++) {
+	    int_1d kv(n_v);
+	    int i = block_x + ix;
+	    const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+	    const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
+	    for (int jx = 0; jx < y_step; jx++) {
+	      if (counter % nthreads == thread_id) {
+		int j = block_y + jx;
+		bproject_ah(source_x, source_y, pixels, voxels, x_0, yvals[j],
+			    x_n, yvals[j + 1], nz, i, j, a_step, n_h, n_v,
+			    h_pixels, mid, c_angle, s_angle, delta_z, inv_delz,
+			    vox_z, pzbz, pzdv, z_1, z_nm, p1x, p1y, cdetx,
+			    sdetx, ilcphi, ilsphi, block_a, ah_arr,
+			    alpha_xy_0, alpha_xy_1, ah_index, block_a, nwork);
+		if (nwork > 0) {
+		  if (nwork > xy_size)
+		    report_error("back project overflow");
+		  else {
+#ifdef CBZCHECK
+		    // find safe region where all m stay inside the main block
+		    // like min_v_all/max_v_all in calc_xy
+		    recon_type pzdeps = pzdv * (1.0 + epsilon);
+		    int min_v = 0;
+		    for (int m = 0; m < count; m++) {
+		      int v = int(std::ceil(pzdeps + z_1 / alpha_xy_0[m]));
+		      if (v > min_v)
+			min_v = v;
+		    }
+		    if (min_v > 0)
+		      std::cerr << "Lower z range wrong for cone-beam "
+				<< min_v << '\n';
+		    int max_v = n_v;
+		    for (int m = 0; m < count; m++) {
+		      int v = int(std::floor(pzdv + z_nm / alpha_xy_0[m]));
+		      if (v < max_v)
+			max_v = v;
+		    }
+		    if (max_v < n_v)
+		      std::cerr << "Upper z range wrong for cone-beam "
+				<< max_v << '\n';
+#endif // CBZCHECK
+		    calc_ah_z(ah_arr, &(voxels[i][j][0]), alpha_xy_0,
+			      alpha_xy_1, nwork, pzbz, n_v, nz, mid, delta_z,
+			      inv_delz, vox_z, kv);
+		  }
+		}
+	      }
+	      counter++;
+	    }
 	  }
 	}
       }
-    }
-  }      
+    }      
+  }
 }
 
 void CCPi::cone_beam::b2D(const real source_x, const real source_y,
@@ -1137,7 +1165,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
       recon_1d inv_delz(n_v);
       for (int i = 0; i < n_v; i++)
 	inv_delz[i] = 1.0 / delta_z[i];
-      recon_1d vox_z(nz_voxels + 1);
+      recon_1d vox_z(nz_voxels + 32);
       for (int i = 0; i <= nz_voxels; i++)
 	vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
 
@@ -1460,87 +1488,300 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
     }
   }
 
-  real_1d c_angle(n_angles);
-  real_1d s_angle(n_angles);
-  real_1d p1x(n_angles);
-  real_1d p1y(n_angles);
-  //real_1d cpy(n_angles);
-  //real_1d spy(n_angles);
-  real_1d cdetx(n_angles);
-  real_1d sdetx(n_angles);
-  real_1d ilcphi(n_angles);
-  real_1d ilsphi(n_angles);
-  const real l = detector_x - source_x;
-  for (int a = 0; a < n_angles; a++) {
-    real cos_phi = std::cos(angles[a]);
-    real sin_phi = std::sin(angles[a]);
-    c_angle[a] = cos_phi;
-    s_angle[a] = sin_phi;
-    real cpy = cos_phi * source_y;
-    real spy = sin_phi * source_y;
-    p1x[a] = cos_phi * source_x - spy;
-    p1y[a] = sin_phi * source_x + cpy;
-    cdetx[a] = cos_phi * detector_x;
-    sdetx[a] = sin_phi * detector_x;
-    ilcphi[a] = l / cos_phi;
-    ilsphi[a] = l / sin_phi;
-  }
+  int nthreads = machine::number_of_accelerators();
 
-  const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
-  const recon_type pzbz = recon_type((source_z - vox_origin[2]) / vox_size[2]);
-  const real v_step = v_pixels[1] - v_pixels[0];
-  const recon_type pzdv = recon_type((source_z - v_pixels[0]) / v_step);
-  const recon_type z_1 = recon_type((vox_origin[2] + vox_size[2]
-				     - source_z) / v_step);
-  const recon_type z_nm = recon_type((vox_origin[2] + real(nz - 1) * vox_size[2]
-				      - source_z) / v_step);
+#pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin) firstprivate(n_angles, n_h, n_v, nx, ny, nz, nthreads) num_threads(nthreads)
+  {
+    int thread_id = omp_get_thread_num();
+    const char kernel_name[] = "cone_ah_z";
+    if (!machine::check_accelerator_kernel(kernel_name, thread_id))
+      report_error("backward kernel problem");
+    else {
+      real_1d c_angle(n_angles);
+      real_1d s_angle(n_angles);
+      real_1d p1x(n_angles);
+      real_1d p1y(n_angles);
+      //real_1d cpy(n_angles);
+      //real_1d spy(n_angles);
+      real_1d cdetx(n_angles);
+      real_1d sdetx(n_angles);
+      real_1d ilcphi(n_angles);
+      real_1d ilsphi(n_angles);
+      const real l = detector_x - source_x;
+      for (int a = 0; a < n_angles; a++) {
+	real cos_phi = std::cos(angles[a]);
+	real sin_phi = std::sin(angles[a]);
+	c_angle[a] = cos_phi;
+	s_angle[a] = sin_phi;
+	real cpy = cos_phi * source_y;
+	real spy = sin_phi * source_y;
+	p1x[a] = cos_phi * source_x - spy;
+	p1y[a] = sin_phi * source_x + cpy;
+	cdetx[a] = cos_phi * detector_x;
+	sdetx[a] = sin_phi * detector_x;
+	ilcphi[a] = l / cos_phi;
+	ilsphi[a] = l / sin_phi;
+      }
 
-  recon_1d delta_z(n_v);
-  for (int i = 0; i < n_v; i++)
-    delta_z[i] = v_pixels[i] - source_z;
-  recon_1d inv_delz(n_v);
-  for (int i = 0; i < n_v; i++)
-    inv_delz[i] = 1.0 / delta_z[i];
-  for (int i = 0; i < n_v; i++)
-    delta_z[i] *= inv_dz;
-  recon_1d vox_z(nz + 1);
-  for (int i = 0; i <= nz; i++)
-    vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
+      const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
+      const recon_type pzbz = recon_type((source_z
+					  - vox_origin[2]) / vox_size[2]);
+      const real v_step = v_pixels[1] - v_pixels[0];
+      const recon_type pzdv = recon_type((source_z - v_pixels[0]) / v_step);
+      const recon_type z_1 = recon_type((vox_origin[2] + vox_size[2]
+					 - source_z) / v_step);
+      const recon_type z_nm = recon_type((vox_origin[2] + real(nz - 1)
+					  * vox_size[2] - source_z) / v_step);
 
-  real_1d yvals(ny + 1);
-  for (int j = 0; j <= ny; j++)
-    yvals[j] = vox_origin[1] + real(j) * vox_size[1];
+      recon_1d delta_z(n_v);
+      for (int i = 0; i < n_v; i++)
+	delta_z[i] = v_pixels[i] - source_z;
+      recon_1d inv_delz(n_v);
+      for (int i = 0; i < n_v; i++)
+	inv_delz[i] = 1.0 / delta_z[i];
+      for (int i = 0; i < n_v; i++)
+	delta_z[i] *= inv_dz;
+      recon_1d vox_z(nz + 32);
+      for (int i = 0; i <= nz; i++)
+	vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
 
-  const int x_block = nx;
-  const int y_block = ny;
-  const int a_block = n_angles;
-  for (int block_x = 0; block_x < nx; block_x += x_block) {
-    int x_step = x_block;
-    if (block_x + x_step > nx)
-      x_step = nx - block_x;
-    for (int block_y = 0; block_y < ny; block_y += y_block) {
-      int y_step = y_block;
-      if (block_y + y_step > ny)
-	y_step = ny - block_y;
-      for (int block_a = 0; block_a < n_angles; block_a += a_block) {
-	int a_step = a_block;
-	if (block_a + a_step > n_angles)
-	  a_step = n_angles - block_a;
-	// we don't block h since we have a min/max from the x/y blocks
+      dev_ptr dp_del_z = machine::device_allocate(sl_int(n_v)
+						  * sizeof(float),
+						  true, thread_id);
+      dev_ptr dp_inv_z = machine::device_allocate(sl_int(n_v)
+						  * sizeof(float),
+						  true, thread_id);
+      dev_ptr dp_vox_z = machine::device_allocate(sl_int(nz + 32)
+						  * sizeof(float),
+						  true, thread_id);
+      machine::copy_to_device(delta_z.data(), dp_del_z,
+			      n_v * sizeof(float), thread_id);
+      machine::copy_to_device(inv_delz.data(), dp_inv_z,
+			      n_v * sizeof(float), thread_id);
+      machine::copy_to_device(vox_z.data(), dp_vox_z,
+			      (nz + 32) * sizeof(float), thread_id);
 
-#pragma omp parallel for shared(h_pixels, v_pixels, pixels, voxels, angles, delta_z, inv_delz, vox_z, vox_size, vox_origin, yvals, c_angle, s_angle, p1x, p1y, cdetx, sdetx, ilcphi, ilsphi) firstprivate(source_x, source_y, source_z, detector_x, n_angles, n_h, n_v, nx, ny, nz, mid, pzbz, inv_dz, pzdv, z_1, z_nm, a_step, x_step, y_step, block_x, block_y, block_a) schedule(dynamic)
-	for (int ix = 0; ix < x_step; ix++) {
-	  int_1d kv(n_v);
-	  int i = block_x + ix;
-	  const real x_0 = vox_origin[0] + real(i) * vox_size[0];
-	  const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
-	  for (int jx = 0; jx < y_step; jx++) {
-	    int j = block_y + jx;
-	    bproject_ah(source_x, source_y, pixels, voxels, x_0, yvals[j], x_n,
-			yvals[j + 1], nz, i, j, a_step, n_h, n_v, h_pixels,
-			mid, c_angle, s_angle, delta_z, inv_delz, vox_z, pzbz,
-			pzdv, z_1, z_nm, p1x, p1y, cdetx, sdetx,
-			ilcphi, ilsphi, block_a, kv);
+      real_1d yvals(ny + 1);
+      for (int j = 0; j <= ny; j++)
+	yvals[j] = vox_origin[1] + real(j) * vox_size[1];
+
+      // calc space on accelerator for copy
+      sl_int accel_size =
+	machine::largest_alloc(thread_id) / sizeof(pixel_type);
+      int accel_proj = n_angles;
+      int factor = 1;
+      while (accel_proj * sl_int(n_h) * sl_int(n_v) >accel_size) {
+	factor++;
+	accel_proj = n_angles / factor;
+	if (n_angles % factor != 0)
+	  accel_proj++;
+      }
+      const int a_block = accel_proj;
+
+      int pix_per_vox = 1;
+      while (nz * pix_per_vox < n_v)
+	pix_per_vox++;
+      //const int pix_per_vox = n_v / (nz - 1);
+      // How big should the array be
+      int xy_size = 2 * pix_per_vox * (n_angles + 10);
+      if (xy_size % 32 != 0)
+	xy_size += 32 - (xy_size % 32);
+      pixel_ptr_1d ah_arr(xy_size);
+      int_1d ah_index(xy_size);
+      //int_1d h_arr(2 * pix_per_vox * n_angles);
+      recon_1d alpha_xy_0(xy_size);
+      recon_1d alpha_xy_1(xy_size);
+      int nwork = 0;
+
+      int x_block = nx;
+      int y_block = ny;
+      int xy_max = std::max(nz, xy_size);
+      sl_int mem_size = accel_proj * sl_int(n_h) * sl_int(n_v)
+	* sizeof(pixel_type)
+	+ sl_int(x_block) * sl_int(y_block) * sl_int(xy_max)
+	* (sizeof(voxel_type) + sizeof(recon_type) + sizeof(int));
+      // this is really just 4
+      sl_int data_max = std::max(std::max(sizeof(voxel_type),
+					  sizeof(recon_type)), sizeof(int));
+      bool flip = true;
+      while (mem_size > machine::available_mem(thread_id) or
+	     sl_int(x_block) * sl_int(y_block) * sl_int(xy_max) * data_max >
+	     machine::largest_alloc(thread_id)) {
+	if (flip)
+	  x_block /= 2;
+	else
+	  y_block /= 2;
+	flip = !flip;
+	mem_size = accel_proj * sl_int(n_h) * sl_int(n_v)
+	  * sizeof(pixel_type)
+	  + sl_int(x_block) * sl_int(y_block) * sl_int(xy_max)
+	  * (sizeof(voxel_type) + 2 * sizeof(recon_type) + sizeof(int));
+      }
+      /*
+	add_output("b2D sizes ");
+	add_output(a_block);
+	add_output(" ");
+	add_output(x_block);
+	add_output(" ");
+	add_output(y_block);
+	add_output(" ");
+	add_output(xy_size);
+	send_output();
+      */
+
+      // Need 3D as can't overwrite 1D ones while doing async copy.
+      boost::multi_array<int, 2> ah3_offsets(boost::extents[x_block * y_block][xy_size]);
+      boost::multi_array<recon_type, 2> l3_xy_0(boost::extents[x_block * y_block][xy_size]);
+      boost::multi_array<recon_type, 2> l3_xy_1(boost::extents[x_block * y_block][xy_size]);
+      boost::multi_array<int, 1> work_sizes(boost::extents[x_block * y_block]);
+      boost::multi_array<int, 1> h_arr(boost::extents[x_block * y_block]);
+      
+      dev_ptr pix_buf = machine::device_allocate(accel_proj
+						 * sl_int(n_h)
+						 * sl_int(n_v)
+						 * sizeof(pixel_type), true,
+						 thread_id);
+      dev_ptr vox_buf = machine::device_allocate(sl_int(x_block)
+						 * sl_int(y_block)
+						 * sl_int(nz)
+						 * sizeof(voxel_type), false,
+						 thread_id);
+      dev_ptr xy_offsets = machine::device_allocate(sl_int(x_block)
+						    * sl_int(y_block)
+						    * xy_size * sizeof(int),
+						    true, thread_id);
+      dev_ptr xy0_buff = machine::device_allocate(sl_int(x_block)
+						  * sl_int(y_block) * xy_size
+						  * sizeof(recon_type),
+						  true, thread_id);
+      dev_ptr xy1_buff = machine::device_allocate(sl_int(x_block)
+						  * sl_int(y_block) * xy_size
+						  * sizeof(recon_type),
+						  true, thread_id);
+      dev_ptr xy_work = machine::device_allocate(sl_int(x_block)
+						 * sl_int(y_block)
+						 * sizeof(int),
+						 true, thread_id);
+      dev_ptr h_work = machine::device_allocate(sl_int(x_block)
+						* sl_int(y_block)
+						* sizeof(int),
+						true, thread_id);
+
+      int_1d kv(n_v);
+      long counter = 0;
+      for (int ap = 0; ap < n_angles; ap += accel_proj) {
+	int p_step = accel_proj;
+	if (ap + p_step > n_angles)
+	  p_step = n_angles - ap;
+	event_t pixel_ev;
+	machine::copy_to_device(&pixels[ap][0][0], pix_buf,
+				p_step * sl_int(n_h) * sl_int(n_v)
+				* sizeof(pixel_type), thread_id, &pixel_ev);
+	for (int block_x = 0; block_x < nx; block_x += x_block) {
+	  int x_step = x_block;
+	  if (block_x + x_step > nx)
+	    x_step = nx - block_x;
+	  for (int block_y = 0; block_y < ny; block_y += y_block) {
+	    int y_step = y_block;
+	    if (block_y + y_step > ny)
+	      y_step = ny - block_y;
+	    if (counter % nthreads == thread_id) {
+	      event_t vox_ev;
+	      machine::copy_to_device(&voxels[block_x][block_y][0], vox_buf,
+				      ny, nz * sizeof(voxel_type),
+				      x_step, y_step, nz * sizeof(float),
+				      thread_id, &vox_ev);
+	      for (int block_a = 0; block_a < n_angles; block_a += a_block) {
+		int a_step = a_block;
+		if (block_a + a_step > n_angles)
+		  a_step = n_angles - block_a;
+		int offset = 0;
+		std::vector<std::vector<event_t> *> ev(x_block);
+		// we don't block h since we have a min/max from the x/y blocks
+
+		int csize = 0;
+		int cstart = 0;
+		for (int ix = 0; ix < x_step; ix++) {
+		  int i = block_x + ix;
+		  const real x_0 = vox_origin[0] + real(i) * vox_size[0];
+		  const real x_n = vox_origin[0] + real(i + 1) * vox_size[0];
+		  for (int jx = 0; jx < y_step; jx++) {
+		    int j = block_y + jx;
+		    bproject_ah(source_x, source_y, pixels, voxels, x_0,
+				yvals[j], x_n, yvals[j + 1], nz, i, j, a_step,
+				n_h, n_v, h_pixels, mid, c_angle, s_angle,
+				delta_z, inv_delz, vox_z, pzbz, pzdv, z_1, z_nm,
+				p1x, p1y, cdetx, sdetx, ilcphi, ilsphi,
+				ap + block_a, ah_arr, alpha_xy_0, alpha_xy_1,
+				ah_index, block_a, nwork);
+		    offset += xy_size;
+		    if (nwork > 0) {
+		      if (nwork > xy_size) {
+			report_error("back project overflow");
+			nwork = 0;
+		      } else {
+			for (int d = 0; d < nwork; d++)
+			  ah3_offsets[csize][d] = ah_index[d];
+			for (int d = 0; d < nwork; d++)
+			  l3_xy_0[csize][d] = alpha_xy_0[d];
+			for (int d = 0; d < nwork; d++)
+			  l3_xy_1[csize][d] = alpha_xy_1[d];
+			h_arr[csize] = ix * y_step + jx;
+			work_sizes[csize] = nwork;
+			csize++;
+		      }
+		    }
+		  }
+		  if (csize > 0) {
+		    ev[ix] = new std::vector<event_t>(7);
+		    machine::copy_to_device(&ah3_offsets[cstart][0], xy_offsets,
+					    cstart * xy_size * sizeof(int),
+					    csize * xy_size * sizeof(int),
+					    thread_id, &((*(ev[ix]))[0]));
+		    machine::copy_to_device(&l3_xy_0[cstart][0], xy0_buff,
+					    cstart * xy_size
+					    * sizeof(recon_type),
+					    csize * xy_size
+					    * sizeof(recon_type),
+					    thread_id, &((*(ev[ix]))[1]));
+		    machine::copy_to_device(&l3_xy_1[cstart][0], xy1_buff,
+					    cstart * xy_size
+					    * sizeof(recon_type),
+					    csize * xy_size
+					    * sizeof(recon_type),
+					    thread_id, &((*(ev[ix]))[2]));
+		    machine::copy_to_device(&work_sizes[cstart], xy_work,
+					    cstart * sizeof(int),
+					    csize * sizeof(int), thread_id,
+					    &((*(ev[ix]))[3]));
+		    machine::copy_to_device(&h_arr[cstart], h_work,
+					    cstart * sizeof(int),
+					    csize * sizeof(int), thread_id,
+					    &((*(ev[ix]))[4]));
+		    (*(ev[ix]))[5] = pixel_ev;
+		    (*(ev[ix]))[6] = vox_ev;
+		    //int vox_offset = (ix * y_step) * nz;
+		    machine::run_cone_ah(kernel_name, pix_buf, vox_buf,
+					 xy0_buff, xy1_buff, xy_offsets,
+					 xy_work, h_work, n_v, nz, cstart,
+					 xy_size, pzbz, mid, dp_del_z, inv_dz,
+					 dp_inv_z, dp_vox_z, n_v, csize,
+					 thread_id, ev[ix]);
+		  } else
+		    ev[ix] = 0;
+		}
+		machine::accelerator_barrier(thread_id);
+		for (int ix = 0; ix < x_step; ix++)
+		  if (ev[ix] != 0)
+		    delete ev[ix];
+	      }
+	      // no events copy is blocking
+	      machine::copy_from_device(&voxels[block_x][block_y][0], vox_buf,
+					ny, nz * sizeof(voxel_type),
+					x_step, y_step, nz * sizeof(float),
+					thread_id);
+	    }
+	    counter++;
 	  }
 	}
       }

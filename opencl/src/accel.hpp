@@ -67,6 +67,14 @@ namespace machine {
 		   dev_ptr delta_z, const float inv_dz, dev_ptr inv_delz,
 		   dev_ptr vox_z, const int size, const int dim3,
 		   const int device, std::vector<event_t> *events);
+  void run_cone_ah(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
+		   dev_ptr xy0_buff, dev_ptr xy1_buff, dev_ptr xy_offsets,
+		   dev_ptr h, dev_ptr lengths, const int nv, const int nz,
+		   const int start, const int xy_size, const float pzbz,
+		   const int midp, dev_ptr delta_z, const float inv_dz,
+		   dev_ptr inv_delz, dev_ptr vox_z, const int size,
+		   const int dim3, const int device,
+		   std::vector<event_t> *events);
   void accelerator_barrier(const int device);
   void accelerator_flush(const int device);
   void accelerator_complete(const int device);

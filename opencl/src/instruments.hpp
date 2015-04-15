@@ -227,7 +227,9 @@ namespace CCPi {
 			    const real_1d &p1x, const real_1d &p1y,
 			    const real_1d &cdetx, const real_1d &sdetx,
 			    const real_1d &ilcphi, const real_1d &ilsphi,
-			    const int a_off, int_1d &kv);
+			    const int a_off, pixel_ptr_1d &ah_arr,
+			    recon_1d &alpha_xy_0, recon_1d &alpha_xy_1,
+			    int_1d &ah_index, const int a_base, int &count);
     static void f2D_cpu(const real source_x, const real source_y,
 			const real source_z, const real detector_x,
 			const real_1d &h_pixels, const real_1d &v_pixels,
