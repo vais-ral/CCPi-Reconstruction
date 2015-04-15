@@ -65,7 +65,6 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
 						   const real pixel_v_size)
 {
   bool ok = true;
-  /*
   int nangles = (int)angle_array.shape()[0];
   if (nangles < 1) {
     report_error("Bad angle array");
@@ -73,6 +72,7 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
   } else {
     const pixel_data::size_type *s = pix_array.shape();
     int na = (int)s[0];
+    // Todo - what order should these be
     int nh_pixels = (int)s[1];
     int nv_pixels = (int)s[2];
     if (na != nangles) {
@@ -81,34 +81,39 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
     } else if (nh_pixels < 1 or nv_pixels < 1) {
       report_error("Bad array index for pixels");
       ok = false;
+    } else if (nh_pixels != (int)h_offsets.shape()[0]) {
+      // Todo - can offset array be empty - no error? optional arg?
+      report_error("Number of horizontal pixels doesn't match");
+    } else if (nv_pixels != (int)v_offsets.shape()[0]) {
+      report_error("Number of vertical pixels doesn't match");
     } else {
-      // dummy
-      real hsize = 1.0;
-      real vsize = 1.0;
       // copied from read_data_size
       nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
       real shift = 0.0;
+      /*
       if (rotation_centre > 0.0) {
 	// shift h_pixels
 	// if 4 pixels and centre = 2.0 nothing happens
 	real pixel_shift = rotation_centre - real(nh_pixels) / 2.0;
 	shift = hsize * pixel_shift;
       }
+      */
       // store data in class
       real_1d &h_pixels = set_h_pixels(nh_pixels);
-      h_pixels[0] = - ((nh_pixels - 1) * hsize) / real(2.0) - shift;
+      h_pixels[0] = - ((nh_pixels - 1) * pixel_h_size) / real(2.0) - shift;
       for (int i = 1; i < nh_pixels; i++)
-	h_pixels[i] = h_pixels[0] + real(i) * hsize;
+	h_pixels[i] = h_pixels[0] + real(i) * pixel_h_size;
       real_1d &v_pixels = set_v_pixels(nv_pixels);
-      v_pixels[0] = - ((nv_pixels - 1) * vsize) / real(2.0);
+      v_pixels[0] = - ((nv_pixels - 1) * pixel_v_size) / real(2.0);
       for (int i = 1; i < nv_pixels; i++)
-	v_pixels[i] = v_pixels[0] + real(i) * vsize;
+	v_pixels[i] = v_pixels[0] + real(i) * pixel_v_size;
       real_1d &angles = set_phi(nangles);
       for (int i = 0; i < nangles; i++)
 	angles[i] = angle_array[i];
+      report_error("Todo - find_centre");
+      report_error("Todo - use offsets");
     }
   }
-  */
   return ok;
 }
 
