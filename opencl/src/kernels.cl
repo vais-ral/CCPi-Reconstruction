@@ -234,14 +234,14 @@ __kernel void cone_ah_z(const __global float *pixels,
   float del_z = delta_z[id];
   float inv_z = inv_delz[id];
   for (int m = 0; m < n; m++) {
+    const float alpha_m0 = alpha_xy_0[pos + m];
     int k = (int)(pzbz + alpha_m0 * del_z);
     float pix = pixels[index[pos + m] + id];
-    const float alpha_m0 = alpha_xy_0[pos + m];
     const float alpha_m1 = alpha_xy_1[pos + m];
     float alpha_z = vox_z[k + zshift] * inv_z;
     float min_z = fmin(alpha_z, alpha_m1);
     // Todo - these need to be atomic - OpenCL 1.1 has no atomic_add(float)!
-    vox[h[start + jobid] * nz + k] += pix * (min_z - alpha_m0);
-    vox[h[start + jobid] * nz + k + vshift] += pix * (alpha_m1 - min_z);
+    voxels[h[start + jobid] * nz + k] += pix * (min_z - alpha_m0);
+    voxels[h[start + jobid] * nz + k + vshift] += pix * (alpha_m1 - min_z);
   }
 }
