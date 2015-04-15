@@ -36,8 +36,8 @@ bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
   } else {
     const pixel_data::size_type *s = pix_array.shape();
     int na = (int)s[0];
-    int nh_pixels = (int)s[1];
-    int nv_pixels = (int)s[2];
+    int nv_pixels = (int)s[1];
+    int nh_pixels = (int)s[2];
     if (na != nangles) {
       report_error("Number of projections doesn't match angle array");
       ok = false;
