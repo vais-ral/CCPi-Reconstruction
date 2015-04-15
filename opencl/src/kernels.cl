@@ -183,7 +183,7 @@ __kernel void cone_xy_z(__global float *pixels,
 			const int nv, const int nz, const int start,
 			const int ah_size, const float pzbz,
 			const int midp, const __global float *delta_z,
-			const float inv_dz, const __global float *inv_delz,
+			const __global float *inv_delz,
 			const global float *vox_z)
 {
   size_t id = get_global_id(0); // v
@@ -195,7 +195,7 @@ __kernel void cone_xy_z(__global float *pixels,
   // hopefully this is -(1) + 0 or -0 + 1
   int vshift = -(id < midp) + (id >= midp);
   int zshift = (id >= midp);
-  float del_z = delta_z[id] * inv_dz;
+  float del_z = delta_z[id];
   float inv_z = inv_delz[id];
   float alpha_m0 = alpha_xy[pos];
   for (int m = 1; m < n; m++) {
@@ -220,7 +220,7 @@ __kernel void cone_ah_z(const __global float *pixels,
 			const int nv, const int nz, const int start,
 			const int xy_size, const float pzbz,
 			const int midp, const __global float *delta_z,
-			const float inv_dz, const __global float *inv_delz,
+			const __global float *inv_delz,
 			const global float *vox_z)
 {
   size_t id = get_global_id(0); // v
@@ -231,7 +231,7 @@ __kernel void cone_ah_z(const __global float *pixels,
   // hopefully this is -(1) + 0 or -0 + 1
   int vshift = -(id < midp) + (id >= midp);
   int zshift = (id >= midp);
-  float del_z = delta_z[id] * inv_dz;
+  float del_z = delta_z[id];
   float inv_z = inv_delz[id];
   for (int m = 0; m < n; m++) {
     int k = (int)(pzbz + alpha_m0 * del_z);

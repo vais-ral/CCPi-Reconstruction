@@ -54,6 +54,69 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
   return false;
 }
 
+bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
+						   const numpy_1d &angle_array,
+						   const numpy_1d &h_offsets,
+						   const numpy_1d &v_offsets,
+						   const int pixels_per_voxel,
+						   const real source_x,
+						   const real detector_x,
+						   const real pixel_h_size,
+						   const real pixel_v_size)
+{
+  bool ok = true;
+  int nangles = (int)angle_array.shape()[0];
+  if (nangles < 1) {
+    report_error("Bad angle array");
+    ok = false;
+  } else {
+    const pixel_data::size_type *s = pix_array.shape();
+    int na = (int)s[0];
+    // Todo - what order should these be
+    int nh_pixels = (int)s[1];
+    int nv_pixels = (int)s[2];
+    if (na != nangles) {
+      report_error("Number of projections doesn't match angle array");
+      ok = false;
+    } else if (nh_pixels < 1 or nv_pixels < 1) {
+      report_error("Bad array index for pixels");
+      ok = false;
+    } else if (nh_pixels != (int)h_offsets.shape()[0]) {
+      // Todo - can offset array be empty - no error? optional arg?
+      report_error("Number of horizontal pixels doesn't match");
+    } else if (nv_pixels != (int)v_offsets.shape()[0]) {
+      report_error("Number of vertical pixels doesn't match");
+    } else {
+      // copied from read_data_size
+      nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
+      real shift = 0.0;
+      /*
+      if (rotation_centre > 0.0) {
+	// shift h_pixels
+	// if 4 pixels and centre = 2.0 nothing happens
+	real pixel_shift = rotation_centre - real(nh_pixels) / 2.0;
+	shift = hsize * pixel_shift;
+      }
+      */
+      // store data in class
+      real_1d &h_pixels = set_h_pixels(nh_pixels);
+      h_pixels[0] = - ((nh_pixels - 1) * pixel_h_size) / real(2.0) - shift;
+      for (int i = 1; i < nh_pixels; i++)
+	h_pixels[i] = h_pixels[0] + real(i) * pixel_h_size;
+      real_1d &v_pixels = set_v_pixels(nv_pixels);
+      v_pixels[0] = - ((nv_pixels - 1) * pixel_v_size) / real(2.0);
+      for (int i = 1; i < nv_pixels; i++)
+	v_pixels[i] = v_pixels[0] + real(i) * pixel_v_size;
+      real_1d &angles = set_phi(nangles);
+      for (int i = 0; i < nangles; i++)
+	angles[i] = angle_array[i];
+      report_error("Todo - find_centre");
+      report_error("Todo - use offsets");
+    }
+  }
+  return ok;
+}
+
 bool CCPi::Nikon_XTek::create_phantom()
 {
   set_source(-250.0, 0.0, 0.0);
@@ -438,8 +501,30 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
 bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
 				  const int offset, const int block_size)
 {
-  report_error("Python SAVU, XTek read scans not implemented");
-  return false;
+  // bits from read_data
+  int nv = get_num_v_pixels();
+  int nh = get_num_h_pixels();
+  int nangles = get_num_angles();
+  int v_offset = get_data_v_offset();
+  int v_size = get_data_v_size();
+  int v_end = v_offset + v_size;
+  set_v_offset(offset);
+  // Copy pixels
+  pixel_data &pixels = create_pixel_data();
+  for (int i = 0; i < nangles; i++) {
+    for (sl_int j = 0; j < nh; j++) {
+      // initialise aligned bits that don't contain data
+      for (sl_int k = 0; k < v_offset; k++) {
+	pixels[i][j][k] = 0.0;
+      }
+      for (sl_int k = v_offset; k < v_end; k++)
+	pixels[i][j][k] = - std::log(pixel_array[i][j][k - v_offset]);
+      for (sl_int k = v_end; k < nv; k++) {
+	pixels[i][j][k] = 0.0;
+      }
+    }
+  }
+  return true;
 }
 
 pixel_type linear(const real x1, const real x2, const pixel_type f1,

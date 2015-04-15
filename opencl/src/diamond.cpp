@@ -36,8 +36,8 @@ bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
   } else {
     const pixel_data::size_type *s = pix_array.shape();
     int na = (int)s[0];
-    int nh_pixels = (int)s[1];
-    int nv_pixels = (int)s[2];
+    int nv_pixels = (int)s[1];
+    int nh_pixels = (int)s[2];
     if (na != nangles) {
       report_error("Number of projections doesn't match angle array");
       ok = false;
@@ -72,6 +72,20 @@ bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
     }
   }
   return ok;
+}
+
+bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
+						const numpy_1d &angle_array,
+						const numpy_1d &h_offsets,
+						const numpy_1d &v_offsets,
+						const int pixels_per_voxel,
+						const real source_x,
+						const real detector_x,
+						const real pixel_h_size,
+						const real pixel_v_size)
+{
+  report_error("Diamond Avizo interface not implemented");
+  return false;
 }
 
 bool CCPi::Diamond::create_phantom()
@@ -393,7 +407,7 @@ bool CCPi::Diamond::read_scans(const numpy_3d &pixel_array,
 	pixels[i][j][k] = 0.0;
       }
       for (sl_int k = v_offset; k < v_end; k++)
-	pixels[i][j][k] = - std::log(pixel_array[i][j][k - v_offset]);
+	pixels[i][j][k] = - std::log(pixel_array[i][k - v_offset][j]);
       for (sl_int k = v_end; k < nv; k++) {
 	pixels[i][j][k] = 0.0;
       }

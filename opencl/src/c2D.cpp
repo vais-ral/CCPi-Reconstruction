@@ -40,10 +40,10 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
   // k = int((p1_z - b_z) * inv_dz + (alpha_xy[m - 1] * delta_z[v]) * inv_dz)
   // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
   // k = int((pzbz + alpha_inv * delta_z[v])
-  recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
-  recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
-  recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
-  recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
+  const recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  const recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  const recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  const recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
   int *k_ptr = assume_aligned(&(kv[0]), int);
   pixel_type *const pix = assume_aligned(pixels, pixel_type);
   recon_type alpha_m0 = axy_ptr[0];
@@ -1063,11 +1063,13 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
       for (int hv = 0; hv < n_h * n_v; hv++)
 	pix[hv] *= dc[hv];
     }
+    /*
     if (machine::has_accelerator())
       b2D_accel(source_x, source_y, source_z, detector_x, h_pixels, v_pixels,
 		angles, pixels, voxels, n_angles, n_h, n_v, vox_origin,
 		vox_size, nx, ny, nz, d_conv);
     else
+    */
       b2D_cpu(source_x, source_y, source_z, detector_x, h_pixels, v_pixels,
 	      angles, pixels, voxels, n_angles, n_h, n_v, vox_origin,
 	      vox_size, nx, ny, nz, d_conv);          
@@ -1099,11 +1101,13 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
       for (int hv = 0; hv < n_h * n_v; hv++)
 	dpx[hv] = pix[hv] * dc[hv];
     }
+    /*
     if (machine::has_accelerator())
       b2D_accel(source_x, source_y, source_z, detector_x, h_pixels, v_pixels,
 		angles, dpixels, voxels, n_angles, n_h, n_v, vox_origin,
 		vox_size, nx, ny, nz, d_conv);
     else
+    */
       b2D_cpu(source_x, source_y, source_z, detector_x, h_pixels, v_pixels,
 	      angles, dpixels, voxels, n_angles, n_h, n_v, vox_origin, vox_size,
 	      nx, ny, nz, d_conv);
@@ -1156,7 +1160,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 	}
       }
 
-      const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
+      //const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
       const recon_type pzbz = recon_type((source_z
 					  - grid_offset[2]) / voxel_size[2]);
       recon_1d delta_z(n_v);
@@ -1165,6 +1169,8 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
       recon_1d inv_delz(n_v);
       for (int i = 0; i < n_v; i++)
 	inv_delz[i] = 1.0 / delta_z[i];
+      for (int i = 0; i < n_v; i++)
+	delta_z[i] /= voxel_size[2];
       recon_1d vox_z(nz_voxels + 32);
       for (int i = 0; i <= nz_voxels; i++)
 	vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
@@ -1425,7 +1431,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 		  machine::run_cone_xy(kernel_name, pix_buf, vox_buf,
 				       ij_buff, xy_offsets, h_work,
 				       ij_work, n_v, nz_voxels, cstart,
-				       ah_size, pzbz, mid, dp_del_z, inv_dz,
+				       ah_size, pzbz, mid, dp_del_z,
 				       dp_inv_z, dp_vox_z, n_v, csize,
 				       thread_id, ev[ax]);
 		} else
@@ -1523,7 +1529,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 	ilsphi[a] = l / sin_phi;
       }
 
-      const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
+      //const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
       const recon_type pzbz = recon_type((source_z
 					  - vox_origin[2]) / vox_size[2]);
       const real v_step = v_pixels[1] - v_pixels[0];
@@ -1540,7 +1546,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
       for (int i = 0; i < n_v; i++)
 	inv_delz[i] = 1.0 / delta_z[i];
       for (int i = 0; i < n_v; i++)
-	delta_z[i] *= inv_dz;
+	delta_z[i] /= vox_size[2];
       recon_1d vox_z(nz + 32);
       for (int i = 0; i <= nz; i++)
 	vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z;
@@ -1764,7 +1770,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 		    machine::run_cone_ah(kernel_name, pix_buf, vox_buf,
 					 xy0_buff, xy1_buff, xy_offsets,
 					 xy_work, h_work, n_v, nz, cstart,
-					 xy_size, pzbz, mid, dp_del_z, inv_dz,
+					 xy_size, pzbz, mid, dp_del_z,
 					 dp_inv_z, dp_vox_z, n_v, csize,
 					 thread_id, ev[ix]);
 		  } else
