@@ -21,7 +21,7 @@ namespace machine {
   bool accelerator = false;
   int num_devices = 0;
   int max_work0 = 1000000;
-  int max_work01 = 10000000;
+  int max_work1 = 10000000;
   int max_work2 = 1000000;
   cl::Context context;
   cl::Program program;
@@ -162,13 +162,11 @@ void machine::init_accelerator()
 	      if ((int)wval[0] < max_work0)
 		max_work0 = wval[0];
 	      if (val == 3) {
-		if (int(wval[0] * wval[2]) < max_work01)
-		  max_work01 = wval[0] * wval[2];
-	      } else {
-		max_work01 = max_work0;
+		if (int(wval[2]) < max_work2)
+		  max_work2 = wval[2];
 	      }
-	      if (int(wval[1]) < max_work2)
-		max_work2 = wval[1];
+	      if (int(wval[1]) < max_work1)
+		max_work1 = wval[1];
 	    }
 	    if (val < 3)
 	      report_error("Only 2 work dims supported");
@@ -465,6 +463,16 @@ void machine::device_free(dev_ptr data, const int device)
   //delete buf;
 }
 
+int machine::device_workitems_0()
+{
+  return max_work0;
+}
+
+int machine::device_workitems_1()
+{
+  return max_work1;
+}
+
 bool machine::check_accelerator_kernel(const char name[], const int device)
 {
   cl_int err;
@@ -476,11 +484,11 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
 			      dev_ptr vox_buf, const int vox_offset,
 			      dev_ptr xy_buff, dev_ptr xy_offsets,
 			      dev_ptr nlengths, const int nv,
-			      const int nz, const int xy_size, const int ix,
-			      const int size, const int dim3, const int device,
-			      std::vector<event_t> *events)
+			      const int nz, const int xy_size, const int start,
+			      const int size, const int dim3, const int vidx,
+			      const int device, std::vector<event_t> *events)
 {
-  if (size > max_work01 or dim3 > max_work2)
+  if (size > max_work0 or dim3 > max_work1)
     report_error("Too much work for device");
   else {
     cl_int err;
@@ -511,7 +519,9 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
       if (status == CL_SUCCESS)
 	status = kernel.setArg(8, xy_size);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(9, ix);
+	status = kernel.setArg(9, start);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(10, vidx);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
 						globalThreads, cl::NullRange,
@@ -530,10 +540,10 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 			      dev_ptr xy_offsets, dev_ptr h, dev_ptr lengths,
 			      const int nv, const int nz, const int start,
 			      const int ah_size, const int size,
-			      const int dim3, const int device,
+			      const int dim3, const int vidx, const int device,
 			      std::vector<event_t> *events)
 {
-  if (size > max_work01 or dim3 > max_work2)
+  if (size > max_work0 or dim3 > max_work1)
     report_error("Too much work for device");
   else {
     cl_int err;
@@ -565,6 +575,8 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 	status = kernel.setArg(8, start);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(9, ah_size);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(10, vidx);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
 						globalThreads, cl::NullRange,
@@ -586,9 +598,10 @@ void machine::run_cone_xy(const char name[], dev_ptr pix_buf,
 			  const float idelta_z0, const float idelta_zs,
 			  dev_ptr inv_delz, const float vox_z0,
 			  const float vox_zs, const int size, const int dim3,
-			  const int device, std::vector<event_t> *events)
+			  const int vstart, const int device,
+			  std::vector<event_t> *events)
 {
-  if (size > max_work01 or dim3 > max_work2)
+  if (size > max_work0 or dim3 > max_work1)
     report_error("Too much work for device");
   else {
     cl_int err;
@@ -632,6 +645,8 @@ void machine::run_cone_xy(const char name[], dev_ptr pix_buf,
 	status = kernel.setArg(14, vox_z0);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(15, vox_zs);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(16, vstart);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
 						globalThreads, cl::NullRange,
@@ -651,10 +666,10 @@ void machine::run_cone_ah(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
 			  const int nv, const int nz, const int start,
 			  const int xy_size, const float pzbz, const int midp,
 			  dev_ptr delta_z, dev_ptr inv_delz, dev_ptr vox_z,
-			  const int size, const int dim3, const int device,
-			  std::vector<event_t> *events)
+			  const int size, const int dim3, const int vstart,
+			  const int device, std::vector<event_t> *events)
 {
-  if (size > max_work01 or dim3 > max_work2)
+  if (size > max_work0 or dim3 > max_work1)
     report_error("Too much work for device");
   else {
     cl_int err;
@@ -698,6 +713,8 @@ void machine::run_cone_ah(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
 	status = kernel.setArg(14, inv_delz);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(15, vox_z);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(16, vstart);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
 						globalThreads, cl::NullRange,
@@ -807,6 +824,16 @@ void machine::device_free(dev_ptr data, const int device)
 {
 }
 
+int machine::device_workitems_0()
+{
+  return 1000000;
+}
+
+int machine::device_workitems_1()
+{
+  return 1000000;
+}
+
 bool machine::check_accelerator_kernel(const char name[], const int device)
 {
   return false;
@@ -816,9 +843,9 @@ void machine::run_parallel_ah(const char name[], dev_ptr pix_buf,
 			      dev_ptr vox_buf, const int vox_offset,
 			      dev_ptr xy_buff, dev_ptr xy_offsets,
 			      dev_ptr nlengths, const int nv,
-			      const int nz, const int xy_size, const int ix,
-			      const int size, const int dim3, const int device,
-			      std::vector<event_t> *events)
+			      const int nz, const int xy_size, const int start,
+			      const int size, const int dim3, const int vidx,
+			      const int device, std::vector<event_t> *events)
 {
 }
 
@@ -827,7 +854,7 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 			      dev_ptr xy_offsets, dev_ptr h, dev_ptr lengths,
 			      const int nv, const int nz, const int start,
 			      const int ah_size, const int size,
-			      const int dim3, const int device,
+			      const int dim3, const int vidx, const int device,
 			      std::vector<event_t> *events)
 {
 }
@@ -840,7 +867,8 @@ void machine::run_cone_xy(const char name[], dev_ptr pix_buf,
 			  const float idelta_z0, const float idelta_zs,
 			  dev_ptr inv_delz, const float vox_z0,
 			  const float vox_zs, const int size, const int dim3,
-			  const int device, std::vector<event_t> *events)
+			  const int vstart, const int device,
+			  std::vector<event_t> *events)
 {
 }
 
@@ -850,8 +878,8 @@ void machine::run_cone_ah(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
 			  const int nv, const int nz, const int start,
 			  const int xy_size, const float pzbz, const int midp,
 			  dev_ptr delta_z, dev_ptr inv_delz, dev_ptr vox_z,
-			  const int size, const int dim3, const int device,
-			  std::vector<event_t> *events)
+			  const int size, const int dim3, const int vstart,
+			  const int device, std::vector<event_t> *events)
 {
 }
 

@@ -46,19 +46,21 @@ namespace machine {
 			const sl_int y_size, const int z_size,
 			const int device);
   void device_free(dev_ptr data, const int device);
+  int device_workitems_0();
+  int device_workitems_1();
   bool check_accelerator_kernel(const char name[], const int device);
   void run_parallel_ah(const char name[], dev_ptr pix_buf,
 		       dev_ptr vox_buf, const int vox_offset,
 		       dev_ptr xy_buff, dev_ptr xy_offsets,
 		       dev_ptr nlengths, const int nv,
 		       const int nz, const int xy_size, const int ix,
-		       const int size, const int dim3, const int device,
-		       std::vector<event_t> *events);
+		       const int size, const int dim3, const int vidx,
+		       const int device, std::vector<event_t> *events);
   void run_parallel_xy(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
 		       dev_ptr xy_buff, dev_ptr xy_offsets, dev_ptr h,
 		       dev_ptr lengths, const int nv, const int nz,
 		       const int start, const int ah_size, const int size,
-		       const int dim3, const int device,
+		       const int dim3, const int vidx, const int device,
 		       std::vector<event_t> *events);
   void run_cone_xy(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
 		   dev_ptr xy_buff, dev_ptr xy_offsets, dev_ptr h,
@@ -66,15 +68,16 @@ namespace machine {
 		   const int ah_size, const int midp,
 		   const float idelta_z0, const float idelta_zs,
 		   dev_ptr inv_delz, const float vox_z0, const float vox_zs,
-		   const int size, const int dim3, const int device,
-		   std::vector<event_t> *events);
+		   const int size, const int dim3, const int vstart,
+		   const int device, std::vector<event_t> *events);
   void run_cone_ah(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
 		   dev_ptr xy0_buff, dev_ptr xy1_buff, dev_ptr xy_offsets,
 		   dev_ptr h, dev_ptr lengths, const int nv, const int nz,
 		   const int start, const int xy_size, const float pzbz,
 		   const int midp, dev_ptr delta_z, dev_ptr inv_delz,
 		   dev_ptr vox_z, const int size, const int dim3,
-		   const int device, std::vector<event_t> *events);
+		   const int vstart, const int device,
+		   std::vector<event_t> *events);
   void accelerator_barrier(const int device);
   void accelerator_flush(const int device);
   void accelerator_complete(const int device);

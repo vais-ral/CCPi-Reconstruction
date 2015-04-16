@@ -1246,6 +1246,8 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 #pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz,map_type) num_threads(nthreads)
     {
       int thread_id = omp_get_thread_num();
+      int worksize_0 = machine::device_workitems_0();
+      int worksize_1 = machine::device_workitems_1();
       char kernel_name[32];
       if (map_type == 2)
 	strcpy(kernel_name, "parallel_xy_z2");
@@ -1551,12 +1553,29 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 			(*(ev[ax]))[4] = ah_ev;
 			(*(ev[ax]))[5] = vox_ev;
 			//int pix_offset = (ax * nh_pixels) * nv_pixels;
-			machine::run_parallel_xy(kernel_name, pix_buf,
-						 vox_buf,
-						 ij_buff, xy_offsets, h_work,
-						 ij_work, nv_pixels, nz, cstart,
-						 ah_size, nz, csize, thread_id,
-						 ev[ax]);
+			while (csize > 0) {
+			  int cblock = worksize_1;
+			  if (csize < cblock)
+			    cblock = csize;
+			  int vsize = nz;
+			  int vstart = 0;
+			  while (vsize > 0) {
+			    int vblock = worksize_0;
+			    if (vblock > vsize)
+			      vblock = vsize;
+			    machine::run_parallel_xy(kernel_name, pix_buf,
+						     vox_buf, ij_buff,
+						     xy_offsets, h_work,
+						     ij_work, nv_pixels, nz,
+						     cstart, ah_size, vblock,
+						     cblock, vstart, thread_id,
+						     ev[ax]);
+			    vstart += vblock;
+			    vsize -= vblock;
+			  }
+			  csize -= cblock;
+			  cstart += cblock;
+			}
 		      } else
 			ev[ax] = 0;
 		    }
@@ -1609,6 +1628,8 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 #pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin, mapping) firstprivate(n_angles, nh_pixels, nv_pixels, nx, ny, nz, map_type, nthreads) num_threads(nthreads)
     {
       int thread_id = omp_get_thread_num();
+      int worksize_0 = machine::device_workitems_0();
+      int worksize_1 = machine::device_workitems_1();
       char kernel_name[32];
       if (map_type == 2)
 	strcpy(kernel_name, "parallel_ah_z2");
@@ -1859,11 +1880,31 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 		    (*(ev[ix]))[3] = pixel_ev;
 		    (*(ev[ix]))[4] = vox_ev;
 		    int vox_offset = (ix * y_step) * nz;
-		    machine::run_parallel_ah(kernel_name, pix_buf,
-					     vox_buf, vox_offset, xy_buff,
-					     xy_offsets, xy_work, nv_pixels,
-					     nz, xy_size, ix, nz, y_step,
-					     thread_id, ev[ix]);
+		    int csize = y_step;
+		    int cstart = 0;
+		    while (csize > 0) {
+		      int cblock = worksize_1;
+		      if (csize < cblock)
+			cblock = csize;
+		      int vsize = nz;
+		      int vstart = 0;
+		      while (vsize > 0) {
+			int vblock = worksize_0;
+			if (vblock > vsize)
+			  vblock = vsize;
+			machine::run_parallel_ah(kernel_name, pix_buf, vox_buf,
+						 vox_offset, xy_buff,
+						 xy_offsets, xy_work, nv_pixels,
+						 nz, xy_size,
+						 (ix * y_step) + cstart, vblock,
+						 cblock, vstart, thread_id,
+						 ev[ix]);
+			vstart += vblock;
+			vsize -= vblock;
+		      }
+		      csize -= cblock;
+		      cstart += cblock;
+		    }
 		  }
 		  machine::accelerator_barrier(thread_id);
 		  for (int ix = 0; ix < x_step; ix++)

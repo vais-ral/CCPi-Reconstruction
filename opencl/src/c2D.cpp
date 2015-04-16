@@ -1145,6 +1145,8 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 #pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, voxel_size, grid_offset) firstprivate(n_angles, n_h, n_v, nx_voxels, ny_voxels, nz_voxels, nthreads) num_threads(nthreads)
   {
     int thread_id = omp_get_thread_num();
+    int worksize_0 = machine::device_workitems_0();
+    int worksize_1 = machine::device_workitems_1();
     const char kernel_name[] = "cone_xy_z";
     if (!machine::check_accelerator_kernel(kernel_name, thread_id))
       report_error("forward kernel problem");
@@ -1410,13 +1412,56 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 					  &((*(ev[ax]))[3]));
 		  (*(ev[ax]))[4] = ah_ev;
 		  (*(ev[ax]))[5] = vox_ev;
-		  //int pix_offset = (ax * n_h) * n_v;
-		  machine::run_cone_xy(kernel_name, pix_buf, vox_buf,
-				       ij_buff, xy_offsets, h_work,
-				       ij_work, n_v, nz_voxels, cstart,
-				       ah_size, mid, idelta_z0, idelta_zs,
-				       dp_inv_z, vox_z0, vox_zs, n_v, csize,
-				       thread_id, ev[ax]);
+		  // Todo - could just make it a 3D grid with only
+		  // 2 calls, one for (csize / worksize1) * worksize1
+		  // and the other for the remainder.
+		  while (csize > 0) {
+		    int cblock = worksize_1;
+		    if (csize < cblock)
+		      cblock = csize;
+		    if (n_v > worksize_0) {
+		      if (mid > worksize_0) {
+			int vsize = n_v;
+			int vstart = 0;
+			while (vsize > 0) {
+			  int vblock = worksize_0;
+			  if (vblock > vsize)
+			    vblock = vsize;
+			  machine::run_cone_xy(kernel_name, pix_buf, vox_buf,
+					       ij_buff, xy_offsets, h_work,
+					       ij_work, n_v, nz_voxels, cstart,
+					       ah_size, mid, idelta_z0,
+					       idelta_zs, dp_inv_z, vox_z0,
+					       vox_zs, vblock, cblock, vstart,
+					       thread_id, ev[ax]);
+			  vstart += vblock;
+			  vsize -= vblock;
+			}
+		      } else {
+			// Todo - could be smarter with upper/lower cone algs
+			machine::run_cone_xy(kernel_name, pix_buf, vox_buf,
+					     ij_buff, xy_offsets, h_work,
+					     ij_work, n_v, nz_voxels, cstart,
+					     ah_size, mid, idelta_z0, idelta_zs,
+					     dp_inv_z, vox_z0, vox_zs, mid,
+					     cblock, 0, thread_id, ev[ax]);
+			machine::run_cone_xy(kernel_name, pix_buf, vox_buf,
+					     ij_buff, xy_offsets, h_work,
+					     ij_work, n_v, nz_voxels, cstart,
+					     ah_size, mid, idelta_z0, idelta_zs,
+					     dp_inv_z, vox_z0, vox_zs, mid,
+					     cblock, mid, thread_id, ev[ax]);
+		      }
+		    } else
+		      machine::run_cone_xy(kernel_name, pix_buf, vox_buf,
+					   ij_buff, xy_offsets, h_work,
+					   ij_work, n_v, nz_voxels, cstart,
+					   ah_size, mid, idelta_z0, idelta_zs,
+					   dp_inv_z, vox_z0, vox_zs, n_v,
+					   cblock, 0, thread_id, ev[ax]);
+		    csize -= cblock;
+		    cstart += cblock;
+		  }
 		} else
 		  ev[ax] = 0;
 	      }
@@ -1480,6 +1525,8 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 #pragma omp parallel shared(h_pixels, v_pixels, pixels, voxels, angles, vox_size, vox_origin) firstprivate(n_angles, n_h, n_v, nx, ny, nz, nthreads) num_threads(nthreads)
   {
     int thread_id = omp_get_thread_num();
+    int worksize_0 = machine::device_workitems_0();
+    int worksize_1 = machine::device_workitems_1();
     const char kernel_name[] = "cone_ah_z";
     if (!machine::check_accelerator_kernel(kernel_name, thread_id))
       report_error("backward kernel problem");
@@ -1748,12 +1795,53 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 		    (*(ev[ix]))[5] = pixel_ev;
 		    (*(ev[ix]))[6] = vox_ev;
 		    //int vox_offset = (ix * y_step) * nz;
-		    machine::run_cone_ah(kernel_name, pix_buf, vox_buf,
-					 xy0_buff, xy1_buff, xy_offsets,
-					 xy_work, h_work, n_v, nz, cstart,
-					 xy_size, pzbz, mid, dp_del_z,
-					 dp_inv_z, dp_vox_z, n_v, csize,
-					 thread_id, ev[ix]);
+		    while (csize > 0) {
+		      int cblock = worksize_1;
+		      if (csize < cblock)
+			cblock = csize;
+		      if (n_v > worksize_0) {
+			if (mid > worksize_0) {
+			  int vsize = n_v;
+			  int vstart = 0;
+			  while (vsize > 0) {
+			    int vblock = worksize_0;
+			    if (vblock > vsize)
+			      vblock = vsize;
+			    machine::run_cone_ah(kernel_name, pix_buf, vox_buf,
+						 xy0_buff, xy1_buff, xy_offsets,
+						 xy_work, h_work, n_v, nz,
+						 cstart, xy_size, pzbz, mid,
+						 dp_del_z, dp_inv_z, dp_vox_z,
+						 vblock, cblock, vstart,
+						 thread_id, ev[ix]);
+			    vstart += vblock;
+			    vsize -= vblock;
+			  }
+			} else {
+			  // Todo - could be smarter with upper/lower cone algs
+			  machine::run_cone_ah(kernel_name, pix_buf, vox_buf,
+					       xy0_buff, xy1_buff, xy_offsets,
+					       xy_work, h_work, n_v, nz, cstart,
+					       xy_size, pzbz, mid, dp_del_z,
+					       dp_inv_z, dp_vox_z, mid, csize,
+					       0, thread_id, ev[ix]);
+			  machine::run_cone_ah(kernel_name, pix_buf, vox_buf,
+					       xy0_buff, xy1_buff, xy_offsets,
+					       xy_work, h_work, n_v, nz, cstart,
+					       xy_size, pzbz, mid, dp_del_z,
+					       dp_inv_z, dp_vox_z, mid, cblock,
+					       mid, thread_id, ev[ix]);
+			}
+		      } else
+			machine::run_cone_ah(kernel_name, pix_buf, vox_buf,
+					     xy0_buff, xy1_buff, xy_offsets,
+					     xy_work, h_work, n_v, nz, cstart,
+					     xy_size, pzbz, mid, dp_del_z,
+					     dp_inv_z, dp_vox_z, n_v, cblock,
+					     0, thread_id, ev[ix]);
+		      csize -= cblock;
+		      cstart += cblock;
+		    }
 		  } else
 		    ev[ix] = 0;
 		}
