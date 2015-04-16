@@ -582,10 +582,11 @@ void machine::run_cone_xy(const char name[], dev_ptr pix_buf,
 			  dev_ptr vox_buf, dev_ptr xy_buff,
 			  dev_ptr xy_offsets, dev_ptr h, dev_ptr lengths,
 			  const int nv, const int nz, const int start,
-			  const int ah_size, const float pzbz, const int midp,
-			  dev_ptr delta_z, dev_ptr inv_delz, dev_ptr vox_z,
-			  const int size, const int dim3, const int device,
-			  std::vector<event_t> *events)
+			  const int ah_size, const int midp,
+			  const float idelta_z0, const float idelta_zs,
+			  dev_ptr inv_delz, const float vox_z0,
+			  const float vox_zs, const int size, const int dim3,
+			  const int device, std::vector<event_t> *events)
 {
   if (size > max_work01 or dim3 > max_work2)
     report_error("Too much work for device");
@@ -620,15 +621,17 @@ void machine::run_cone_xy(const char name[], dev_ptr pix_buf,
       if (status == CL_SUCCESS)
 	status = kernel.setArg(9, ah_size);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(10, pzbz);
+	status = kernel.setArg(10, midp);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(11, midp);
+	status = kernel.setArg(11, idelta_z0);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(12, delta_z);
+	status = kernel.setArg(12, idelta_zs);
       if (status == CL_SUCCESS)
 	status = kernel.setArg(13, inv_delz);
       if (status == CL_SUCCESS)
-	status = kernel.setArg(14, vox_z);
+	status = kernel.setArg(14, vox_z0);
+      if (status == CL_SUCCESS)
+	status = kernel.setArg(15, vox_zs);
       if (status == CL_SUCCESS) {
 	if (queue[device]->enqueueNDRangeKernel(kernel, cl::NullRange,
 						globalThreads, cl::NullRange,
@@ -710,7 +713,11 @@ void machine::run_cone_ah(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
 
 void machine::accelerator_barrier(const int device)
 {
+#if defined(CL_VERSION_1_2)
+  queue[device]->enqueueBarrierWithWaitList();
+#else
   queue[device]->enqueueBarrier();
+#endif // CL_VERSION
 }
 
 void machine::accelerator_flush(const int device)
@@ -825,12 +832,14 @@ void machine::run_parallel_xy(const char name[], dev_ptr pix_buf,
 {
 }
 
-void machine::run_cone_xy(const char name[], dev_ptr pix_buf, dev_ptr vox_buf,
-			  dev_ptr xy_buff, dev_ptr xy_offsets, dev_ptr h,
-			  dev_ptr lengths, const int nv, const int nz,
-			  const int start, const int ah_size, const float pzbz,
-			  const int midp, dev_ptr delta_z, dev_ptr inv_delz,
-			  dev_ptr vox_z, const int size, const int dim3,
+void machine::run_cone_xy(const char name[], dev_ptr pix_buf,
+			  dev_ptr vox_buf, dev_ptr xy_buff,
+			  dev_ptr xy_offsets, dev_ptr h, dev_ptr lengths,
+			  const int nv, const int nz, const int start,
+			  const int ah_size, const int midp,
+			  const float idelta_z0, const float idelta_zs,
+			  dev_ptr inv_delz, const float vox_z0,
+			  const float vox_zs, const int size, const int dim3,
 			  const int device, std::vector<event_t> *events)
 {
 }

@@ -181,27 +181,33 @@ __kernel void cone_xy_z(__global float *pixels,
 			const __global int *h,
 			const __global int *lengths,
 			const int nv, const int nz, const int start,
-			const int ah_size, const float pzbz,
-			const int midp, const __global float *delta_z,
+			const int ah_size, const int midp,
+			const float idelta_z0, const float idelta_zs,
 			const __global float *inv_delz,
-			const global float *vox_z)
+			const float vox_z0, const float vox_zs)
 {
   size_t id = get_global_id(0); // v
   size_t jobid = get_global_id(1);
   // pixel ptr should be ah column or needs an offset
+  const float ivstep = 1.0 / vox_zs;
   float pix = 0.0;
   int n = lengths[start + jobid];
   int pos = (start + jobid) * ah_size;
   // hopefully this is -(1) + 0 or -0 + 1
   int vshift = -(id < midp) + (id >= midp);
   int zshift = (id >= midp);
-  float del_z = delta_z[id];
+  float del_z = (idelta_z0 + ((float)id) * idelta_zs) * ivstep;
+  const float pzbz = - vox_z0 * ivstep;
+  // modifying to remove this didn't seem to help
   float inv_z = inv_delz[id];
+  const float inv_zs = vox_zs * inv_z;
+  const float vox_z1 = vox_z0 * inv_z + ((float)zshift) * inv_zs;
   float alpha_m0 = alpha_xy[pos];
   for (int m = 1; m < n; m++) {
-    int k = (int)(pzbz + alpha_m0 * del_z);
+    const float kf = trunc(pzbz + alpha_m0 * del_z);
+    int k = (int)kf;
     float alpha_m1 = alpha_xy[pos + m];
-    float alpha_z = vox_z[k + zshift] * inv_z;
+    float alpha_z = vox_z1 + kf * inv_zs;
     float min_z = fmin(alpha_z, alpha_m1);
     pix += (voxels[index[pos + m] + k] * (min_z - alpha_m0)
 	    + voxels[index[pos + m] + k + vshift] * (alpha_m1 - min_z));

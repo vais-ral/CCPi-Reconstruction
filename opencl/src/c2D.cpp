@@ -1160,36 +1160,19 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 	}
       }
 
-      //const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
-      const recon_type pzbz = recon_type((source_z
-					  - grid_offset[2]) / voxel_size[2]);
-      recon_1d delta_z(n_v);
-      for (int i = 0; i < n_v; i++)
-	delta_z[i] = v_pixels[i] - source_z;
+      recon_type idelta_z0 = (v_pixels[0] - source_z);
+      recon_type idelta_zs = (v_pixels[1] - v_pixels[0]);
+      recon_type vox_z0 = grid_offset[2] - source_z;
+      recon_type vox_zs = voxel_size[2];
       recon_1d inv_delz(n_v);
       for (int i = 0; i < n_v; i++)
-	inv_delz[i] = 1.0 / delta_z[i];
-      for (int i = 0; i < n_v; i++)
-	delta_z[i] /= voxel_size[2];
-      recon_1d vox_z(nz_voxels + 32);
-      for (int i = 0; i <= nz_voxels; i++)
-	vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
+	inv_delz[i] = 1.0 / (v_pixels[i] - source_z);
 
-      dev_ptr dp_del_z = machine::device_allocate(sl_int(n_v)
-						  * sizeof(float),
-						  true, thread_id);
       dev_ptr dp_inv_z = machine::device_allocate(sl_int(n_v)
-						  * sizeof(float),
-						  true, thread_id);
-      dev_ptr dp_vox_z = machine::device_allocate(sl_int(nz_voxels + 32)
-						  * sizeof(float),
-						  true, thread_id);
-      machine::copy_to_device(delta_z.data(), dp_del_z,
-			      n_v * sizeof(float), thread_id);
+                                                  * sizeof(float),
+                                                  true, thread_id);
       machine::copy_to_device(inv_delz.data(), dp_inv_z,
 			      n_v * sizeof(float), thread_id);
-      machine::copy_to_device(vox_z.data(), dp_vox_z,
-			      (nz_voxels + 32) * sizeof(float), thread_id);
 
       const real pixel_step = (h_pixels[1] - h_pixels[0]);
       const real ipix_step = 1.0 / pixel_step;
@@ -1431,8 +1414,8 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 		  machine::run_cone_xy(kernel_name, pix_buf, vox_buf,
 				       ij_buff, xy_offsets, h_work,
 				       ij_work, n_v, nz_voxels, cstart,
-				       ah_size, pzbz, mid, dp_del_z,
-				       dp_inv_z, dp_vox_z, n_v, csize,
+				       ah_size, mid, idelta_z0, idelta_zs,
+				       dp_inv_z, vox_z0, vox_zs, n_v, csize,
 				       thread_id, ev[ax]);
 		} else
 		  ev[ax] = 0;
@@ -1466,9 +1449,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
       machine::device_free(xy_offsets, thread_id);
       machine::device_free(vox_buf, thread_id);
       machine::device_free(pix_buf, thread_id);
-      machine::device_free(dp_vox_z, thread_id);
       machine::device_free(dp_inv_z, thread_id);
-      machine::device_free(dp_del_z, thread_id);
       machine::accelerator_complete(thread_id);
     }
   }
