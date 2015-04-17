@@ -191,7 +191,6 @@ __kernel void cone_xy_z(__global float *pixels,
   size_t jobid = get_global_id(1);
   // pixel ptr should be ah column or needs an offset
   const float ivstep = 1.0 / vox_zs;
-  float pix = 0.0;
   int n = lengths[start + jobid];
   int pos = (start + jobid) * ah_size;
   // hopefully this is -(1) + 0 or -0 + 1
@@ -204,17 +203,23 @@ __kernel void cone_xy_z(__global float *pixels,
   const float inv_zs = vox_zs * inv_z;
   const float vox_z1 = vox_z0 * inv_z + ((float)zshift) * inv_zs;
   float alpha_m0 = alpha_xy[pos];
+  float pix1 = 0.0;
+  float pix2 = 0.0;
   for (int m = 1; m < n; m++) {
     const float kf = trunc(pzbz + alpha_m0 * del_z);
     int k = (int)kf;
     float alpha_m1 = alpha_xy[pos + m];
     float alpha_z = vox_z1 + kf * inv_zs;
-    float min_z = fmin(alpha_z, alpha_m1);
-    pix += (voxels[index[pos + m] + k] * (min_z - alpha_m0)
-	    + voxels[index[pos + m] + k + vshift] * (alpha_m1 - min_z));
+    int kstep = (alpha_z < alpha_m1);
+    float vox1 = voxels[index[pos + m] + k];
+    pix1 += vox1 * alpha_z;
+    pix2 -= vox1 * alpha_m0;
+    float vox2 = (kstep) ? voxels[index[pos + m] + k + vshift] : vox1;
+    pix1 -= vox2 * alpha_z;
+    pix2 += vox2 * alpha_m1;
     alpha_m0 = alpha_m1;
   }
-  pixels[h[start + jobid] * nv + id] += pix;
+  pixels[h[start + jobid] * nv + id] += pix1 + pix2;
 }
 
 __kernel void cone_ah_z(const __global float *pixels, 

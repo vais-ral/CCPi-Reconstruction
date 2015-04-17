@@ -252,6 +252,7 @@ void machine::init_accelerator()
 	      ok = false;
 	    } else {
 	      err = program.build(devices);
+	      //"-cl-mad-enable -cl-fast-relaxed-math -cl-strict-aliasing"
 	      if (err != CL_SUCCESS) {
 		if (err == CL_BUILD_PROGRAM_FAILURE) {
 		  std::string str = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]);
