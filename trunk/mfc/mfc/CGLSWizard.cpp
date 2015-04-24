@@ -101,7 +101,7 @@ bool CGLSWizard::main_loop()
 		ok = false;
 		bool phantom = false;
 		real rotation_centre = -1.0;
-		if (device->setup_experimental_geometry(get_data_path(), get_data_name(), rotation_centre, phantom)) {
+		if (device->setup_experimental_geometry(get_data_path(), get_data_name(), rotation_centre, resolution, phantom)) {
 		  int nx_voxels = 0;
 		  int ny_voxels = 0;
 		  int maxz_voxels = 0;
