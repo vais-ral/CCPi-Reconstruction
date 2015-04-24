@@ -162,12 +162,14 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_TIMER;BOOST_DISABLE_ASSERTS;WIN32;_WINDOWS;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USE_TIMER;HAS_TIFF;BOOST_DISABLE_ASSERTS;WIN32;_WINDOWS;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>\Users\bgs42\Projects\boost_1_55_0;\Users\bgs42\Projects\cgls;\Users\bgs42\Projects\cgls\tiff-4.0.3\libtiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <AssemblerListingLocation>$(IntDir)\asm\</AssemblerListingLocation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -194,6 +196,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\algorithms.hpp" />
+    <ClInclude Include="..\..\src\allocator.hpp" />
     <ClInclude Include="..\..\src\base_types.hpp" />
     <ClInclude Include="..\..\src\blas.hpp" />
     <ClInclude Include="..\..\src\cone_b.hpp" />
