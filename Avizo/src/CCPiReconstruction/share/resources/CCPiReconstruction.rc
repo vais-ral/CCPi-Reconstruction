@@ -1,0 +1,13 @@
+################################################################################
+#
+# Resource file of custom package CCPi
+#
+################################################################################
+
+
+module -name     "CGLS" \
+       -primary  "HxUniformScalarField3" \
+       -class    "CGLS_recon" \
+       -category "Local" \
+       -package  "CCPi" \
+       -icon     "TVDefCompute"
