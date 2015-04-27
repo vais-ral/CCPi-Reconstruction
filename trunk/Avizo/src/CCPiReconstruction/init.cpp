@@ -7,7 +7,7 @@ extern "C"
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-void amirapackage_CCPi_init()
+void amirapackage_CCPiReconstruction_init()
 {
     static bool isInitialized = false;
     if (isInitialized)
@@ -24,7 +24,7 @@ extern "C"
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-void amirapackage_CCPi_finish()
+void amirapackage_CCPiReconstruction_finish()
 {
     static bool isFinished = false;
     if (isFinished)
@@ -47,10 +47,10 @@ BOOL WINAPI DllMain(
     switch (fdwReason)
     {
     case DLL_PROCESS_ATTACH:
-        amirapackage_CCPi_init();
+        amirapackage_CCPiReconstruction_init();
         break;
     case DLL_PROCESS_DETACH:
-        amirapackage_CCPi_finish();
+        amirapackage_CCPiReconstruction_finish();
         break;
     default:
         ;
@@ -62,11 +62,11 @@ BOOL WINAPI DllMain(
 #endif
 
 #if defined(__GNUC__)
-void __attribute__((constructor)) soconstructor_CCPi() {
-    amirapackage_CCPi_init();
+void __attribute__((constructor)) soconstructor_CCPiReconstruction() {
+    amirapackage_CCPiReconstruction_init();
 }
 
-void __attribute__((destructor)) sodestructor_CCPi() {
-    amirapackage_CCPi_finish();
+void __attribute__((destructor)) sodestructor_CCPiReconstruction() {
+    amirapackage_CCPiReconstruction_finish();
 }
 #endif
