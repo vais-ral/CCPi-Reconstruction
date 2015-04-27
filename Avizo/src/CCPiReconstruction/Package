@@ -1,4 +1,4 @@
-set PACKAGE {CCPi}
+set PACKAGE {CCPiReconstruction}
 
 set LIBS {
     hxplot hxtime hxsurface hxcolor hxfield
@@ -6,7 +6,7 @@ set LIBS {
 }
 
 set SHARE {
-    share/resources/CCPi.rc
+    share/resources/CCPiReconstruction.rc
 }
 
 set INCLUDES {

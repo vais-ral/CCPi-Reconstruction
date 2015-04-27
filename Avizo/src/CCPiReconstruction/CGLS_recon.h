@@ -12,7 +12,7 @@
 
 #include "api.h"
 
-class CCPI_API CGLS_recon : public HxCompModule
+class CCPIRECONSTRUCTION_API CGLS_recon : public HxCompModule
 {
   HX_HEADER(CGLS_recon);
 
@@ -20,7 +20,7 @@ class CCPI_API CGLS_recon : public HxCompModule
 
   CGLS_recon();
   ~CGLS_recon();
-  /** Connection to masking data */
+
   HxConnection rotationAngle;
   HxConnection pixelSize;
   HxConnection imageKey;
