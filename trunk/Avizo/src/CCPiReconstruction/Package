@@ -1,0 +1,34 @@
+set PACKAGE {CCPi}
+
+set LIBS {
+    hxplot hxtime hxsurface hxcolor hxfield
+    hxcore amiramesh mclib oiv tcl qt
+}
+
+set SHARE {
+    share/resources/CCPi.rc
+}
+
+set INCLUDES {
+    ../../../src
+}
+
+set SRC {
+    CGLS_recon.cpp
+    ../../../src/results.cpp
+    ../../../src/instruments.cpp
+    ../../../src/parallel.cpp
+    ../../../src/cone.cpp
+    ../../../src/diamond.cpp
+    ../../../src/xtek.cpp
+    ../../../src/cgls.cpp
+    ../../../src/p2D.cpp
+    ../../../src/tv_reg.cpp
+    ../../../src/tv_core.cpp
+    ../../../src/tiff.cpp
+    ../../../src/timer.cpp
+    ../../../src/utils.cpp
+    ../../../src/mpi.cpp
+    ../../../src/c2D.cpp
+    ../../../src/voxels.cpp
+}
