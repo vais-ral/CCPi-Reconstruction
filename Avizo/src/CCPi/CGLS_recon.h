@@ -20,7 +20,10 @@ class CCPI_API CGLS_recon : public HxCompModule
 
   CGLS_recon();
   ~CGLS_recon();
-
+  /** Connection to masking data */
+  HxConnection rotationAngle;
+  HxConnection pixelSize;
+  HxConnection imageKey;
   HxPortDoIt portAction;
   HxPortIntSlider iterations;
   HxPortIntSlider resolution;

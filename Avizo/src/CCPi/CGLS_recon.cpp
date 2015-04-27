@@ -26,6 +26,9 @@ HX_INIT_CLASS(CGLS_recon,HxCompModule)
 
 CGLS_recon::CGLS_recon() :
   HxCompModule(HxUniformScalarField3::getClassTypeId()),
+  rotationAngle(this,"rotation angle",QApplication::translate("CGLS_recon", "Rotation Angle")),
+  pixelSize(this,"pixel size",QApplication::translate("CGLS_recon", "Pixel Size(x,y)")),
+  imageKey(this,"image key",QApplication::translate("CGLS_recon", "Image Key")),
   portAction(this, "action", QApplication::translate("CGLS_recon", "Action")),
   iterations(this, "number of iterations",
 	     QApplication::translate("CGLS_recon", "Iterations")),
@@ -34,6 +37,10 @@ CGLS_recon::CGLS_recon() :
   beam_harden(this, "beam harden",
 	      QApplication::translate("CGLS_recon", "Beam Hardening"))
 {
+  rotationAngle.addType(HxUniformScalarField3::getClassTypeId());
+  pixelSize.addType(HxUniformScalarField3::getClassTypeId());
+  imageKey.addType(HxUniformScalarField3::getClassTypeId());
+
   portAction.setLabel(0,"DoIt");
   iterations.setMinMax(5, 30);
   iterations.setValue(20);
