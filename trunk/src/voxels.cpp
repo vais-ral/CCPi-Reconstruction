@@ -98,7 +98,6 @@ void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
 	if (device->read_scans(path, z_data_offset,
 			       z_data_size, first, phantom)) {
 	  voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
-	  init_data(voxels, nx_voxels, ny_voxels, nz_voxels);
 	  if (beam_harden)
 	    device->apply_beam_hardening();
 	  ok = algorithm->reconstruct(device, voxels,
@@ -180,7 +179,6 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	if (device->read_scans(pixels, z_data_offset, z_data_size)) {
 	  voxels =
 	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
-	  init_data(*voxels, nx_voxels, ny_voxels, nz_voxels);
 	  if (beam_harden)
 	    device->apply_beam_hardening();
 	  ok = algorithm->reconstruct(device, *voxels,
@@ -270,7 +268,6 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	if (device->read_scans(pixels, z_data_offset, z_data_size)) {
 	  voxels =
 	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
-	  init_data(*voxels, nx_voxels, ny_voxels, nz_voxels);
 	  if (beam_harden)
 	    device->apply_beam_hardening();
 	  ok = algorithm->reconstruct(device, *voxels,
