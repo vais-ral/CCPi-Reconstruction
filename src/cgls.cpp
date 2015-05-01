@@ -29,7 +29,6 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
   // Prepare for CG iteration.
   voxel_data d(boost::extents[sz[0]][sz[1]][sz[2]],
 	       boost::c_storage_order());
-  init_data(d, nx, ny, nz);
   initialise_progress(2 * iterations + 1, "CGLS iterating...");
   device->backward_project(d, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
@@ -48,7 +47,6 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
     // Update x and r vectors.
     {
       pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
-      init_data(Ad, n_angles, n_h, n_v);
       device->forward_project(Ad, d, origin, voxel_size,
 			      (int)sz[0], (int)sz[1], (int)sz[2]);
       pixel_update(Ad, b, n_angles, n_v, n_h, d, voxels, nx, ny, nz, normr2);
@@ -57,7 +55,6 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
     {
       voxel_data s(boost::extents[sz[0]][sz[1]][sz[2]],
 		   boost::c_storage_order());
-      init_data(s, nx, ny, nz);
       device->backward_project(b, s, origin, voxel_size,
 			       (int)sz[0], (int)sz[1], (int)sz[2]);
 
@@ -184,7 +181,6 @@ bool CCPi::bi_cgls_3d::reconstruct(instrument *device, voxel_data &voxels,
   // Prepare for CG iteration.
   voxel_data r0(boost::extents[sz[0]][sz[1]][sz[2]],
 		boost::c_storage_order());
-  init_data(r0, nx, ny, nz);
   initialise_progress(2 * get_iterations() + 1, "BiCGLS iterating...");
   device->backward_project(r0, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
@@ -208,7 +204,6 @@ bool CCPi::bi_cgls_3d::reconstruct(instrument *device, voxel_data &voxels,
   for (int iter = 0; iter < get_iterations(); iter++) {
     iter_time.reset();
     pixel_data q(boost::extents[n_angles][n_h][n_v]);
-    init_data(q, n_angles, n_h, n_v);
     //pixel_data qt(boost::extents[n_angles][n_h][n_v]);
     //init_data(qt, n_angles, n_h, n_v);
     device->forward_project(q, p0, origin, voxel_size,
@@ -218,7 +213,6 @@ bool CCPi::bi_cgls_3d::reconstruct(instrument *device, voxel_data &voxels,
     update_progress(2 * iter + 2);
     voxel_data vq(boost::extents[sz[0]][sz[1]][sz[2]],
 		  boost::c_storage_order());
-    init_data(vq, nx, ny, nz);
     //voxel_data vqt(boost::extents[sz[0]][sz[1]][sz[2]],
     //	  boost::c_storage_order());
     //init_data(vqt, nx, ny, nz);
@@ -271,7 +265,6 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
   // Prepare for CG iteration.
   voxel_data r0(boost::extents[sz[0]][sz[1]][sz[2]],
 		boost::c_storage_order());
-  init_data(r0, nx, ny, nz);
   initialise_progress(2 * get_iterations() + 1, "BiCGSTABLS iterating...");
   device->backward_project(r0, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
@@ -299,7 +292,6 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
     scal_xby(r, beta, p0, nx, ny, nz);
     sum_axpy(- beta * omega, v0, p0, nx, ny, nz);
     pixel_data pv(boost::extents[n_angles][n_h][n_v]);
-    init_data(pv, n_angles, n_h, n_v);
     device->forward_project(pv, p0, origin, voxel_size,
 			    (int)sz[0], (int)sz[1], (int)sz[2]);
     init_data(v0, nx, ny, nz);
@@ -317,7 +309,6 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
 			    (int)sz[0], (int)sz[1], (int)sz[2]);
     voxel_data t(boost::extents[sz[0]][sz[1]][sz[2]],
 		 boost::c_storage_order());
-    init_data(t, nx, ny, nz);
     device->backward_project(t, pv, origin, voxel_size,
 			     (int)sz[0], (int)sz[1], (int)sz[2]);
     omega = norm_voxels(t, s, nx, ny, nz) / norm_voxels(t, nx, ny, nz);
