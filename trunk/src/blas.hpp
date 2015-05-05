@@ -16,6 +16,20 @@ inline void init_data(boost::multi_array_ref<real_type, 3> &x,
 }
 
 template <class real_type>
+inline void clamp_min(boost::multi_array_ref<real_type, 3> &y, const real m,
+		      const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // clamp min value of y, y = max(y, m)
+  real_type minv = real_type(m);
+#pragma omp parallel for shared(y) firstprivate(nx, ny, nz, minv) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++)
+      yptr[j] = std::max(yptr[j], minv);
+  }
+}
+
+template <class real_type>
 inline void scal_y(const real beta, boost::multi_array_ref<real_type, 3> &y,
 		   const sl_int nx, const sl_int ny, const sl_int nz)
 {
