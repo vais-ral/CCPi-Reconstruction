@@ -6,6 +6,7 @@
 #include "timer.hpp"
 #include "ui_calls.hpp"
 #include "blas.hpp"
+#include "cgls.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false

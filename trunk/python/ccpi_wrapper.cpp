@@ -10,6 +10,7 @@
 #include "algorithms.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
+#include "cgls.hpp"
 
 using namespace boost::python;
 
