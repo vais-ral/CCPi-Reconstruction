@@ -8,6 +8,8 @@
 #include "algorithms.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
+#include "cgls.hpp"
+#include "tv_reg.hpp"
 
 int main()
 {

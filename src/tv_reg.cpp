@@ -4,6 +4,8 @@
 #include "algorithms.hpp"
 #include "blas.hpp"
 #include "ui_calls.hpp"
+#include "cgls.hpp"
+#include "tv_reg.hpp"
 
 // driver routine designed to initialise from CGLS
 bool CCPi::tv_regularization::reconstruct(instrument *device,

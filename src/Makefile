@@ -25,9 +25,10 @@ $(OBJECTS): base_types.hpp allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
-	mpi.hpp voxels.hpp
+	mpi.hpp voxels.hpp cgls.hpp tv_reg.hpp
 
-cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp blas.hpp
+cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp\
+	cgls.hpp blas.hpp
 
 instruments.o: instruments.cpp instruments.hpp ui_calls.hpp
 
@@ -42,9 +43,11 @@ xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp ui_calls.hpp
 
 results.o: results.cpp results.hpp tiff.hpp mpi.hpp ui_calls.hpp
 
-tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp blas.hpp
+tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp blas.hpp \
+	tv_reg.hpp cgls.hpp
 
-tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
+tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp \
+	tv_reg.hpp
 
 p2D.o: p2D.cpp instruments.hpp ui_calls.hpp
 
