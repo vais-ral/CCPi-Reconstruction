@@ -103,15 +103,7 @@ void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
 	  ok = algorithm->reconstruct(device, voxels,
 				      voxel_origin, voxel_size);
 	  if (ok) {
-	    // truncate negative values
-	    for (int i = 0; i < nx_voxels; i++) {
-	      for (int j = 0; j < ny_voxels; j++) {
-		for (int k = 0; k < nz_voxels; k++) {
-		  if (voxels[i][j][k] < 0.0)
-		    voxels[i][j][k] = 0.0;
-		}
-	      }
-	    }
+	    clamp_min(voxels, 0.0, nx_voxels, ny_voxels, nz_voxels);
 	    CCPi::write_results(output_name, voxels, full_vox_origin,
 				voxel_size, block_offset, maxz_voxels,
 				write_format, clamp_output);
@@ -185,14 +177,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
 				      voxel_origin, voxel_size);
 	  if (ok) {
 	    // truncate negative values
-	    for (int i = 0; i < nx_voxels; i++) {
-	      for (int j = 0; j < ny_voxels; j++) {
-		for (int k = 0; k < nz_voxels; k++) {
-		  if ((*voxels)[i][j][k] < 0.0)
-		    (*voxels)[i][j][k] = 0.0;
-		}
-	      }
-	    }
+	    clamp_min(*voxels, 0.0, nx_voxels, ny_voxels, nz_voxels);
 	  }
 	} else
 	  ok = false;
@@ -274,14 +259,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
 				      voxel_origin, voxel_size);
 	  if (ok) {
 	    // truncate negative values
-	    for (int i = 0; i < nx_voxels; i++) {
-	      for (int j = 0; j < ny_voxels; j++) {
-		for (int k = 0; k < nz_voxels; k++) {
-		  if ((*voxels)[i][j][k] < 0.0)
-		    (*voxels)[i][j][k] = 0.0;
-		}
-	      }
-	    }
+	    clamp_min(*voxels, 0.0, nx_voxels, ny_voxels, nz_voxels);
 	  }
 	} else
 	  ok = false;
