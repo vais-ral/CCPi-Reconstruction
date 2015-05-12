@@ -7,7 +7,7 @@
 namespace CCPi {
 
   enum algorithms { alg_FDK, alg_CGLS, alg_TVreg, alg_BiCGLS, alg_BiCGSTABLS,
-		    alg_landweber, alg_MLEM };
+		    alg_landweber, alg_MLEM, alg_SIRT };
 
   class reconstruction_alg {
   public:
