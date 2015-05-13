@@ -25,7 +25,7 @@ $(OBJECTS): base_types.hpp allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
-	mpi.hpp voxels.hpp cgls.hpp tv_reg.hpp
+	mpi.hpp voxels.hpp cgls.hpp tv_reg.hpp landweber.hpp mlem.hpp sirt.hpp
 
 cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp\
 	cgls.hpp blas.hpp

@@ -10,6 +10,9 @@
 #include "voxels.hpp"
 #include "cgls.hpp"
 #include "tv_reg.hpp"
+#include "landweber.hpp"
+#include "mlem.hpp"
+#include "sirt.hpp"
 
 int main()
 {
@@ -49,6 +52,8 @@ int main()
   const real l = 6930;
   const real mu = 0.5;
   const real tv_reg_constraint = 3;
+  // Todo - what should this be?
+  const real lambda = 0.1;
   bool setup_ok = true;
   // Todo - get stuff rather than the above test defaults here
   switch (device) {
@@ -74,6 +79,15 @@ int main()
       recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
     else
       recon_algorithm = new CCPi::cgls_3d(niterations);
+    break;
+  case CCPi::alg_landweber:
+    recon_algorithm = new CCPi::landweberLS(niterations, lambda);
+    break;
+  case CCPi::alg_MLEM:
+    recon_algorithm = new CCPi::mlem(niterations);
+    break;
+  case CCPi::alg_SIRT:
+    recon_algorithm = new CCPi::sirt(niterations);
     break;
   case CCPi::alg_TVreg:
     recon_algorithm = new CCPi::tv_regularization(alpha, tau, l, mu,

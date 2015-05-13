@@ -55,3 +55,8 @@ bool CCPi::landweberLS::reconstruct(instrument *device, voxel_data &voxels,
   }
   return true;
 }
+
+bool CCPi::landweberLS::supports_blocks() const
+{
+  return false;
+}

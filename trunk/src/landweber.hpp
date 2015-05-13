@@ -10,6 +10,7 @@ namespace CCPi {
 
     bool reconstruct(class instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
+    bool supports_blocks() const;
 
   protected:
     int get_iterations() const;
