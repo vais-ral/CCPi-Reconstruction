@@ -78,3 +78,8 @@ bool CCPi::sirt::reconstruct(instrument *device, voxel_data &voxels,
   }
   return true;
 }
+
+bool CCPi::sirt::supports_blocks() const
+{
+  return false;
+}

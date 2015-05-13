@@ -72,3 +72,8 @@ bool CCPi::mlem::reconstruct(instrument *device, voxel_data &voxels,
   }
   return true;
 }
+
+bool CCPi::mlem::supports_blocks() const
+{
+  return false;
+}
