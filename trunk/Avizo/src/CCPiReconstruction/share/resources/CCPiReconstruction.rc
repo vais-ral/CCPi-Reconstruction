@@ -9,5 +9,5 @@ module -name     "CGLS" \
        -primary  "HxUniformScalarField3" \
        -class    "CGLS_recon" \
        -category "Local" \
-       -package  "CCPi" \
+       -package  "CCPiReconstruction" \
        -icon     "TVDefCompute"

@@ -26,10 +26,10 @@ HX_INIT_CLASS(CGLS_recon,HxCompModule)
 
 CGLS_recon::CGLS_recon() :
   HxCompModule(HxUniformScalarField3::getClassTypeId()),
+  portAction(this, "action", QApplication::translate("CGLS_recon", "Action")),
   rotationAngle(this,"rotation angle",QApplication::translate("CGLS_recon", "Rotation Angle")),
   pixelSize(this,"pixel size",QApplication::translate("CGLS_recon", "Pixel Size(x,y)")),
   imageKey(this,"image key",QApplication::translate("CGLS_recon", "Image Key")),
-  portAction(this, "action", QApplication::translate("CGLS_recon", "Action")),
   iterations(this, "number of iterations",
 	     QApplication::translate("CGLS_recon", "Iterations")),
   resolution(this, "resolution",
@@ -63,6 +63,17 @@ void CGLS_recon::compute()
     // Check whether the input port is connected
     if (field == 0)
       return;
+	HxUniformScalarField3* rot_angle = (HxUniformScalarField3*) rotationAngle.source();
+	//Check the Rotation Angle
+	if (rot_angle == 0 || rot_angle->lattice.dims()[0]==1)
+		return;
+	HxUniformScalarField3* image_key = (HxUniformScalarField3*) imageKey.source();
+	//Check the image key
+	if (image_key == 0 || image_key->lattice.dims()[0]==1)
+		return;
+
+
+	
     // Todo - check that its a float field?
     run_cgls();
     // end progress area
@@ -81,10 +92,16 @@ void CGLS_recon::run_cgls()
     pixels((float *)field->lattice.dataPtr(),
 	   boost::extents[fdims[0]][fdims[1]][fdims[2]],
 	   boost::fortran_storage_order());
+  messages->error(QApplication::translate("CGLS",std::to_string((long double)fdims[2]).c_str()));// std::to_string((long double)fdims[2])));
+  float* tmp_angles = (float*)((HxUniformScalarField3*) rotationAngle.source())->lattice.dataPtr();
+  float* image_key = (float*)((HxUniformScalarField3*) imageKey.source())->lattice.dataPtr();
   // Todo - fix
-  boost::multi_array<float, 1> angles(boost::extents[1]);
+  boost::multi_array<float, 1> angles(boost::extents[fdims[2]]);
   boost::multi_array<float, 1> h_offsets(boost::extents[1]);
   boost::multi_array<float, 1> v_offsets(boost::extents[1]);
+
+  for(int i=0;i<fdims[2];i++)
+	  angles[i] = tmp_angles[i];
   real source_x = -1.0;
   real detector_x = 10.0;
   real h_size = 0.1;
@@ -93,7 +110,7 @@ void CGLS_recon::run_cgls()
   int pixels_per_voxel = resolution.getValue();
   int niterations = iterations.getValue();
   bool beam_hardening = beam_harden.getValue();
-  CCPi::instrument *instrument = new CCPi::Nikon_XTek();
+  CCPi::instrument *instrument = new CCPi::Diamond();
   CCPi::reconstruction_alg *algorithm = new CCPi::cgls_3d(niterations);
   //if (blocking_factor > 0 and instrument->supports_blocks())
   //  recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
@@ -108,7 +125,7 @@ void CGLS_recon::run_cgls()
   delete instrument;
   if (voxels != 0) {
     int dims[3];
-    // fortran order for Avizo
+    
     dims[0] = voxels->shape()[2];
     dims[1] = voxels->shape()[1];
     dims[2] = voxels->shape()[0];
