@@ -2,8 +2,8 @@
  *  Template of a compute module
  */
 
-#ifndef CGLS_RECON_H
-#define CGLS_RECON_H
+#ifndef PARALLEL_BEAM_RECON_H
+#define PARALLEL_BEAM_RECON_H
 
 #include <hxcore/HxCompModule.h>
 #include <hxcore/HxPortDoIt.h>
@@ -12,14 +12,14 @@
 
 #include "api.h"
 
-class CCPIRECONSTRUCTION_API CGLS_recon : public HxCompModule
+class CCPIRECONSTRUCTION_API Parallel_Beam_recon : public HxCompModule
 {
-  HX_HEADER(CGLS_recon);
+  HX_HEADER(Parallel_Beam_recon);
 
  public:
 
-  CGLS_recon();
-  ~CGLS_recon();
+  Parallel_Beam_recon();
+  ~Parallel_Beam_recon();
 
   HxConnection rotationAngle;
   HxConnection pixelSize;
@@ -32,7 +32,7 @@ class CCPIRECONSTRUCTION_API CGLS_recon : public HxCompModule
   virtual void compute();
 
  private:
-  void run_cgls();
+  void run_reconstruction();
 };
 
-#endif // CGLS_RECON_H
+#endif // PARALLEL_BEAM_RECON_H

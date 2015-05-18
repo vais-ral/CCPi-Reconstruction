@@ -14,7 +14,9 @@ set INCLUDES {
 }
 
 set SRC {
-    CGLS_recon.cpp
+    Parallel_Beam_recon.cpp
+    Cone_Beam_recon.cpp
+    NeXus_normalise.cpp
     ../../../src/results.cpp
     ../../../src/instruments.cpp
     ../../../src/parallel.cpp

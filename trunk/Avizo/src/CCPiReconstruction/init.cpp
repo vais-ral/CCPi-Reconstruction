@@ -1,6 +1,10 @@
 // AUTOMATICALLY GENERATED FILE.  DO NOT MODIFY.  Place custom code in custominit.h.
-void mcExitClass_CGLS_recon();
-void mcInitClass_CGLS_recon();
+void mcExitClass_Parallel_Beam_recon();
+void mcInitClass_Parallel_Beam_recon();
+void mcExitClass_NeXus_normalise();
+void mcInitClass_NeXus_normalise();
+void mcExitClass_Cone_Beam_recon();
+void mcInitClass_Cone_Beam_recon();
 
 
 extern "C"
@@ -15,7 +19,9 @@ void amirapackage_CCPiReconstruction_init()
 
     isInitialized = true;
 
-    mcInitClass_CGLS_recon();
+    mcInitClass_Parallel_Beam_recon();
+    mcInitClass_NeXus_normalise();
+    mcInitClass_Cone_Beam_recon();
 
 }
 
@@ -33,7 +39,9 @@ void amirapackage_CCPiReconstruction_finish()
     isFinished = true;
 
 
-    mcExitClass_CGLS_recon();
+    mcExitClass_Cone_Beam_recon();
+    mcExitClass_NeXus_normalise();
+    mcExitClass_Parallel_Beam_recon();
 }
 
 #if defined(_WIN32)
