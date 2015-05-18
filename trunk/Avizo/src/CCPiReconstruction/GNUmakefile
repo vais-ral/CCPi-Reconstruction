@@ -551,6 +551,26 @@ $(INTERMEDIATEDIR)/NeXus_normalise.d: NeXus_normalise.cpp $(UICOUTPUT) $(filter 
 DEPS += $(INTERMEDIATEDIR)/NeXus_normalise.d
 endif
 
+$(INTERMEDIATEDIR)/ui_messages.o: ui_messages.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/ui_messages.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/ui_messages.d: ui_messages.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/ui_messages.d
+endif
+
 $(INTERMEDIATEDIR)/../../../src/results.o: ../../../src/results.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
 	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
 	@mkdir -p $(@D)
@@ -689,6 +709,26 @@ $(INTERMEDIATEDIR)/../../../src/cgls.d: ../../../src/cgls.cpp $(UICOUTPUT) $(fil
 	@rm $@.orig
 
 DEPS += $(INTERMEDIATEDIR)/../../../src/cgls.d
+endif
+
+$(INTERMEDIATEDIR)/../../../src/sirt.o: ../../../src/sirt.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/../../../src/sirt.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/../../../src/sirt.d: ../../../src/sirt.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/../../../src/sirt.d
 endif
 
 $(INTERMEDIATEDIR)/../../../src/p2D.o: ../../../src/p2D.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS

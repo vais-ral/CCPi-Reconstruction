@@ -9,6 +9,8 @@
 #include <hxcore/HxPortDoIt.h>
 #include <hxcore/HxPortIntSlider.h>
 #include <hxcore/HxPortOnOff.h>
+#include <hxcore/HxPortRadioBox.h>
+#include <hxcore/HxPortFloatTextN.h>
 
 #include "api.h"
 
@@ -21,12 +23,13 @@ class CCPIRECONSTRUCTION_API Parallel_Beam_recon : public HxCompModule
   Parallel_Beam_recon();
   ~Parallel_Beam_recon();
 
+  HxPortDoIt portAction;
   HxConnection rotationAngle;
   HxConnection pixelSize;
-  HxConnection imageKey;
-  HxPortDoIt portAction;
+  HxPortRadioBox algorithm;
   HxPortIntSlider iterations;
   HxPortIntSlider resolution;
+  HxPortFloatTextN rotationCentre;
   HxPortOnOff beam_harden;
 
   virtual void compute();

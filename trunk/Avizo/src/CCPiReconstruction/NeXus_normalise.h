@@ -12,16 +12,22 @@
 
 class CCPIRECONSTRUCTION_API NeXus_normalise : public HxCompModule
 {
-    HX_HEADER(NeXus_normalise);
+  HX_HEADER(NeXus_normalise);
 
-  public:
+ public:
 
-    NeXus_normalise();
-    ~NeXus_normalise();
+  NeXus_normalise();
+  ~NeXus_normalise();
 
-    HxPortDoIt portAction;
+  HxPortDoIt portAction;
+  HxConnection rotationAngle;
+  HxConnection imageKey;
+  HxConnection pixelSize;
 
-    virtual void compute();
+  virtual void compute();
+
+ private:
+  void normalise();
 };
 
 #endif // NEXUS_NORMALISE_H
