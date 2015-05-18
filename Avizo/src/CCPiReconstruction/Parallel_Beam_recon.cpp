@@ -8,13 +8,15 @@
 #include <hxcore/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
 
-#include "CGLS_recon.h"
+#include "Parallel_Beam_recon.h"
 
 #include "base_types.hpp"
 #include "mpi.hpp"
 #include "utils.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
+#include "cgls.hpp"
+#include "sirt.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
 
@@ -22,20 +24,20 @@ static HxMessage *messages = 0;
 static HxWorkArea *progress = theWorkArea;
 static bool do_progress = false;
 
-HX_INIT_CLASS(CGLS_recon,HxCompModule)
+HX_INIT_CLASS(Parallel_Beam_recon,HxCompModule)
 
-CGLS_recon::CGLS_recon() :
+Parallel_Beam_recon::Parallel_Beam_recon() :
   HxCompModule(HxUniformScalarField3::getClassTypeId()),
-  portAction(this, "action", QApplication::translate("CGLS_recon", "Action")),
-  rotationAngle(this,"rotation angle",QApplication::translate("CGLS_recon", "Rotation Angle")),
-  pixelSize(this,"pixel size",QApplication::translate("CGLS_recon", "Pixel Size(x,y)")),
-  imageKey(this,"image key",QApplication::translate("CGLS_recon", "Image Key")),
+  portAction(this, "action", QApplication::translate("Parallel_Beam_recon", "Action")),
+  rotationAngle(this,"rotation angle",QApplication::translate("Parallel_Beam_recon", "Rotation Angle")),
+  pixelSize(this,"pixel size",QApplication::translate("Parallel_Beam_recon", "Pixel Size(x,y)")),
+  imageKey(this,"image key",QApplication::translate("Parallel_Beam_recon", "Image Key")),
   iterations(this, "number of iterations",
-	     QApplication::translate("CGLS_recon", "Iterations")),
+	     QApplication::translate("Parallel_Beam_recon", "Iterations")),
   resolution(this, "resolution",
-	     QApplication::translate("CGLS_recon", "Pixels per Voxel")),
+	     QApplication::translate("Parallel_Beam_recon", "Pixels per Voxel")),
   beam_harden(this, "beam harden",
-	      QApplication::translate("CGLS_recon", "Beam Hardening"))
+	      QApplication::translate("Parallel_Beam_recon", "Beam Hardening"))
 {
   rotationAngle.addType(HxUniformScalarField3::getClassTypeId());
   pixelSize.addType(HxUniformScalarField3::getClassTypeId());
@@ -49,11 +51,11 @@ CGLS_recon::CGLS_recon() :
   beam_harden.setValue(true);
 }
 
-CGLS_recon::~CGLS_recon()
+Parallel_Beam_recon::~Parallel_Beam_recon()
 {
 }
 
-void CGLS_recon::compute()
+void Parallel_Beam_recon::compute()
 {
   if (portAction.wasHit()) {
     do_progress = false;
@@ -75,7 +77,7 @@ void CGLS_recon::compute()
 
 	
     // Todo - check that its a float field?
-    run_cgls();
+    run_reconstruction();
     // end progress area
     if (do_progress) {
       theWorkArea->stopWorking();
@@ -84,7 +86,7 @@ void CGLS_recon::compute()
   }
 }
 
-void CGLS_recon::run_cgls()
+void Parallel_Beam_recon::run_reconstruction()
 {
   HxUniformScalarField3* field = (HxUniformScalarField3*) portData.source();
   const int *fdims = field->lattice.dims();
@@ -92,7 +94,7 @@ void CGLS_recon::run_cgls()
     pixels((float *)field->lattice.dataPtr(),
 	   boost::extents[fdims[0]][fdims[1]][fdims[2]],
 	   boost::fortran_storage_order());
-  messages->error(QApplication::translate("CGLS",std::to_string((long double)fdims[2]).c_str()));// std::to_string((long double)fdims[2])));
+  messages->error(QApplication::translate("Parallel_Beam",std::to_string((long double)fdims[2]).c_str()));// std::to_string((long double)fdims[2])));
   float* tmp_angles = (float*)((HxUniformScalarField3*) rotationAngle.source())->lattice.dataPtr();
   float* image_key = (float*)((HxUniformScalarField3*) imageKey.source())->lattice.dataPtr();
   // Todo - fix
@@ -143,7 +145,7 @@ void CGLS_recon::run_cgls()
 
 void report_error(const std::string message)
 {
-  messages->error(QApplication::translate("CGLS", message.c_str()));
+  messages->error(QApplication::translate("Parallel_Beam", message.c_str()));
 }
 
 void report_error(const std::string message, const std::string arg)
@@ -168,7 +170,7 @@ void initialise_progress(const int length, const char label[])
   }
   // Turn into busy state, don't activate the Stop button.
   progress->subdivide(length);
-  progress->startWorkingNoStop(QApplication::translate("CGLS", label));
+  progress->startWorkingNoStop(QApplication::translate("Parallel_Beam", label));
   do_progress = true;
 }
 
