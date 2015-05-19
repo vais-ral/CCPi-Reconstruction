@@ -204,7 +204,8 @@ voxel_data *reconstruct(CCPi::instrument *device,
 			const numpy_1d &h_offsets, const numpy_1d &v_offsets,
 			const int pixels_per_voxel, const real source_x,
 			const real detector_x, const real pixel_h_size,
-			const real pixel_v_size, const bool beam_harden)
+			const real pixel_v_size, const bool beam_harden,
+			real full_vox_origin[3], real voxel_size[3])
 {
   int num_processors = machine::get_number_of_processors();
   const int blocking_factor = 0;
@@ -228,8 +229,8 @@ voxel_data *reconstruct(CCPi::instrument *device,
     device->set_v_block(z_data_size);
     int block_offset = machine::get_processor_id() * block_size;
     int z_data_offset = block_offset * pixels_per_voxel;
-    real full_vox_origin[3];
-    real voxel_size[3];
+    //real full_vox_origin[3];
+    //real voxel_size[3];
     if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
 				      nx_voxels, ny_voxels, maxz_voxels)) {
       // can modify offsets and end if parallel beam to solve subregion
