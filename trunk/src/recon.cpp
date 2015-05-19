@@ -108,9 +108,14 @@ int main()
     machine::initialise();
     int num_processors = machine::get_number_of_processors();
     if (num_processors == 1 or instrument->supports_distributed_memory()) {
-      reconstruct(instrument, recon_algorithm, data_file, output_name,
-		  rotation_centre, pixels_per_voxel, blocking_factor,
-		  beam_harden, write_format, clamp_output, phantom);
+      real vox_origin[3];
+      real vox_size[3];
+      voxel_data *voxels = reconstruct(instrument, recon_algorithm, data_file,
+				       output_name, vox_origin, vox_size,
+				       rotation_centre, pixels_per_voxel,
+				       blocking_factor, beam_harden,
+				       write_format, clamp_output, phantom);
+      delete voxels;
     } else
       std::cerr 
 	<< "Program does not support distributed memory for this instrument\n";

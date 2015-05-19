@@ -172,6 +172,7 @@ endif
 ifeq ($(MAKE_UNAME),LinuxAMD64)
   ifeq ($(MAKE_CFG),Debug)
     INCLUDES += -I../../../src
+    INCLUDES += -I$(MAINROOT)/include/exlibtiff
     INCLUDES += -I../../src
     INCLUDES += -I/usr/X11R6/include
     INCLUDES += -I/usr/local/Avizo/9.0.0/include
@@ -221,6 +222,7 @@ ifeq ($(MAKE_UNAME),LinuxAMD64)
   endif
   ifeq ($(MAKE_CFG),Optimize)
     INCLUDES += -I../../../src
+    INCLUDES += -I$(MAINROOT)/include/exlibtiff
     INCLUDES += -I../../src
     INCLUDES += -I/usr/X11R6/include
     INCLUDES += -I/usr/local/Avizo/9.0.0/include
@@ -332,6 +334,7 @@ ifeq ($(MAKE_UNAME),LinuxAMD64)
     LIBS += -lLDM
     LIBS += -lX11
     LIBS += -ltcl8.5
+    LIBS += -lexlibtiff
     LIBS += -lQt3Support
     LIBS += -lQtCore
     LIBS += -lQtDesignerComponents
@@ -375,6 +378,7 @@ ifeq ($(MAKE_UNAME),LinuxAMD64)
     LIBS += -lLDM
     LIBS += -lX11
     LIBS += -ltcl8.5
+    LIBS += -lexlibtiff
     LIBS += -lQt3Support
     LIBS += -lQtCore
     LIBS += -lQtDesignerComponents
@@ -549,6 +553,26 @@ $(INTERMEDIATEDIR)/NeXus_normalise.d: NeXus_normalise.cpp $(UICOUTPUT) $(filter 
 	@rm $@.orig
 
 DEPS += $(INTERMEDIATEDIR)/NeXus_normalise.d
+endif
+
+$(INTERMEDIATEDIR)/XTek_recon.o: XTek_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/XTek_recon.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/XTek_recon.d: XTek_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/XTek_recon.d
 endif
 
 $(INTERMEDIATEDIR)/ui_messages.o: ui_messages.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS

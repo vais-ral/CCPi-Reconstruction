@@ -4,7 +4,7 @@
 
 namespace CCPi {
 
-  enum output_format { unsigned_byte_tiff, unsigned_short_tiff,
+  enum output_format { no_output, unsigned_byte_tiff, unsigned_short_tiff,
 		       native_dump, signed_short_tiff, bgs_float_dump };
 
   void write_results(const std::string basename, const voxel_data &voxels,

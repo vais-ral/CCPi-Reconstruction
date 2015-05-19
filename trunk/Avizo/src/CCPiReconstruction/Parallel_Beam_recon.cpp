@@ -150,7 +150,7 @@ void Parallel_Beam_recon::run_reconstruction()
     dims[1] = voxels->shape()[1];
     dims[2] = voxels->shape()[0];
     HxUniformScalarField3* output =
-      new HxUniformScalarField3(dims, field->primType());
+      new HxUniformScalarField3(dims, McPrimType::mc_float);
     for (int i = 0; i < dims[0]; i++)
       for (int j = 0; j < dims[1]; j++)
 	for (int k = 0; k < dims[2]; k++)
