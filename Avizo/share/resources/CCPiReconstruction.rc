@@ -27,3 +27,11 @@ module -name     "NeXus_norm" \
        -category "Local" \
        -package  "CCPiReconstruction" \
        -icon     "TVDefCompute"
+
+
+module -name     "XTek" \
+       -primary  "HxUniformScalarField3" \
+       -class    "XTek_recon" \
+       -category "Local" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"

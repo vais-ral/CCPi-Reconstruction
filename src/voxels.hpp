@@ -11,14 +11,17 @@ extern void calculate_block_sizes(int &nx_voxels, int &ny_voxels,
 				  CCPi::instrument *instrument,
 				  const bool recon_blocks);
 
-extern void reconstruct(CCPi::instrument *device,
-			CCPi::reconstruction_alg *algorithm,
-			const std::string data_file,
-			const std::string output_name,
-			const real rotation_centre, const int pixels_per_voxel,
-			const int blocking_factor, const bool beam_harden,
-			const CCPi::output_format write_format,
-			const bool clamp_output, const bool phantom);
+extern voxel_data *reconstruct(CCPi::instrument *device,
+			       CCPi::reconstruction_alg *algorithm,
+			       const std::string data_file,
+			       const std::string output_name,
+			       real full_vox_origin[3], real voxel_size[3],
+			       const real rotation_centre,
+			       const int pixels_per_voxel,
+			       const int blocking_factor,
+			       const bool beam_harden,
+			       const CCPi::output_format write_format,
+			       const bool clamp_output, const bool phantom);
 
 extern voxel_data *reconstruct(CCPi::instrument *device,
 			       CCPi::reconstruction_alg *algorithm,

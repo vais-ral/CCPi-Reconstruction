@@ -3,6 +3,13 @@
 #  include "tiffio.h"
 #endif // HAS_TIFF
 
+// Due to Avizo's different tiff lib this comes after the above include.
+#ifdef AMIRA_RELEASE
+#  define HAS_TIFF
+#  include "exlibtiff.h"
+#  include "tiffio.h"
+#endif // AMIRA/AVIZO
+
 #include "base_types.hpp"
 #include "tiff.hpp"
 #include "timer.hpp"

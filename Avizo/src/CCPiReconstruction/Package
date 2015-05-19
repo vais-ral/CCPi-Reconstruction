@@ -2,7 +2,7 @@ set PACKAGE {CCPiReconstruction}
 
 set LIBS {
     hxplot hxtime hxsurface hxcolor hxfield
-    hxcore amiramesh mclib oiv tcl qt
+    hxcore amiramesh mclib oiv tcl exlibtiff qt
 }
 
 set SHARE {
@@ -11,12 +11,14 @@ set SHARE {
 
 set INCLUDES {
     ../../../src
+    $(MAINROOT)/include/exlibtiff
 }
 
 set SRC {
     Parallel_Beam_recon.cpp
     Cone_Beam_recon.cpp
     NeXus_normalise.cpp
+    XTek_recon.cpp
     ui_messages.cpp
     ../../../src/results.cpp
     ../../../src/instruments.cpp
