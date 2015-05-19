@@ -5,9 +5,25 @@
 ################################################################################
 
 
-module -name     "CGLS" \
+module -name     "ParallelB_recon" \
        -primary  "HxUniformScalarField3" \
-       -class    "CGLS_recon" \
+       -class    "Parallel_Beam_recon" \
        -category "Local" \
-       -package  "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "ConeB_recon" \
+       -primary  "HxUniformScalarField3" \
+       -class    "Cone_Beam_recon" \
+       -category "Local" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "NeXus_norm" \
+       -primary  "HxUniformScalarField3" \
+       -class    "NeXus_normalise" \
+       -category "Local" \
+       -package  "CCPiReconstruction" \
        -icon     "TVDefCompute"

@@ -81,11 +81,14 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
     } else if (nh_pixels < 1 or nv_pixels < 1) {
       report_error("Bad array index for pixels");
       ok = false;
-    } else if (nh_pixels != (int)h_offsets.shape()[0]) {
-      // Todo - can offset array be empty - no error? optional arg?
-      report_error("Number of horizontal pixels doesn't match");
-    } else if (nv_pixels != (int)v_offsets.shape()[0]) {
-      report_error("Number of vertical pixels doesn't match");
+    } else if (h_offsets.shape()[0] > 1) {
+      if (nh_pixels != (int)h_offsets.shape()[0])
+	report_error("Number of horizontal pixels doesn't match");
+      report_error("Todo - use horizontal offsets");
+    } else if (h_offsets.shape()[0] > 1) {
+      if (nv_pixels != (int)v_offsets.shape()[0])
+	report_error("Number of vertical pixels doesn't match");
+      report_error("Todo - use vertical offsets");
     } else {
       // copied from read_data_size
       nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
@@ -110,8 +113,8 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
       real_1d &angles = set_phi(nangles);
       for (int i = 0; i < nangles; i++)
 	angles[i] = angle_array[i];
-      report_error("Todo - find_centre");
-      report_error("Todo - use offsets");
+      report_error("Mask radius? - interface probably incomplete");
+      //report_error("Todo - find_centre");
     }
   }
   return ok;
@@ -524,6 +527,7 @@ bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
       }
     }
   }
+  find_centre(get_num_v_pixels() / 2 + 1);
   return true;
 }
 
