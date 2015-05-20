@@ -14,7 +14,7 @@ LIBS = $(PYTHONLIB)
 PYOBJS = ccpi_wrapper.o
 OBJECTS = results.o instruments.o parallel.o cone.o diamond.o xtek.o cgls.o \
 	p2D.o tv_reg.o tv_core.o tiff.o timer.o utils.o ui_calls.o \
-	mpi.o c2D.o voxels.o
+	mpi.o c2D.o voxels.o sirt.o mlem.o
 
 ccpi.so: $(PYOBJS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(PYOBJS) $(OBJECTS) $(LIBS)
@@ -31,10 +31,16 @@ $(OBJECTS): ../src/base_types.hpp ../src/allocator.hpp
 ccpi_wrapper.o: ccpi_wrapper.cpp reconstruct.hpp reconstruct.cpp \
 	../src/mpi.hpp ../src/utils.hpp ../src/instruments.hpp \
 	../src/algorithms.hpp ../src/results.hpp ../src/voxels.hpp \
-	../src/cgls.hpp
+	../src/cgls.hpp ../src/sirt.hpp ../src/mlem.hpp
 
 cgls.o: ../src/cgls.cpp ../src/algorithms.hpp ../src/instruments.hpp \
 	../src/timer.hpp ../src/ui_calls.hpp ../src/blas.hpp ../src/cgls.hpp
+
+mlem.o: ../src/mlem.cpp ../src/algorithms.hpp ../src/instruments.hpp \
+	../src/timer.hpp ../src/ui_calls.hpp ../src/mlem.hpp ../src/blas.hpp
+
+sirt.o: ../src/sirt.cpp ../src/algorithms.hpp ../src/instruments.hpp \
+	../src/timer.hpp ../src/ui_calls.hpp ../src/sirt.hpp ../src/blas.hpp
 
 instruments.o: ../src/instruments.cpp ../src/instruments.hpp ../src/ui_calls.hpp
 
