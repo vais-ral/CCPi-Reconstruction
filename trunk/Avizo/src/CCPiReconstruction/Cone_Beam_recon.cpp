@@ -16,6 +16,7 @@
 #include "algorithms.hpp"
 #include "cgls.hpp"
 #include "sirt.hpp"
+#include "mlem.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
 #include "ui_messages.hpp"
@@ -57,9 +58,10 @@ Cone_Beam_recon::Cone_Beam_recon() :
   coneGeometry.addType(HxUniformScalarField3::getClassTypeId());
 
   portAction.setLabel(0,"DoIt");
-  algorithm.setNum(2);
+  algorithm.setNum(3);
   algorithm.setLabel(0, "CGLS");
   algorithm.setLabel(0, "SIRT");
+  algorithm.setLabel(0, "MLEM");
   algorithm.setValue(0);
   iterations.setMinMax(5, 30);
   iterations.setValue(20);
@@ -156,6 +158,9 @@ void Cone_Beam_recon::run_reconstruction()
     break;
   case 1:
     recon_algorithm = new CCPi::sirt(niterations);
+    break;
+  case 2:
+    recon_algorithm = new CCPi::mlem(niterations);
     break;
   }
 

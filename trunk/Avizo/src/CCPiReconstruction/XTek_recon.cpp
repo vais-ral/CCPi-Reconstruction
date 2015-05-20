@@ -16,6 +16,7 @@
 #include "algorithms.hpp"
 #include "cgls.hpp"
 #include "sirt.hpp"
+#include "mlem.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
 #include "ui_messages.hpp"
@@ -36,9 +37,10 @@ XTek_recon::XTek_recon() :
 	      QApplication::translate("XTek_recon", "Beam Hardening"))
 {
   portAction.setLabel(0,"DoIt");
-  algorithm.setNum(2);
+  algorithm.setNum(3);
   algorithm.setLabel(0, "CGLS");
   algorithm.setLabel(0, "SIRT");
+  algorithm.setLabel(0, "MLEM");
   algorithm.setValue(0);
   iterations.setMinMax(5, 30);
   iterations.setValue(20);
@@ -95,6 +97,9 @@ void XTek_recon::run_reconstruction(const std::string filename)
     break;
   case 1:
     recon_algorithm = new CCPi::sirt(niterations);
+    break;
+  case 2:
+    recon_algorithm = new CCPi::mlem(niterations);
     break;
   }
 
