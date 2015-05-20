@@ -2,6 +2,12 @@
 #ifndef BLAS_WRAPPERS
 #define BLAS_WRAPPERS
 
+#ifdef WIN32
+#  undef min
+#  undef max
+#  include <algorithm>
+#endif // WIN32
+
 template <class real_type>
 inline void init_data(boost::multi_array_ref<real_type, 3> &x,
 		      const sl_int nx, const sl_int ny, const sl_int nz,
@@ -118,7 +124,7 @@ inline void mult_xy(boost::multi_array_ref<real_type, 3> &x,
 #pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
   for (sl_int i = 0; i < nx; i++) {
     real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
-    real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
     for (sl_int j = 0; j < ny * nz; j++)
       xptr[j] *= yptr[j];
   }
@@ -133,7 +139,7 @@ inline void div_xy(boost::multi_array_ref<real_type, 3> &x,
 #pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
   for (sl_int i = 0; i < nx; i++) {
     real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
-    real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
     for (sl_int j = 0; j < ny * nz; j++) {
       if (yptr[j] != 0.0)
 	xptr[j] /= yptr[j];
@@ -153,8 +159,8 @@ inline void div_xyz(boost::multi_array_ref<real_type, 3> &x,
 #pragma omp parallel for shared(x, y, z) firstprivate(nx, ny, nz) schedule(dynamic)
   for (sl_int i = 0; i < nx; i++) {
     real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
-    real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
-    real_type *zptr = assume_aligned(&(z[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    const real_type *zptr = assume_aligned(&(z[i][0][0]), real_type);
     for (sl_int j = 0; j < ny * nz; j++) {
       if (zptr[j] != 0.0)
 	xptr[j] = yptr[j] / zptr[j];
@@ -174,8 +180,8 @@ inline void multsum_xyz(boost::multi_array_ref<real_type, 3> &x,
 #pragma omp parallel for shared(x, y, z) firstprivate(nx, ny, nz) schedule(dynamic)
   for (sl_int i = 0; i < nx; i++) {
     real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
-    real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
-    real_type *zptr = assume_aligned(&(z[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    const real_type *zptr = assume_aligned(&(z[i][0][0]), real_type);
     for (sl_int j = 0; j < ny * nz; j++)
       xptr[j] *= (yptr[j] * zptr[j]);
   }

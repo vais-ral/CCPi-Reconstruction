@@ -10,6 +10,9 @@
 #include "src/utils.hpp"
 #include "src/voxels.hpp"
 #include "src/blas.hpp"
+#include "src/cgls.hpp"
+#include "src/sirt.hpp"
+#include "src/mlem.hpp"
 
 CGLSWizard *my_sheet = 0;
 static voxel_data *voxels = 0;
@@ -91,8 +94,14 @@ bool CGLSWizard::main_loop()
 	CCPi::reconstruction_alg *recon_algorithm = 0;
 	switch (algorithm) {
 	case CCPi::alg_CGLS:
-		recon_algorithm = new CCPi::cgls_3d(niterations);
-		break;
+	  recon_algorithm = new CCPi::cgls_3d(niterations);
+	  break;
+	case CCPi::alg_SIRT:
+	  recon_algorithm = new CCPi::sirt(niterations);
+	  break;
+	case CCPi::alg_MLEM:
+	  recon_algorithm = new CCPi::mlem(niterations);
+	  break;
 	default:
 		//std::cerr << "ERROR: Unknown algorithm\n";
 		ok = false;
