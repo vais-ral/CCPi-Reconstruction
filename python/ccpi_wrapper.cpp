@@ -11,6 +11,8 @@
 #include "results.hpp"
 #include "voxels.hpp"
 #include "cgls.hpp"
+#include "sirt.hpp"
+#include "mlem.hpp"
 
 using namespace boost::python;
 
@@ -26,5 +28,7 @@ BOOST_PYTHON_MODULE(ccpi)
   //def("test", test);
   def("aml_ring_artefacts", ring_artefacts_aml);
   def("cgls", reconstruct_cgls);
-  def("tvreg", reconstruct_tvreg);
+  def("sirt", reconstruct_sirt);
+  def("mlem", reconstruct_mlem);
+  //def("tvreg", reconstruct_tvreg);
 }

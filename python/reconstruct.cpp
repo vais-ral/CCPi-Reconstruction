@@ -48,30 +48,44 @@ void ring_artefacts_aml(numpy_boost<float, 3> &pixels, const real param_n,
   }
 }
 
-numpy_boost<float, 3> reconstruct_cgls(const numpy_boost<float, 3> &pixels,
+numpy_boost<float, 3> reconstruct_iter(const numpy_boost<float, 3> &pixels,
 				       const numpy_boost<float, 1> &angles,
 				       double rotation_centre, int resolution,
-				       int niterations, int nthreads)
+				       int niterations, int nthreads,
+				       CCPi::algorithms alg)
 {
-  // Todo ring artefacts choice etc.
-
   bool beam_harden = false;
   // vertical size to break data up into for processing
   const int blocking_factor = 0;
   // number of GPUs etc if using accelerated code
   //const int num_devices = 1;
-  CCPi::instrument *instrument = new CCPi::Diamond();
-  CCPi::reconstruction_alg *algorithm = new CCPi::cgls_3d(niterations);
-  //if (blocking_factor > 0 and instrument->supports_blocks())
-  //  recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
-  machine::initialise(nthreads);
-  // instrument setup from pixels/angles will probably copy
-  voxel_data *voxels = reconstruct(instrument, algorithm, pixels, angles,
-				   rotation_centre, resolution,
-				   blocking_factor, beam_harden);
-  machine::exit();
-  delete algorithm;
-  delete instrument;
+  voxel_data *voxels = 0;
+  CCPi::reconstruction_alg *algorithm = 0;
+  switch (alg) {
+  case CCPi::alg_CGLS:
+    //if (blocking_factor > 0 and instrument->supports_blocks())
+    //  recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
+    algorithm = new CCPi::cgls_3d(niterations);
+    break;
+  case CCPi::alg_SIRT:
+    algorithm = new CCPi::sirt(niterations);
+    break;
+  case CCPi::alg_MLEM:
+    algorithm = new CCPi::mlem(niterations);
+    break;
+  default:
+    break;
+  }
+  if (algorithm != 0) {
+    CCPi::instrument *instrument = new CCPi::Diamond();
+    machine::initialise(nthreads);
+    // instrument setup from pixels/angles will probably copy
+    voxels = reconstruct(instrument, algorithm, pixels, angles, rotation_centre,
+			 resolution, blocking_factor, beam_harden);
+    machine::exit();
+    delete instrument;
+    delete algorithm;
+  }
   int dims[3];
   if (voxels == 0) {
     dims[0] = 1;
@@ -95,6 +109,33 @@ numpy_boost<float, 3> reconstruct_cgls(const numpy_boost<float, 3> &pixels,
     delete voxels;
   }
   return varray;
+}
+
+numpy_boost<float, 3> reconstruct_cgls(const numpy_boost<float, 3> &pixels,
+				       const numpy_boost<float, 1> &angles,
+				       double rotation_centre, int resolution,
+				       int niterations, int nthreads)
+{
+  return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+			  niterations, nthreads, CCPi::alg_CGLS);
+}
+
+numpy_boost<float, 3> reconstruct_sirt(const numpy_boost<float, 3> &pixels,
+				       const numpy_boost<float, 1> &angles,
+				       double rotation_centre, int resolution,
+				       int niterations, int nthreads)
+{
+  return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+			  niterations, nthreads, CCPi::alg_SIRT);
+}
+
+numpy_boost<float, 3> reconstruct_mlem(const numpy_boost<float, 3> &pixels,
+				       const numpy_boost<float, 1> &angles,
+				       double rotation_centre, int resolution,
+				       int niterations, int nthreads)
+{
+  return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+			  niterations, nthreads, CCPi::alg_MLEM);
 }
 
 void reconstruct_tvreg()
