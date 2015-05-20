@@ -755,6 +755,26 @@ $(INTERMEDIATEDIR)/../../../src/sirt.d: ../../../src/sirt.cpp $(UICOUTPUT) $(fil
 DEPS += $(INTERMEDIATEDIR)/../../../src/sirt.d
 endif
 
+$(INTERMEDIATEDIR)/../../../src/mlem.o: ../../../src/mlem.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/../../../src/mlem.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/../../../src/mlem.d: ../../../src/mlem.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/../../../src/mlem.d
+endif
+
 $(INTERMEDIATEDIR)/../../../src/p2D.o: ../../../src/p2D.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
 	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
 	@mkdir -p $(@D)

@@ -53,17 +53,23 @@ bool CCPi::mlem::reconstruct(instrument *device, voxel_data &voxels,
       // get ratio for values != 0 (> 0)?
       div_xyz(ratio, b, sino_est, n_angles, n_h, n_v);
     }
-    pixel_1d val(n_angles);
-    for (int a = 0; a < n_angles; a++)
-      val[a] = 10.0 * ratio[a][n_h / 2][n_v / 2]; // +1?
-    clamp_min_max(ratio, pixel_type(0.0), val, n_angles, n_h, n_v);
+    /* Todo - the upper bound caused problems with the phantom. val <= 0.0?
+    {
+      pixel_1d val(n_v);
+      for (int v = 0; v < n_v; v++)
+	val[v] = 10.0 * ratio[n_angles / 2][n_h / 2][v]; // n/2+1?
+      clampv_min_max(ratio, pixel_type(0.0), val, n_angles, n_h, n_v);
+    }
+    */
+    // use this version of clamp instead of the commented out code above.
+    clamp_min(ratio, 0.0, n_angles, n_h, n_v);
     update_progress(2 * iter + 2);
     {
       voxel_data bp_ratio(boost::extents[sz[0]][sz[1]][sz[2]],
 			  boost::c_storage_order());
       device->backward_project(ratio, bp_ratio, origin, voxel_size,
 			       (int)sz[0], (int)sz[1], (int)sz[2]);
-      mult_xyz(voxels, normalisation, bp_ratio, nx, ny, nz);
+      multsum_xyz(voxels, normalisation, bp_ratio, nx, ny, nz);
     }
     clamp_min(voxels, 0.0, nx, ny, nz);
     update_progress(2 * iter + 3);

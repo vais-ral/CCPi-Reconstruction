@@ -61,6 +61,22 @@ inline void clamp_min_max(pixel_data &y, const pixel_type mn,
   }
 }
 
+inline void clampv_min_max(pixel_data &y, const pixel_type mn,
+			   const pixel_1d &mx,
+			   const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // clamp min value of y, y = min(max(y, mn), mx)
+  pixel_type minv = mn;
+#pragma omp parallel for shared(y, mx) firstprivate(nx, ny, nz, minv) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    for (sl_int j = 0; j < ny; j++) {
+      pixel_type *yptr = assume_aligned(&(y[i][j][0]), pixel_type);
+      for (sl_int k = 0; k < nz; k++)
+	yptr[k] = (yptr[k] > mx[k]) ? minv : std::max(yptr[k], minv);
+    }
+  }
+}
+
 template <class real_type>
 inline void invert_x(boost::multi_array_ref<real_type, 3> &x,
 		     const sl_int nx, const sl_int ny, const sl_int nz)
@@ -149,10 +165,10 @@ inline void div_xyz(boost::multi_array_ref<real_type, 3> &x,
 }
 
 template <class real_type>
-inline void mult_xyz(boost::multi_array_ref<real_type, 3> &x,
-		     const boost::multi_array_ref<real_type, 3> &y,
-		     const boost::multi_array_ref<real_type, 3> &z,
-		     const sl_int nx, const sl_int ny, const sl_int nz)
+inline void multsum_xyz(boost::multi_array_ref<real_type, 3> &x,
+			const boost::multi_array_ref<real_type, 3> &y,
+			const boost::multi_array_ref<real_type, 3> &z,
+			const sl_int nx, const sl_int ny, const sl_int nz)
 {
   // x = x * y * z
 #pragma omp parallel for shared(x, y, z) firstprivate(nx, ny, nz) schedule(dynamic)
