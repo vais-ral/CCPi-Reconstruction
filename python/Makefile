@@ -34,13 +34,16 @@ ccpi_wrapper.o: ccpi_wrapper.cpp reconstruct.hpp reconstruct.cpp \
 	../src/cgls.hpp ../src/sirt.hpp ../src/mlem.hpp
 
 cgls.o: ../src/cgls.cpp ../src/algorithms.hpp ../src/instruments.hpp \
-	../src/timer.hpp ../src/ui_calls.hpp ../src/blas.hpp ../src/cgls.hpp
+	../src/timer.hpp ../src/ui_calls.hpp ../src/blas.hpp ../src/cgls.hpp \
+	../src/regularize.hpp
 
 mlem.o: ../src/mlem.cpp ../src/algorithms.hpp ../src/instruments.hpp \
 	../src/timer.hpp ../src/ui_calls.hpp ../src/mlem.hpp ../src/blas.hpp
 
 sirt.o: ../src/sirt.cpp ../src/algorithms.hpp ../src/instruments.hpp \
 	../src/timer.hpp ../src/ui_calls.hpp ../src/sirt.hpp ../src/blas.hpp
+
+tikhonov.o: ../src/tikhonov.cpp ../src/regularize.hpp
 
 instruments.o: ../src/instruments.cpp ../src/instruments.hpp ../src/ui_calls.hpp
 

@@ -96,6 +96,16 @@ namespace CCPi {
 		     const real origin[3], const real voxel_size[3]);
   };
 
+  class cgls_tikhonov : public cgls_3d {
+  public:
+    cgls_tikhonov(const int niterations, const real param);
+    bool reconstruct(class instrument *device, voxel_data &voxels,
+		     const real origin[3], const real voxel_size[3]);
+
+  private:
+    real regularisation_param;
+  };
+
 }
 
 inline CCPi::cgls_base::cgls_base(const int niterations)
@@ -125,6 +135,12 @@ inline CCPi::bi_cgls_3d::bi_cgls_3d(const int niterations)
 
 inline CCPi::bi_cgstabls_3d::bi_cgstabls_3d(const int niterations)
   : cgls_3d(niterations)
+{
+}
+
+inline CCPi::cgls_tikhonov::cgls_tikhonov(const int niterations,
+					  const real param)
+  : cgls_3d(niterations), regularisation_param(param)
 {
 }
 
