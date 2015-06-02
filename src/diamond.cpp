@@ -68,7 +68,7 @@ bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
 	v_pixels[i] = v_pixels[0] + real(i) * vsize;
       real_1d &angles = set_phi(nangles);
       for (int i = 0; i < nangles; i++)
-	angles[i] = angle_array[i];
+	angles[i] = M_PI * (angle_array[i] / 180.0);
     }
   }
   return ok;
