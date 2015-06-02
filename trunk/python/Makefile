@@ -14,7 +14,7 @@ LIBS = $(PYTHONLIB)
 PYOBJS = ccpi_wrapper.o
 OBJECTS = results.o instruments.o parallel.o cone.o diamond.o xtek.o cgls.o \
 	p2D.o tv_reg.o tv_core.o tiff.o timer.o utils.o ui_calls.o \
-	mpi.o c2D.o voxels.o sirt.o mlem.o
+	mpi.o c2D.o voxels.o sirt.o mlem.o tikhonov.o
 
 ccpi.so: $(PYOBJS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(PYOBJS) $(OBJECTS) $(LIBS)
