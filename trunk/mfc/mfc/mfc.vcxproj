@@ -208,6 +208,7 @@
     <ClInclude Include="..\..\src\parallel_b.hpp" />
     <ClInclude Include="..\..\src\parallel_f.hpp" />
     <ClInclude Include="..\..\src\project_line.hpp" />
+    <ClInclude Include="..\..\src\regularize.hpp" />
     <ClInclude Include="..\..\src\results.hpp" />
     <ClInclude Include="..\..\src\sirt.hpp" />
     <ClInclude Include="..\..\src\tiff.hpp" />
@@ -242,6 +243,7 @@
     <ClCompile Include="..\..\src\results.cpp" />
     <ClCompile Include="..\..\src\sirt.cpp" />
     <ClCompile Include="..\..\src\tiff.cpp" />
+    <ClCompile Include="..\..\src\tikhonov.cpp" />
     <ClCompile Include="..\..\src\timer.cpp" />
     <ClCompile Include="..\..\src\tv_core.cpp" />
     <ClCompile Include="..\..\src\tv_reg.cpp" />

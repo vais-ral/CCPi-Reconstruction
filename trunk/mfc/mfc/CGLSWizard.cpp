@@ -147,6 +147,7 @@ void CGLSWizard::save_results()
 	std::string output_name;
 	CCPi::combine_path_and_name(get_output_path(), get_output_name(), output_name);
 	const voxel_data::size_type *s = voxels->shape();
+	clamp_min(*voxels, 0.0, s[0], s[1], s[2]);
 	CCPi::write_results(output_name, *voxels, voxel_origin, voxel_size, 0, (int)s[2], out_format, clamp_output);
 	delete voxels;
 }
