@@ -20,9 +20,14 @@ void CCPi::tikhonov_regularize(voxel_data &b, const voxel_data &a,
       int j2 = j - 1;
       if (j2 < 0)
 	j2 = j + 1;
+      const voxel_type *a_i1 = assume_aligned(&(a[i1][j][0]), voxel_type);
+      const voxel_type *a_i2 = assume_aligned(&(a[i2][j][0]), voxel_type);
+      const voxel_type *a_j1 = assume_aligned(&(a[i][j1][0]), voxel_type);
+      const voxel_type *a_j2 = assume_aligned(&(a[i][j2][0]), voxel_type);
+      const voxel_type *a_ij = assume_aligned(&(a[i][j][0]), voxel_type);
+      voxel_type *b_ij = assume_aligned(&(b[i][j][0]), voxel_type);
       for (int k = 0; k < nz; k++)
-	b[i][j][k] = 0.25 * (a[i1][j][k] + a[i2][j][k] + a[i][j1][k]
-			     + a[i][j2][k]) - a[i][j][k];
+	b_ij[k] = 0.25 * (a_i1[k] + a_i2[k] + a_j1[k] + a_j2[k]) - a_ij[k];
     }
   }
 }
