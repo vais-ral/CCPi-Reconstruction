@@ -1373,6 +1373,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 				    y_proj, nz * sizeof(voxel_type),
 				    x_proj, y_proj, nz * sizeof(float),
 				    thread_id, &vox_ev);
+	    machine::accelerator_flush(thread_id);
 	    sl_int block_yz = y_proj * nz;
 	    for (int block_a = 0; block_a < n_angles; block_a += a_block) {
 	      int a_step = a_block;
@@ -1386,6 +1387,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 					* sl_int(nv_pixels)
 					* sizeof(pixel_type), thread_id,
 					&ah_ev);
+		machine::accelerator_flush(thread_id);
 		// we don't block h since we have a min/max from the x/y blocks
 		for (int block_x = 0; block_x < x_proj; block_x += x_block) {
 		  int x_step = x_block;
@@ -1533,6 +1535,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 						cstart * sizeof(int),
 						csize * sizeof(int), thread_id,
 						&((*(ev[ax]))[3]));
+			machine::accelerator_flush(thread_id);
 			(*(ev[ax]))[4] = ah_ev;
 			(*(ev[ax]))[5] = vox_ev;
 			//int pix_offset = (ax * nh_pixels) * nv_pixels;
@@ -1559,6 +1562,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 			  csize -= cblock;
 			  cstart += cblock;
 			}
+			machine::accelerator_flush(thread_id);
 		      } else
 			ev[ax] = 0;
 		    }
@@ -1573,6 +1577,7 @@ void CCPi::parallel_beam::f2D_accel(const real_1d &h_pixels,
 					  a_step * sl_int(nh_pixels)
 					  * sl_int(nv_pixels)
 					  * sizeof(pixel_type), thread_id);
+		machine::accelerator_flush(thread_id);
 	      }
 	    }
 	  }
@@ -1793,6 +1798,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 	  machine::copy_to_device(&pixels[ap][0][0], pix_buf,
 				  p_step * sl_int(nh_pixels) * sl_int(nv_pixels)
 				  * sizeof(pixel_type), thread_id, &pixel_ev);
+	  machine::accelerator_flush(thread_id);
 	  for (int block_x = 0; block_x < nx; block_x += x_block) {
 	    int x_step = x_block;
 	    if (block_x + x_step > nx)
@@ -1807,6 +1813,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 					ny, nz * sizeof(voxel_type),
 					x_step, y_step, nz * sizeof(float),
 					thread_id, &vox_ev);
+		machine::accelerator_flush(thread_id);
 		for (int block_a = 0; block_a < p_step; block_a += a_block) {
 		  int a_step = a_block;
 		  if (block_a + a_step > p_step)
@@ -1860,6 +1867,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 					    ix * y_step * sizeof(int),
 					    y_step * sizeof(int), thread_id,
 					    &((*(ev[ix]))[2]));
+		    machine::accelerator_flush(thread_id);
 		    (*(ev[ix]))[3] = pixel_ev;
 		    (*(ev[ix]))[4] = vox_ev;
 		    int vox_offset = (ix * y_step) * nz;
@@ -1888,6 +1896,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 		      csize -= cblock;
 		      cstart += cblock;
 		    }
+		    machine::accelerator_flush(thread_id);
 		  }
 		  machine::accelerator_barrier(thread_id);
 		  for (int ix = 0; ix < x_step; ix++)
@@ -1898,6 +1907,7 @@ void CCPi::parallel_beam::b2D_accel(const real_1d &h_pixels,
 					  ny, nz * sizeof(voxel_type),
 					  x_step, y_step, nz * sizeof(float),
 					  thread_id);
+		machine::accelerator_flush(thread_id);
 		//machine::accelerator_barrier(thread_id);
 	      }
 	      counter++;

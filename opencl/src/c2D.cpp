@@ -1175,6 +1175,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
                                                   true, thread_id);
       machine::copy_to_device(inv_delz.data(), dp_inv_z,
 			      n_v * sizeof(float), thread_id);
+      machine::accelerator_flush(thread_id);
 
       const real pixel_step = (h_pixels[1] - h_pixels[0]);
       const real ipix_step = 1.0 / pixel_step;
@@ -1285,6 +1286,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 				  y_step, nz_voxels * sizeof(voxel_type),
 				  x_step, y_step, nz_voxels * sizeof(float),
 				  thread_id, &vox_ev);
+	  machine::accelerator_flush(thread_id);
 	  sl_int block_yz = y_step * nz_voxels;
 	  sl_int x_base = sl_int(block_x) * block_yz;
 	  sl_int ij_base = i_base + sl_int(block_y) * sl_int(nz_voxels);
@@ -1301,6 +1303,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 				      * sl_int(n_v)
 				      * sizeof(pixel_type), thread_id,
 				      &ah_ev);
+	      machine::accelerator_flush(thread_id);
 	      sl_int ah_base = x_base + sl_int(block_y) * sl_int(nz_voxels);
 	      std::vector<std::vector<event_t > *> ev(a_step);
 	      int cx = 0;
@@ -1410,6 +1413,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 					  cstart * sizeof(int),
 					  csize * sizeof(int), thread_id,
 					  &((*(ev[ax]))[3]));
+		  machine::accelerator_flush(thread_id);
 		  (*(ev[ax]))[4] = ah_ev;
 		  (*(ev[ax]))[5] = vox_ev;
 		  // Todo - could just make it a 3D grid with only
@@ -1462,6 +1466,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 		    csize -= cblock;
 		    cstart += cblock;
 		  }
+		  machine::accelerator_flush(thread_id);
 		} else
 		  ev[ax] = 0;
 	      }
@@ -1473,6 +1478,7 @@ void CCPi::cone_beam::f2D_accel(const real source_x, const real source_y,
 					a_step * sl_int(n_h)
 					* sl_int(n_v)
 					* sizeof(pixel_type), thread_id);
+	      machine::accelerator_flush(thread_id);
 	      // Todo - improve this
 	      for (int ax = 0; ax < a_step; ax++) {
 		int a = block_a + ax;
@@ -1594,6 +1600,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 			      n_v * sizeof(float), thread_id);
       machine::copy_to_device(vox_z.data(), dp_vox_z,
 			      (nz + 32) * sizeof(float), thread_id);
+      machine::accelerator_flush(thread_id);
 
       real_1d yvals(ny + 1);
       for (int j = 0; j <= ny; j++)
@@ -1725,6 +1732,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 				      ny, nz * sizeof(voxel_type),
 				      x_step, y_step, nz * sizeof(float),
 				      thread_id, &vox_ev);
+	      machine::accelerator_flush(thread_id);
 	      for (int block_a = 0; block_a < n_angles; block_a += a_block) {
 		int a_step = a_block;
 		if (block_a + a_step > n_angles)
@@ -1792,6 +1800,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 					    cstart * sizeof(int),
 					    csize * sizeof(int), thread_id,
 					    &((*(ev[ix]))[4]));
+		    machine::accelerator_flush(thread_id);
 		    (*(ev[ix]))[5] = pixel_ev;
 		    (*(ev[ix]))[6] = vox_ev;
 		    //int vox_offset = (ix * y_step) * nz;
@@ -1842,6 +1851,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 		      csize -= cblock;
 		      cstart += cblock;
 		    }
+		    machine::accelerator_flush(thread_id);
 		  } else
 		    ev[ix] = 0;
 		}
@@ -1855,6 +1865,7 @@ void CCPi::cone_beam::b2D_accel(const real source_x, const real source_y,
 					ny, nz * sizeof(voxel_type),
 					x_step, y_step, nz * sizeof(float),
 					thread_id);
+	      machine::accelerator_flush(thread_id);
 	    }
 	    counter++;
 	  }
