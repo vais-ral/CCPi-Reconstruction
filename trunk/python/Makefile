@@ -16,11 +16,11 @@ OBJECTS = results.o instruments.o parallel.o cone.o diamond.o xtek.o cgls.o \
 	p2D.o tv_reg.o tv_core.o tiff.o timer.o utils.o ui_calls.o \
 	mpi.o c2D.o voxels.o sirt.o mlem.o tikhonov.o
 
-ccpi.so: $(PYOBJS) $(OBJECTS)
+reconstruction.so: $(PYOBJS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(PYOBJS) $(OBJECTS) $(LIBS)
 
 clean:
-	rm ccpi.so *.o
+	rm reconstruction.so *.o
 
 $(PYOBJS): ../src/base_types.hpp ../src/allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
