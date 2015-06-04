@@ -21,9 +21,9 @@ function [] = write_tiff(w, pathname, filename, nvoxels, nbits)
   x = reshape(x,nvoxels);
   % write projection data
   for i = 1:nvoxels(3)
-    data = x(:,:,i);
-    % memory order was x,y,z, tiff is y first
-    data = permute(data, [2 1]);
+    data = x(i,:,:);
+    % memory order was z,y,x, tiff is y first
+    % data = permute(data, [2 1]);
     % tiff y pixel goes down screen, ours was -y to + y up
     data = flipdim(data, 1);
     if nbits == 8

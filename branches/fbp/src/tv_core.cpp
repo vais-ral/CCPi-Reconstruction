@@ -3,16 +3,18 @@
 #include <cstdlib>
 #include <cstdio>
 #include <algorithm>
+#include <float.h>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
 #  include "base_types.hpp"
 #endif // types
 #include "blas.hpp"
-#include "fbp.hpp"
+#include "filters.hpp"
 #include "instruments.hpp"
 #include "algorithms.hpp"
 #include "ui_calls.hpp"
+#include "tv_reg.hpp"
 
 /* Settings which makes the user do a CTRL-C break out of the loop*/
 #if defined(_WIN32) || defined(__WIN32__)
@@ -68,6 +70,8 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
 					 const real grid_offset[],
 					 instrument *device)
 {
+  // FLT_EPSILON? or 1e-14
+  const real one_eps = 1.0 + 1e-14; //1.0 + FLT_EPSILON;
   real q;
   real thetakp1;
   real betak;
@@ -104,8 +108,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   /*temp vectors */
   voxel_3d tv(boost::extents[sz[0]][sz[1]][sz[2]],
 	      boost::c_storage_order());
-  pixel_3d tv2(boost::extents[n_angles][n_v][n_h]);
+  pixel_3d tv2(boost::extents[n_angles][n_h][n_v]);
   std::vector<real> uijl(Ddim);
+
+  add_output("TVreg initialising...");
+  send_output();
 
   /* INITIALIZE */
   numGrad = 0;
@@ -134,11 +141,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   /* For each voxel */
   scal_y(alpha, Nablafyk, nx, ny, nz);
   /*-----------------Forward projection--------------------------------*/
-  init_data(tv2, n_angles, n_v, n_h);
+  init_data(tv2, n_angles, n_h, n_v);
   /*tv2 = A*yk */
   device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = tv2 - b */
-  sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+  sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
   numFunc++;
   /* fyk + 0.5*||A*y_k - b||^2 */
@@ -166,11 +173,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  init_data(tv2, n_angles, n_v, n_h);
+  init_data(tv2, n_angles, n_h, n_v);
   /*tv2 = A*x_k+1 */
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
   /* tv2 = (A*x_k+1 - b) */
-  sum_axpy(-1.0, b, tv2, n_angles, n_v, n_h);
+  sum_axpy(-1.0, b, tv2, n_angles, n_h, n_v);
 
   /* 0.5*||A*x_k+1 - b||^2 */
   gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -179,7 +186,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   // f(x_k+1) = h(x_k+1) + g(x_k+1) = alpha*T_tau(x_k+1) + 0.5*||A*x_k+1 - b||^2
   fxkp1 = hxkp1 + gxkp1;
 
-  while (fxkp1 / (1+1e-14) > fyk + dot_prod(Nablafyk, tv, nx, ny, nz)
+  while (fxkp1 / one_eps > fyk + dot_prod(Nablafyk, tv, nx, ny, nz)
 	 + (bL / 2) * norm_voxels(tv, nx, ny, nz)) {
     numBack++;
     bL *= s_L;
@@ -199,11 +206,11 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    init_data(tv2, n_angles, n_v, n_h);
+    init_data(tv2, n_angles, n_h, n_v);
     /*tv2 = A*x_k+1 */
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
     /* tv2 = (A*x_k+1 - b) */
-    sum_axpy(-1.0, b, tv2, n_angles, n_v, n_h);
+    sum_axpy(-1.0, b, tv2, n_angles, n_h, n_v);
 
     /* 0.5*||A*x_k+1 - b||^2 */
     gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -240,9 +247,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   real fxk = alpha*DTD(xkp1,Nablafxkp1,uijl,tau,Ddim,Dm,Dn,Dl, sz);
 
   /*-----------------Forward projection--------------------------------*/
-  init_data(tv2, n_angles, n_v, n_h);
+  init_data(tv2, n_angles, n_h, n_v);
   device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-  sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+  sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
   numFunc++;
   fxk += real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -251,6 +258,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
   // subroutine?
   int kk = -1;
   for (int k = 0; k <= k_max; k++) {
+    add_output("Iteration ");
+    add_output(k + 1);
+    send_output();
     kk++;
     Lklist[kk] = bL;
     muklist[kk] = bmu;
@@ -261,9 +271,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     scal_y(alpha, Nablafyk, nx, ny, nz);
 
     /*-----------------Forward projection--------------------------------*/
-    init_data(tv2, n_angles, n_v, n_h);
+    init_data(tv2, n_angles, n_h, n_v);
     device->forward_project(tv2, yk, grid_offset, voxel_size, Dm, Dn, Dl);
-    sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+    sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
     numFunc++;
     fyk += real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
@@ -282,7 +292,7 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     if (k != 0) {
       diff_xyz(xk, yk, tv, nx, ny, nz);
 
-      bmu = std::max(std::min(real(2) * (fxk * (real(1) + real(1e-14))
+      bmu = std::max(std::min(real(2) * (fxk * real(one_eps)
 					 - (fyk
 					    + dot_prod(Nablafyk, tv, nx,ny,nz)))
 			      / norm_voxels(tv, nx, ny, nz), bmu),
@@ -301,17 +311,16 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
     hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
     /*-----------------Forward projection--------------------------------*/
-    init_data(tv2, n_angles, n_v, n_h);
+    init_data(tv2, n_angles, n_h, n_v);
     device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-    sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+    sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
     gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
     numFunc++;
     fxkp1 = hxkp1 + gxkp1;
 
-    while (fxkp1 / (real(1) + real(1e-14)) > fyk
-	   + dot_prod(Nablafyk, tv, nx, ny, nz)
+    while (fxkp1 / one_eps > fyk + dot_prod(Nablafyk, tv, nx, ny, nz)
 	   + (bL / real(2)) * norm_voxels(tv, nx, ny, nz)) {
       numBack++;
       bL *= s_L;
@@ -327,9 +336,9 @@ void CCPi::tv_regularization::tvreg_core(voxel_data &xkp1, real &fxkp1,
       hxkp1 = alpha * DTD(xkp1, Nablafxkp1, uijl, tau, Ddim, Dm, Dn, Dl, sz);
 
       /*-----------------Forward projection--------------------------------*/
-      init_data(tv2, n_angles, n_v, n_h);
+      init_data(tv2, n_angles, n_h, n_v);
       device->forward_project(tv2, xkp1, grid_offset, voxel_size, Dm, Dn, Dl);
-      sum_axpy(real(-1.0), b, tv2, n_angles, n_v, n_h);
+      sum_axpy(real(-1.0), b, tv2, n_angles, n_h, n_v);
 
       gxkp1 = real(0.5) * norm_pixels(tv2, n_angles, n_v, n_h);
 
@@ -508,7 +517,7 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 	 const real tau, const int Ddim, const int Dm, const int Dn,
 	 const int Dl, const voxel_data::size_type sz[])
 {
-  real tv_tau_x=0;
+  real tv_tau_x = 0;
   real taud2 = tau / 2;
   real tau2 = 1 / (tau * 2);
 
@@ -516,14 +525,13 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
   init_data(Nablafx, sl_int(sz[0]), sl_int(sz[1]), sl_int(sz[2]));
 
   if (Ddim == 2) {
-    for (sl_int u = 0; u <= Dm - 1; u++) {
-      for (sl_int v = 0; v <= Dn - 1; v++) {
-	sl_int i1 = (u + 1) %Dm + v * Dm;
-	sl_int i2 = u + ((v + 1) % Dn) * Dm;
-	sl_int i3= u + v * Dm;
+    for (sl_int u = 0; u < Dm; u++) {
+      for (sl_int v = 0; v < Dn; v++) {
+	sl_int i1 = (u + 1) % Dm;
+	sl_int i2 = (v + 1) % Dn;
 
-	uijl[0] = (x.data())[i1] - (x.data())[i3];
-	uijl[1] = (x.data())[i2] - (x.data())[i3];
+	uijl[0] = x[i1][v][0] - x[u][v][0];
+	uijl[1] = x[u][i2][0] - x[u][v][0];
 
 	real c1 = std::sqrt(uijl[0] * uijl[0] + uijl[1] * uijl[1]);
 	real c2;
@@ -538,36 +546,37 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 	uijl[0] /= c2;
 	uijl[1] /= c2;
 
-	(Nablafx.data())[i1] += uijl[0];
-	(Nablafx.data())[i3] -= uijl[0];
-	(Nablafx.data())[i2] += uijl[1];
-	(Nablafx.data())[i3] -= uijl[1];
+	Nablafx[i1][v][0] += uijl[0];
+	Nablafx[u][v][0] -= uijl[0];
+	Nablafx[u][i2][0] += uijl[1];
+	Nablafx[u][v][0] -= uijl[1];
       }
     }
 
   } else if (Ddim == 3) {
-    sl_int mn = Dm * Dn;
-    sl_int mnl = mn * Dl;
+    for (sl_int u = 0; u < Dm; u++) {
+      int u1 = (u + 1) % Dm;
+      for (sl_int v = 0; v < Dn; v++) {
+	int v1 = (v + 1) % Dn;
+	//sl_int s1= ((u + 1) % Dm) + v * Dm;
+	//sl_int s2 = u + ((v + 1) % Dn) * Dm;
+	//sl_int s3 = u + v * Dm;
+	//sl_int s4 = 0;
+	for (sl_int w = 0; w < Dl; w++) {
+	  int w1 = (w + 1) % Dl;
+	  //sl_int i1 = s1 + s4;
+	  //sl_int i2 = s2 + s4;
+	  //sl_int i4 = s3 + s4;
+	  //sl_int i3 = (i4 + mn) % mnl;
 
-    for (sl_int u = 0; u <= Dm - 1; u++) {
-      for (sl_int v = 0; v <= Dn - 1; v++) {
-	/*s1= ((u+1)%Dm) + v*Dm;*/
-	/*s2 = u + ((v+1)%Dn)*Dm;*/
-	sl_int s1= ((u + 1) % Dm) + v * Dm;
-	sl_int s2 = u + ((v + 1) % Dn) * Dm;
-	sl_int s3 = u + v * Dm;
-	sl_int s4 = 0;
-	for (sl_int w = 0; w <= Dl - 1; w++) {
-	  sl_int i1 = s1 + s4;
-	  sl_int i2 = s2 + s4;
-	  sl_int i4 = s3 + s4;
-	  sl_int i3 = (i4 + mn) % mnl;
+	  //s4 += mn;
 
-	  s4 += mn;
-
-	  uijl[0] = (x.data())[i1] - (x.data())[i4];
-	  uijl[1] = (x.data())[i2] - (x.data())[i4];
-	  uijl[2] = (x.data())[i3] - (x.data())[i4];
+	  uijl[0] = x[u1][v][w] - x[u][v][w];
+	  uijl[1] = x[u][v1][w] - x[u][v][w];
+	  uijl[2] = x[u][v][w1] - x[u][v][w];
+	  //uijl[0] = (x.data())[i1] - (x.data())[i4];
+	  //uijl[1] = (x.data())[i2] - (x.data())[i4];
+	  //uijl[2] = (x.data())[i3] - (x.data())[i4];
 
 	  real c1 = std::sqrt(uijl[0] * uijl[0] + uijl[1] * uijl[1]
 			      + uijl[2] * uijl[2]);
@@ -584,10 +593,14 @@ real DTD(voxel_data &x, voxel_data &Nablafx, std::vector<real> &uijl,
 	  uijl[1] /= c2;
 	  uijl[2] /= c2;
 
-	  (Nablafx.data())[i1] += uijl[0];
-	  (Nablafx.data())[i4] -= uijl[0] + uijl[1] + uijl[2];
-	  (Nablafx.data())[i2] += uijl[1];
-	  (Nablafx.data())[i3] += uijl[2];
+	  Nablafx[u1][v][w] += uijl[0];
+	  Nablafx[u][v][w] -= uijl[0] + uijl[1] + uijl[2];
+	  Nablafx[u][v1][w] += uijl[1];
+	  Nablafx[u][v][w1] += uijl[2];
+	  //(Nablafx.data())[i1] += uijl[0];
+	  //(Nablafx.data())[i4] -= uijl[0] + uijl[1] + uijl[2];
+	  //(Nablafx.data())[i2] += uijl[1];
+	  //(Nablafx.data())[i3] += uijl[2];
 
 	}
       }

@@ -31,6 +31,8 @@ BEGIN_MESSAGE_MAP(Initial_page, CPropertyPage)
 	ON_BN_CLICKED(IDC_RADIO_XTEK, &Initial_page::OnBnClickedRadioXtek)
 	ON_BN_CLICKED(IDC_CGLS, &Initial_page::OnBnClickedCgls)
 	ON_BN_CLICKED(IDC_HT_CHECK, &Initial_page::OnBnClickedHtCheck)
+	ON_BN_CLICKED(IDC_MLEM, &Initial_page::OnBnClickedMLEM)
+	ON_BN_CLICKED(IDC_SIRT, &Initial_page::OnBnClickedSIRT)
 END_MESSAGE_MAP()
 
 
@@ -63,4 +65,16 @@ BOOL Initial_page::OnSetActive()
 void Initial_page::OnBnClickedHtCheck()
 {
 	my_sheet->toggle_hyper_threads();
+}
+
+
+void Initial_page::OnBnClickedMLEM()
+{
+  my_sheet->set_algorithm(CCPi::alg_MLEM);
+}
+
+
+void Initial_page::OnBnClickedSIRT()
+{
+  my_sheet->set_algorithm(CCPi::alg_SIRT);
 }

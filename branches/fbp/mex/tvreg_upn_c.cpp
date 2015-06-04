@@ -117,7 +117,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     n_rays_y = mxGetM(prhs[20]);
     n_rays_z = mxGetM(prhs[21]);
     n_angles = mxGetM(prhs[22]);
-    pixel_data px(b, boost::extents[n_angles][n_rays_z][n_rays_y]);
+    pixel_data px(b, boost::extents[n_angles][n_rays_y][n_rays_z]);
         
     /*obtain the dimensions */
     dim = std::max( mxGetM(Mdims), mxGetN(Mdims) );
@@ -169,7 +169,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     /* Get a pointer to the data space in our newly allocated memory */
     xkp1 = (float*)mxGetPr(plhs[0]);
     voxel_data vxkp1(xkp1, boost::extents[D.m][D.n][D.l],
-		     boost::fortran_storage_order());
+		     boost::c_storage_order());
     fxkp1 = mxGetPr(plhs[1]);
     hxkp1 = mxGetPr(plhs[2]);
     gxkp1 = mxGetPr(plhs[3]);

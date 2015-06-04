@@ -23,4 +23,6 @@ public:
 	afx_msg void OnBnClickedCgls();
 	virtual BOOL OnSetActive();
 	afx_msg void OnBnClickedHtCheck();
+	afx_msg void OnBnClickedMLEM();
+	afx_msg void OnBnClickedSIRT();
 };
