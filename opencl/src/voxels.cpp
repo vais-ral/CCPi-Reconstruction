@@ -51,14 +51,18 @@ void calculate_block_sizes(int &nx_voxels, int &ny_voxels, int &nz_voxels,
   }
 }
 
-void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
-		 const std::string data_file, const std::string output_name,
-		 const real rotation_centre, const int pixels_per_voxel,
-		 const int blocking_factor, const bool beam_harden,
-		 const CCPi::output_format write_format,
-		 const bool clamp_output, const bool phantom)
+voxel_data *reconstruct(CCPi::instrument *device,
+			CCPi::reconstruction_alg *algorithm,
+			const std::string data_file,
+			const std::string output_name, real full_vox_origin[3],
+			real voxel_size[3], const real rotation_centre,
+			const int pixels_per_voxel, const int blocking_factor,
+			const bool beam_harden,
+			const CCPi::output_format write_format,
+			const bool clamp_output, const bool phantom)
 {
   int num_processors = machine::get_number_of_processors();
+  voxel_data *voxels = 0;
   std::string path;
   std::string filename;
   CCPi::split_path_and_name(data_file, path, filename);
@@ -79,8 +83,8 @@ void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
     device->set_v_block(z_data_size);
     int block_offset = machine::get_processor_id() * block_size;
     int z_data_offset = block_offset * pixels_per_voxel;
-    real full_vox_origin[3];
-    real voxel_size[3];
+    //real full_vox_origin[3];
+    //real voxel_size[3];
     if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
 				      nx_voxels, ny_voxels, maxz_voxels)) {
       // can modify offsets and end if parallel beam to solve subregion
@@ -103,23 +107,15 @@ void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
 	  + block_offset * voxel_size[2];
 	if (device->read_scans(path, z_data_offset,
 			       z_data_size, first, phantom)) {
-	  voxel_data voxels(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
-	  init_data(voxels, nx_voxels, ny_voxels, nz_voxels);
+	  voxels =
+	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
 	  if (beam_harden)
 	    device->apply_beam_hardening();
-	  ok = algorithm->reconstruct(device, voxels,
+	  ok = algorithm->reconstruct(device, *voxels,
 				      voxel_origin, voxel_size);
 	  if (ok) {
-	    // truncate negative values
-	    for (int i = 0; i < nx_voxels; i++) {
-	      for (int j = 0; j < ny_voxels; j++) {
-		for (int k = 0; k < nz_voxels; k++) {
-		  if (voxels[i][j][k] < 0.0)
-		    voxels[i][j][k] = 0.0;
-		}
-	      }
-	    }
-	    CCPi::write_results(output_name, voxels, full_vox_origin,
+	    clamp_min(*voxels, 0.0, nx_voxels, ny_voxels, nz_voxels);
+	    CCPi::write_results(output_name, *voxels, full_vox_origin,
 				voxel_size, block_offset, maxz_voxels,
 				write_format, clamp_output);
 	  }
@@ -131,6 +127,7 @@ void reconstruct(CCPi::instrument *device, CCPi::reconstruction_alg *algorithm,
       } while (ok and z_data_offset < end_value);
     }
   }
+  return voxels;
 }
 
 // Todo - alot of this is copied from the above one, which isn't ideal
@@ -186,21 +183,13 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	if (device->read_scans(pixels, z_data_offset, z_data_size)) {
 	  voxels =
 	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
-	  init_data(*voxels, nx_voxels, ny_voxels, nz_voxels);
 	  if (beam_harden)
 	    device->apply_beam_hardening();
 	  ok = algorithm->reconstruct(device, *voxels,
 				      voxel_origin, voxel_size);
 	  if (ok) {
 	    // truncate negative values
-	    for (int i = 0; i < nx_voxels; i++) {
-	      for (int j = 0; j < ny_voxels; j++) {
-		for (int k = 0; k < nz_voxels; k++) {
-		  if ((*voxels)[i][j][k] < 0.0)
-		    (*voxels)[i][j][k] = 0.0;
-		}
-	      }
-	    }
+	    clamp_min(*voxels, 0.0, nx_voxels, ny_voxels, nz_voxels);
 	  }
 	} else
 	  ok = false;
@@ -227,7 +216,8 @@ voxel_data *reconstruct(CCPi::instrument *device,
 			const numpy_1d &h_offsets, const numpy_1d &v_offsets,
 			const int pixels_per_voxel, const real source_x,
 			const real detector_x, const real pixel_h_size,
-			const real pixel_v_size, const bool beam_harden)
+			const real pixel_v_size, const bool beam_harden,
+			real full_vox_origin[3], real voxel_size[3])
 {
   int num_processors = machine::get_number_of_processors();
   const int blocking_factor = 0;
@@ -251,8 +241,8 @@ voxel_data *reconstruct(CCPi::instrument *device,
     device->set_v_block(z_data_size);
     int block_offset = machine::get_processor_id() * block_size;
     int z_data_offset = block_offset * pixels_per_voxel;
-    real full_vox_origin[3];
-    real voxel_size[3];
+    //real full_vox_origin[3];
+    //real voxel_size[3];
     if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
 				      nx_voxels, ny_voxels, maxz_voxels)) {
       // can modify offsets and end if parallel beam to solve subregion
@@ -276,21 +266,13 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	if (device->read_scans(pixels, z_data_offset, z_data_size)) {
 	  voxels =
 	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
-	  init_data(*voxels, nx_voxels, ny_voxels, nz_voxels);
 	  if (beam_harden)
 	    device->apply_beam_hardening();
 	  ok = algorithm->reconstruct(device, *voxels,
 				      voxel_origin, voxel_size);
 	  if (ok) {
 	    // truncate negative values
-	    for (int i = 0; i < nx_voxels; i++) {
-	      for (int j = 0; j < ny_voxels; j++) {
-		for (int k = 0; k < nz_voxels; k++) {
-		  if ((*voxels)[i][j][k] < 0.0)
-		    (*voxels)[i][j][k] = 0.0;
-		}
-	      }
-	    }
+	    clamp_min(*voxels, 0.0, nx_voxels, ny_voxels, nz_voxels);
 	  }
 	} else
 	  ok = false;

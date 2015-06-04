@@ -6,6 +6,8 @@
 #include "timer.hpp"
 #include "ui_calls.hpp"
 #include "blas.hpp"
+#include "cgls.hpp"
+#include "regularize.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -29,7 +31,6 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
   // Prepare for CG iteration.
   voxel_data d(boost::extents[sz[0]][sz[1]][sz[2]],
 	       boost::c_storage_order());
-  init_data(d, nx, ny, nz);
   initialise_progress(2 * iterations + 1, "CGLS iterating...");
   device->backward_project(d, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
@@ -48,7 +49,6 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
     // Update x and r vectors.
     {
       pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
-      init_data(Ad, n_angles, n_h, n_v);
       device->forward_project(Ad, d, origin, voxel_size,
 			      (int)sz[0], (int)sz[1], (int)sz[2]);
       pixel_update(Ad, b, n_angles, n_v, n_h, d, voxels, nx, ny, nz, normr2);
@@ -57,7 +57,6 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
     {
       voxel_data s(boost::extents[sz[0]][sz[1]][sz[2]],
 		   boost::c_storage_order());
-      init_data(s, nx, ny, nz);
       device->backward_project(b, s, origin, voxel_size,
 			       (int)sz[0], (int)sz[1], (int)sz[2]);
 
@@ -184,7 +183,6 @@ bool CCPi::bi_cgls_3d::reconstruct(instrument *device, voxel_data &voxels,
   // Prepare for CG iteration.
   voxel_data r0(boost::extents[sz[0]][sz[1]][sz[2]],
 		boost::c_storage_order());
-  init_data(r0, nx, ny, nz);
   initialise_progress(2 * get_iterations() + 1, "BiCGLS iterating...");
   device->backward_project(r0, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
@@ -208,7 +206,6 @@ bool CCPi::bi_cgls_3d::reconstruct(instrument *device, voxel_data &voxels,
   for (int iter = 0; iter < get_iterations(); iter++) {
     iter_time.reset();
     pixel_data q(boost::extents[n_angles][n_h][n_v]);
-    init_data(q, n_angles, n_h, n_v);
     //pixel_data qt(boost::extents[n_angles][n_h][n_v]);
     //init_data(qt, n_angles, n_h, n_v);
     device->forward_project(q, p0, origin, voxel_size,
@@ -218,7 +215,6 @@ bool CCPi::bi_cgls_3d::reconstruct(instrument *device, voxel_data &voxels,
     update_progress(2 * iter + 2);
     voxel_data vq(boost::extents[sz[0]][sz[1]][sz[2]],
 		  boost::c_storage_order());
-    init_data(vq, nx, ny, nz);
     //voxel_data vqt(boost::extents[sz[0]][sz[1]][sz[2]],
     //	  boost::c_storage_order());
     //init_data(vqt, nx, ny, nz);
@@ -271,7 +267,6 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
   // Prepare for CG iteration.
   voxel_data r0(boost::extents[sz[0]][sz[1]][sz[2]],
 		boost::c_storage_order());
-  init_data(r0, nx, ny, nz);
   initialise_progress(2 * get_iterations() + 1, "BiCGSTABLS iterating...");
   device->backward_project(r0, origin, voxel_size,
 			   (int)sz[0], (int)sz[1], (int)sz[2]);
@@ -299,7 +294,6 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
     scal_xby(r, beta, p0, nx, ny, nz);
     sum_axpy(- beta * omega, v0, p0, nx, ny, nz);
     pixel_data pv(boost::extents[n_angles][n_h][n_v]);
-    init_data(pv, n_angles, n_h, n_v);
     device->forward_project(pv, p0, origin, voxel_size,
 			    (int)sz[0], (int)sz[1], (int)sz[2]);
     init_data(v0, nx, ny, nz);
@@ -317,7 +311,6 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
 			    (int)sz[0], (int)sz[1], (int)sz[2]);
     voxel_data t(boost::extents[sz[0]][sz[1]][sz[2]],
 		 boost::c_storage_order());
-    init_data(t, nx, ny, nz);
     device->backward_project(t, pv, origin, voxel_size,
 			     (int)sz[0], (int)sz[1], (int)sz[2]);
     omega = norm_voxels(t, s, nx, ny, nz) / norm_voxels(t, nx, ny, nz);
@@ -331,5 +324,72 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
     iter_time.accumulate();
     iter_time.output("Iteration ");
   }
+  return true;
+}
+
+bool CCPi::cgls_tikhonov::reconstruct(instrument *device, voxel_data &voxels,
+				      const real origin[3],
+				      const real voxel_size[3])
+{
+  const voxel_data::size_type *sz = voxels.shape();
+  //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
+  //voxel_type *const x = voxels.data();
+  pixel_data &r_pix = device->get_pixel_data();
+  int n_angles = device->get_num_angles();
+  int n_h = device->get_num_h_pixels();
+  int n_v = device->get_num_v_pixels();
+  sl_int nx = sl_int(sz[0]);
+  sl_int ny = sl_int(sz[1]);
+  sl_int nz = sl_int(sz[2]);
+
+  // Prepare for CG iteration.
+  voxel_data d(boost::extents[nx][ny][nz]);
+  initialise_progress(2 * get_iterations() + 1, "CGLS iterating...");
+  device->backward_project(d, origin, voxel_size, nx, ny, nz);
+  voxel_data r_vox(boost::extents[nx][ny][nz]);
+  voxel_data Ad_vox(boost::extents[nx][ny][nz]);
+
+  voxel_type normr2 = norm_voxels(d, nx, ny, nz);
+  update_progress(1);
+
+  // Iterate.
+  timer iter_time(USE_TIMER);
+  for (int iter = 0; iter < get_iterations(); iter++) {
+    iter_time.reset();
+    // Update x and r vectors.
+    {
+      pixel_data Ad_pix(boost::extents[n_angles][n_h][n_v]);
+      device->forward_project(Ad_pix, d, origin, voxel_size, nx, ny, nz);
+      voxel_data L(boost::extents[nx][ny][nz]);
+      tikhonov_regularize(L, d, nx, ny, nz);
+      sum_axpy(regularisation_param, L, Ad_vox, nx, ny, nz);
+      pixel_type alpha = (norm_pixels(Ad_pix, n_angles, n_v, n_h)
+			  + norm_voxels(Ad_vox, nx, ny, nz));
+      alpha = normr2 / alpha;
+      // voxels += alpha * d
+      sum_axpy(alpha, d, voxels, nx, ny, nz);
+      // r -= alpha * Ad
+      sum_axpy(-alpha, Ad_pix, r_pix, n_angles, n_h, n_v);
+      sum_axpy(-alpha, Ad_vox, r_vox, n_angles, n_h, n_v);
+      tikhonov_regularize(L, voxels, nx, ny, nz);
+      sum_axpy(regularisation_param, L, voxels, nx, ny, nz);
+    }
+    update_progress(2 * iter + 2);
+    {
+      voxel_data s(boost::extents[nx][ny][nz]);
+      device->backward_project(r_pix, s, origin, voxel_size, nx, ny, nz);
+
+      // Update d vector.
+      real normr2_new = norm_voxels(s, nx, ny, nz);
+      real beta = normr2_new / normr2;
+      normr2 = normr2_new;
+      // d = s + beta * d
+      scal_xby(s, beta, d, nx, ny, nz);
+    }
+    update_progress(2 * iter + 3);
+    iter_time.accumulate();
+    iter_time.output("Iteration ");
+  }
+  //delete [] d;
   return true;
 }

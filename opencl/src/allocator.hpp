@@ -85,7 +85,11 @@ public:
 
 // Todo - add an assert #if DEBUG to check that alignment is what it should be?
 #if defined(__GNUC__)
-#  define assume_aligned(a, T) (T *)__builtin_assume_aligned(a, aligned_allocator<T>::alignment)
+#  if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 6)
+#    define assume_aligned(a, T) (T *)__builtin_assume_aligned(a, aligned_allocator<T>::alignment)
+#  else
+#    define assume_aligned(a,T) a
+#  endif // GNUC
 #elif defined(__INTEL_COMPILER) || defined(__ICC) || defined(__ICL)
 // This doesn't really seem to work. Adding __assume(nv%8==0) etc also failed
 // #pragma vector aligned is also supposed to be an alternative

@@ -2,16 +2,188 @@
 #ifndef BLAS_WRAPPERS
 #define BLAS_WRAPPERS
 
+#ifdef WIN32
+#  undef min
+#  undef max
+#  include <algorithm>
+#endif // WIN32
+
 template <class real_type>
 inline void init_data(boost::multi_array_ref<real_type, 3> &x,
-		      const sl_int nx, const sl_int ny, const sl_int nz)
+		      const sl_int nx, const sl_int ny, const sl_int nz,
+		      const real_type v = 0.0)
 {
   //sl_int n = nx * ny * nz;
 #pragma omp parallel for shared(x) firstprivate(nx, ny, nz) schedule(dynamic)
   for (sl_int i = 0; i < nx; i++) {
     real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
     for (sl_int j = 0; j < ny * nz; j++)
-      xptr[j] = 0.0;
+      xptr[j] = v;
+  }
+}
+
+template <class real_type>
+inline void clamp_min(boost::multi_array_ref<real_type, 3> &y, const real m,
+		      const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // clamp min value of y, y = max(y, m)
+  real_type minv = real_type(m);
+#pragma omp parallel for shared(y) firstprivate(nx, ny, nz, minv) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++)
+      yptr[j] = std::max(yptr[j], minv);
+  }
+}
+
+template <class real_type>
+inline void clamp_min_max(boost::multi_array_ref<real_type, 3> &y,
+			  const real mn, const real mx,
+			  const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // clamp min value of y, y = min(max(y, mn), mx)
+  real_type minv = real_type(mn);
+  real_type maxv = real_type(mx);
+#pragma omp parallel for shared(y) firstprivate(nx, ny, nz, minv, maxv) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++)
+      yptr[j] = std::min(std::max(yptr[j], minv), maxv);
+  }
+}
+
+inline void clamp_min_max(pixel_data &y, const pixel_type mn,
+			  const pixel_1d &mx,
+			  const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // clamp min value of y, y = min(max(y, mn), mx)
+  pixel_type minv = mn;
+#pragma omp parallel for shared(y, mx) firstprivate(nx, ny, nz, minv) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    pixel_type maxv = mx[i];
+    pixel_type *yptr = assume_aligned(&(y[i][0][0]), pixel_type);
+    for (sl_int j = 0; j < ny * nz; j++)
+      yptr[j] = std::min(std::max(yptr[j], minv), maxv);
+  }
+}
+
+inline void clampv_min_max(pixel_data &y, const pixel_type mn,
+			   const pixel_1d &mx,
+			   const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // clamp min value of y, y = min(max(y, mn), mx)
+  pixel_type minv = mn;
+#pragma omp parallel for shared(y, mx) firstprivate(nx, ny, nz, minv) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    for (sl_int j = 0; j < ny; j++) {
+      pixel_type *yptr = assume_aligned(&(y[i][j][0]), pixel_type);
+      for (sl_int k = 0; k < nz; k++)
+	yptr[k] = (yptr[k] > mx[k]) ? minv : std::max(yptr[k], minv);
+    }
+  }
+}
+
+template <class real_type>
+inline void invert_x(boost::multi_array_ref<real_type, 3> &x,
+		     const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // x = 1 / x
+#pragma omp parallel for shared(x) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++)
+      if (xptr[j] != 0.0)
+	xptr[j] = 1.0 / xptr[j];
+  }
+}
+
+template <class real_type>
+inline void invert_min_x(boost::multi_array_ref<real_type, 3> &x,
+			 const real_type m, const sl_int nx, const sl_int ny,
+			 const sl_int nz)
+{
+  // x = 1 / x
+#pragma omp parallel for shared(x) firstprivate(nx, ny, nz, m) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++) {
+      if (xptr[j] > m)
+	xptr[j] = 1.0 / xptr[j];
+      else
+	xptr[j] = m;
+    }
+  }
+}
+
+template <class real_type>
+inline void mult_xy(boost::multi_array_ref<real_type, 3> &x,
+		    const boost::multi_array_ref<real_type, 3> &y,
+		    const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // x = x * y
+#pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++)
+      xptr[j] *= yptr[j];
+  }
+}
+
+template <class real_type>
+inline void div_xy(boost::multi_array_ref<real_type, 3> &x,
+		   const boost::multi_array_ref<real_type, 3> &y,
+		   const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // x = x / y
+#pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++) {
+      if (yptr[j] != 0.0)
+	xptr[j] /= yptr[j];
+      else
+	xptr[j] = 0.0;
+    }
+  }
+}
+
+template <class real_type>
+inline void div_xyz(boost::multi_array_ref<real_type, 3> &x,
+		    const boost::multi_array_ref<real_type, 3> &y,
+		    const boost::multi_array_ref<real_type, 3> &z,
+		    const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // x = y / z
+#pragma omp parallel for shared(x, y, z) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    const real_type *zptr = assume_aligned(&(z[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++) {
+      if (zptr[j] != 0.0)
+	xptr[j] = yptr[j] / zptr[j];
+      else
+	xptr[j] = 0.0;
+    }
+  }
+}
+
+template <class real_type>
+inline void multsum_xyz(boost::multi_array_ref<real_type, 3> &x,
+			const boost::multi_array_ref<real_type, 3> &y,
+			const boost::multi_array_ref<real_type, 3> &z,
+			const sl_int nx, const sl_int ny, const sl_int nz)
+{
+  // x = x * y * z
+#pragma omp parallel for shared(x, y, z) firstprivate(nx, ny, nz) schedule(dynamic)
+  for (sl_int i = 0; i < nx; i++) {
+    real_type *xptr = assume_aligned(&(x[i][0][0]), real_type);
+    const real_type *yptr = assume_aligned(&(y[i][0][0]), real_type);
+    const real_type *zptr = assume_aligned(&(z[i][0][0]), real_type);
+    for (sl_int j = 0; j < ny * nz; j++)
+      xptr[j] *= (yptr[j] * zptr[j]);
   }
 }
 

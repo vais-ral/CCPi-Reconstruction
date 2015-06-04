@@ -14,13 +14,13 @@ LIBS = $(PYTHONLIB)
 PYOBJS = ccpi_wrapper.o
 OBJECTS = results.o instruments.o parallel.o cone.o diamond.o xtek.o cgls.o \
 	p2D.o tv_reg.o tv_core.o tiff.o timer.o utils.o ui_calls.o \
-	mpi.o c2D.o voxels.o accel.o
+	mpi.o c2D.o voxels.o sirt.o mlem.o tikhonov.o accel.o
 
-ccpi.so: $(PYOBJS) $(OBJECTS)
+reconstruction.so: $(PYOBJS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(PYOBJS) $(OBJECTS) $(LIBS)
 
 clean:
-	rm ccpi.so *.o
+	rm reconstruction.so *.o
 
 $(PYOBJS): ../src/base_types.hpp ../src/allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
@@ -30,10 +30,20 @@ $(OBJECTS): ../src/base_types.hpp ../src/allocator.hpp
 
 ccpi_wrapper.o: ccpi_wrapper.cpp reconstruct.hpp reconstruct.cpp \
 	../src/mpi.hpp ../src/utils.hpp ../src/instruments.hpp \
-	../src/algorithms.hpp ../src/results.hpp ../src/voxels.hpp
+	../src/algorithms.hpp ../src/results.hpp ../src/voxels.hpp \
+	../src/cgls.hpp ../src/sirt.hpp ../src/mlem.hpp
 
 cgls.o: ../src/cgls.cpp ../src/algorithms.hpp ../src/instruments.hpp \
-	../src/timer.hpp ../src/ui_calls.hpp ../src/blas.hpp
+	../src/timer.hpp ../src/ui_calls.hpp ../src/blas.hpp ../src/cgls.hpp \
+	../src/regularize.hpp
+
+mlem.o: ../src/mlem.cpp ../src/algorithms.hpp ../src/instruments.hpp \
+	../src/timer.hpp ../src/ui_calls.hpp ../src/mlem.hpp ../src/blas.hpp
+
+sirt.o: ../src/sirt.cpp ../src/algorithms.hpp ../src/instruments.hpp \
+	../src/timer.hpp ../src/ui_calls.hpp ../src/sirt.hpp ../src/blas.hpp
+
+tikhonov.o: ../src/tikhonov.cpp ../src/regularize.hpp
 
 instruments.o: ../src/instruments.cpp ../src/instruments.hpp ../src/ui_calls.hpp
 
@@ -53,10 +63,10 @@ results.o: ../src/results.cpp ../src/results.hpp ../src/tiff.hpp \
 	../src/mpi.hpp ../src/ui_calls.hpp
 
 tv_reg.o: ../src/tv_reg.cpp ../src/algorithms.hpp ../src/instruments.hpp \
-	../src/ui_calls.hpp ../src/blas.hpp
+	../src/ui_calls.hpp ../src/blas.hpp ../src/cgls.hpp ../src/tv_reg.hpp
 
 tv_core.o: ../src/tv_core.cpp ../src/instruments.hpp ../src/algorithms.hpp \
-	../src/blas.hpp ../src/ui_calls.hpp
+	../src/blas.hpp ../src/ui_calls.hpp ../src/tv_reg.hpp
 
 p2D.o: ../src/p2D.cpp ../src/instruments.hpp ../src/ui_calls.hpp
 

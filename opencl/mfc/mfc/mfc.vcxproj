@@ -162,12 +162,14 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_TIMER;BOOST_DISABLE_ASSERTS;WIN32;_WINDOWS;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USE_TIMER;HAS_TIFF;BOOST_DISABLE_ASSERTS;WIN32;_WINDOWS;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>\Users\bgs42\Projects\boost_1_55_0;\Users\bgs42\Projects\cgls;\Users\bgs42\Projects\cgls\tiff-4.0.3\libtiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <AssemblerListingLocation>$(IntDir)\asm\</AssemblerListingLocation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -194,16 +196,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\algorithms.hpp" />
+    <ClInclude Include="..\..\src\allocator.hpp" />
     <ClInclude Include="..\..\src\base_types.hpp" />
     <ClInclude Include="..\..\src\blas.hpp" />
+    <ClInclude Include="..\..\src\cgls.hpp" />
     <ClInclude Include="..\..\src\cone_b.hpp" />
     <ClInclude Include="..\..\src\cone_f.hpp" />
     <ClInclude Include="..\..\src\instruments.hpp" />
+    <ClInclude Include="..\..\src\mlem.hpp" />
     <ClInclude Include="..\..\src\mpi.hpp" />
     <ClInclude Include="..\..\src\parallel_b.hpp" />
     <ClInclude Include="..\..\src\parallel_f.hpp" />
     <ClInclude Include="..\..\src\project_line.hpp" />
+    <ClInclude Include="..\..\src\regularize.hpp" />
     <ClInclude Include="..\..\src\results.hpp" />
+    <ClInclude Include="..\..\src\sirt.hpp" />
     <ClInclude Include="..\..\src\tiff.hpp" />
     <ClInclude Include="..\..\src\timer.hpp" />
     <ClInclude Include="..\..\src\ui_calls.hpp" />
@@ -229,11 +236,14 @@
     <ClCompile Include="..\..\src\cone.cpp" />
     <ClCompile Include="..\..\src\diamond.cpp" />
     <ClCompile Include="..\..\src\instruments.cpp" />
+    <ClCompile Include="..\..\src\mlem.cpp" />
     <ClCompile Include="..\..\src\mpi.cpp" />
     <ClCompile Include="..\..\src\p2D.cpp" />
     <ClCompile Include="..\..\src\parallel.cpp" />
     <ClCompile Include="..\..\src\results.cpp" />
+    <ClCompile Include="..\..\src\sirt.cpp" />
     <ClCompile Include="..\..\src\tiff.cpp" />
+    <ClCompile Include="..\..\src\tikhonov.cpp" />
     <ClCompile Include="..\..\src\timer.cpp" />
     <ClCompile Include="..\..\src\tv_core.cpp" />
     <ClCompile Include="..\..\src\tv_reg.cpp" />

@@ -26,6 +26,8 @@ void CCPi::write_results(const std::string basename, const voxel_data &voxels,
 			 const output_format format, const bool clamp)
 {
   switch (format) {
+  case no_output:
+    break;
   case unsigned_byte_tiff:
     write_as_tiff(basename, voxels, offset, 255, 8, clamp);
     break;

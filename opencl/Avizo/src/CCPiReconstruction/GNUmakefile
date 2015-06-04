@@ -55,8 +55,8 @@ endif
 default all: copy dep lib
 
 # The name of this package.
-PACKAGE = CCPi
-TARGET = CCPi
+PACKAGE = CCPiReconstruction
+TARGET = CCPiReconstruction
 
 # The main directories.
 BUILDROOT = ../..
@@ -172,6 +172,7 @@ endif
 ifeq ($(MAKE_UNAME),LinuxAMD64)
   ifeq ($(MAKE_CFG),Debug)
     INCLUDES += -I../../../src
+    INCLUDES += -I$(MAINROOT)/include/exlibtiff
     INCLUDES += -I../../src
     INCLUDES += -I/usr/X11R6/include
     INCLUDES += -I/usr/local/Avizo/9.0.0/include
@@ -221,6 +222,7 @@ ifeq ($(MAKE_UNAME),LinuxAMD64)
   endif
   ifeq ($(MAKE_CFG),Optimize)
     INCLUDES += -I../../../src
+    INCLUDES += -I$(MAINROOT)/include/exlibtiff
     INCLUDES += -I../../src
     INCLUDES += -I/usr/X11R6/include
     INCLUDES += -I/usr/local/Avizo/9.0.0/include
@@ -332,6 +334,7 @@ ifeq ($(MAKE_UNAME),LinuxAMD64)
     LIBS += -lLDM
     LIBS += -lX11
     LIBS += -ltcl8.5
+    LIBS += -lexlibtiff
     LIBS += -lQt3Support
     LIBS += -lQtCore
     LIBS += -lQtDesignerComponents
@@ -375,6 +378,7 @@ ifeq ($(MAKE_UNAME),LinuxAMD64)
     LIBS += -lLDM
     LIBS += -lX11
     LIBS += -ltcl8.5
+    LIBS += -lexlibtiff
     LIBS += -lQt3Support
     LIBS += -lQtCore
     LIBS += -lQtDesignerComponents
@@ -449,15 +453,15 @@ CXXFLAGS += $(DEFINES)
 CFLAGS   += $(DEFINES)
 
 # The package tag.
-CXXFLAGS += -DPACKAGEID=amirapackage_CCPi
+CXXFLAGS += -DPACKAGEID=amirapackage_CCPiReconstruction
 # Copy files in SHARE*.
-$(PRODUCTROOT)/share/resources/CCPi.rc: share/resources/CCPi.rc
+$(PRODUCTROOT)/share/resources/CCPiReconstruction.rc: share/resources/CCPiReconstruction.rc
 	@echo "    Copying $(DIRNAME)/$<"
 	@mkdir -p $(@D)
 	$(QUIET)$(COPY_CMD) $< $@
 	$(QUIET)chmod u+w $@
 
-COPY += $(PRODUCTROOT)/share/resources/CCPi.rc
+COPY += $(PRODUCTROOT)/share/resources/CCPiReconstruction.rc
 
 
 
@@ -491,15 +495,15 @@ endif
 
 
 # The C and CPP targets.
-$(INTERMEDIATEDIR)/CGLS_recon.o: CGLS_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+$(INTERMEDIATEDIR)/Parallel_Beam_recon.o: Parallel_Beam_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
 	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
 	@mkdir -p $(@D)
 	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
 
-OBJS += $(INTERMEDIATEDIR)/CGLS_recon.o
+OBJS += $(INTERMEDIATEDIR)/Parallel_Beam_recon.o
 
 ifdef MAKEDEP
-$(INTERMEDIATEDIR)/CGLS_recon.d: CGLS_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+$(INTERMEDIATEDIR)/Parallel_Beam_recon.d: Parallel_Beam_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
 	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
 	@mkdir -p $(@D)
 	$(QUIET)$(MAKEDEP)
@@ -508,7 +512,87 @@ $(INTERMEDIATEDIR)/CGLS_recon.d: CGLS_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp,
 	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
 	@rm $@.orig
 
-DEPS += $(INTERMEDIATEDIR)/CGLS_recon.d
+DEPS += $(INTERMEDIATEDIR)/Parallel_Beam_recon.d
+endif
+
+$(INTERMEDIATEDIR)/Cone_Beam_recon.o: Cone_Beam_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/Cone_Beam_recon.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/Cone_Beam_recon.d: Cone_Beam_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/Cone_Beam_recon.d
+endif
+
+$(INTERMEDIATEDIR)/NeXus_normalise.o: NeXus_normalise.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/NeXus_normalise.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/NeXus_normalise.d: NeXus_normalise.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/NeXus_normalise.d
+endif
+
+$(INTERMEDIATEDIR)/XTek_recon.o: XTek_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/XTek_recon.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/XTek_recon.d: XTek_recon.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/XTek_recon.d
+endif
+
+$(INTERMEDIATEDIR)/ui_messages.o: ui_messages.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/ui_messages.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/ui_messages.d: ui_messages.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/ui_messages.d
 endif
 
 $(INTERMEDIATEDIR)/../../../src/results.o: ../../../src/results.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
@@ -649,6 +733,46 @@ $(INTERMEDIATEDIR)/../../../src/cgls.d: ../../../src/cgls.cpp $(UICOUTPUT) $(fil
 	@rm $@.orig
 
 DEPS += $(INTERMEDIATEDIR)/../../../src/cgls.d
+endif
+
+$(INTERMEDIATEDIR)/../../../src/sirt.o: ../../../src/sirt.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/../../../src/sirt.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/../../../src/sirt.d: ../../../src/sirt.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/../../../src/sirt.d
+endif
+
+$(INTERMEDIATEDIR)/../../../src/mlem.o: ../../../src/mlem.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/../../../src/mlem.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/../../../src/mlem.d: ../../../src/mlem.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/../../../src/mlem.d
 endif
 
 $(INTERMEDIATEDIR)/../../../src/p2D.o: ../../../src/p2D.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
@@ -927,7 +1051,7 @@ copy: $(call substForPrerequisite, $(COPY))
 clean:
 	@echo "    [$(MAKE_CFG)] Removing intermediate directory"
 	$(QUIET)rm -rf $(INTERMEDIATEDIR)
-	$(QUIET)rm -f $(BUILDROOT)/obj/$(ARCH)/CCPi.lastbuild
+	$(QUIET)rm -f $(BUILDROOT)/obj/$(ARCH)/CCPiReconstruction.lastbuild
 	@echo "    [$(MAKE_CFG)] Removing results"
 	$(QUIET)rm -rf $(BINDIR)/$(TARGET)
 	$(QUIET)rm -f $(LIBDIR)/lib$(TARGET).$(SHARED_EXT)

@@ -10,6 +10,9 @@
 #include "src/utils.hpp"
 #include "src/voxels.hpp"
 #include "src/blas.hpp"
+#include "src/cgls.hpp"
+#include "src/sirt.hpp"
+#include "src/mlem.hpp"
 
 CGLSWizard *my_sheet = 0;
 static voxel_data *voxels = 0;
@@ -91,8 +94,14 @@ bool CGLSWizard::main_loop()
 	CCPi::reconstruction_alg *recon_algorithm = 0;
 	switch (algorithm) {
 	case CCPi::alg_CGLS:
-		recon_algorithm = new CCPi::cgls_3d(niterations);
-		break;
+	  recon_algorithm = new CCPi::cgls_3d(niterations);
+	  break;
+	case CCPi::alg_SIRT:
+	  recon_algorithm = new CCPi::sirt(niterations);
+	  break;
+	case CCPi::alg_MLEM:
+	  recon_algorithm = new CCPi::mlem(niterations);
+	  break;
 	default:
 		//std::cerr << "ERROR: Unknown algorithm\n";
 		ok = false;
@@ -101,7 +110,7 @@ bool CGLSWizard::main_loop()
 		ok = false;
 		bool phantom = false;
 		real rotation_centre = -1.0;
-		if (device->setup_experimental_geometry(get_data_path(), get_data_name(), rotation_centre, phantom)) {
+		if (device->setup_experimental_geometry(get_data_path(), get_data_name(), rotation_centre, resolution, phantom)) {
 		  int nx_voxels = 0;
 		  int ny_voxels = 0;
 		  int maxz_voxels = 0;
@@ -138,6 +147,7 @@ void CGLSWizard::save_results()
 	std::string output_name;
 	CCPi::combine_path_and_name(get_output_path(), get_output_name(), output_name);
 	const voxel_data::size_type *s = voxels->shape();
+	clamp_min(*voxels, 0.0, s[0], s[1], s[2]);
 	CCPi::write_results(output_name, *voxels, voxel_origin, voxel_size, 0, (int)s[2], out_format, clamp_output);
 	delete voxels;
 }

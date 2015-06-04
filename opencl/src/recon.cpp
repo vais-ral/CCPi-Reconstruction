@@ -8,6 +8,11 @@
 #include "algorithms.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
+#include "cgls.hpp"
+#include "tv_reg.hpp"
+#include "landweber.hpp"
+#include "mlem.hpp"
+#include "sirt.hpp"
 
 int main()
 {
@@ -47,6 +52,8 @@ int main()
   const real l = 6930;
   const real mu = 0.5;
   const real tv_reg_constraint = 3;
+  // Todo - what should this be?
+  const real lambda = 0.1;
   bool setup_ok = true;
   // Todo - get stuff rather than the above test defaults here
   switch (device) {
@@ -73,6 +80,15 @@ int main()
     else
       recon_algorithm = new CCPi::cgls_3d(niterations);
     break;
+  case CCPi::alg_landweber:
+    recon_algorithm = new CCPi::landweberLS(niterations, lambda);
+    break;
+  case CCPi::alg_MLEM:
+    recon_algorithm = new CCPi::mlem(niterations);
+    break;
+  case CCPi::alg_SIRT:
+    recon_algorithm = new CCPi::sirt(niterations);
+    break;
   case CCPi::alg_TVreg:
     recon_algorithm = new CCPi::tv_regularization(alpha, tau, l, mu,
 						  tv_reg_constraint);
@@ -83,6 +99,9 @@ int main()
   case CCPi::alg_BiCGSTABLS:
     recon_algorithm = new CCPi::bi_cgstabls_3d(niterations);
     break;
+  case CCPi::alg_CGLS_Tikhonov:
+    recon_algorithm = new CCPi::cgls_tikhonov(niterations, 0.01);
+    break;
   default:
     std::cerr << "ERROR: Unknown algorithm\n";
     setup_ok = false;
@@ -92,9 +111,14 @@ int main()
     machine::initialise();
     int num_processors = machine::get_number_of_processors();
     if (num_processors == 1 or instrument->supports_distributed_memory()) {
-      reconstruct(instrument, recon_algorithm, data_file, output_name,
-		  rotation_centre, pixels_per_voxel, blocking_factor,
-		  beam_harden, write_format, clamp_output, phantom);
+      real vox_origin[3];
+      real vox_size[3];
+      voxel_data *voxels = reconstruct(instrument, recon_algorithm, data_file,
+				       output_name, vox_origin, vox_size,
+				       rotation_centre, pixels_per_voxel,
+				       blocking_factor, beam_harden,
+				       write_format, clamp_output, phantom);
+      delete voxels;
     } else
       std::cerr 
 	<< "Program does not support distributed memory for this instrument\n";
