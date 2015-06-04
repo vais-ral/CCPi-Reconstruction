@@ -1,5 +1,14 @@
 
-#include "tiffio.h"
+#ifdef HAS_TIFF
+#  include "tiffio.h"
+#endif // HAS_TIFF
+
+// Due to Avizo's different tiff lib this comes after the above include.
+#ifdef AMIRA_RELEASE
+#  define HAS_TIFF
+#  include "exlibtiff.h"
+#  include "tiffio.h"
+#endif // AMIRA/AVIZO
 
 #include "base_types.hpp"
 #include "tiff.hpp"
@@ -12,9 +21,10 @@
 
 bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
 		     const int angle, const int n_h_pixels,
-		     const int n_v_pixels)
+		     const int n_v_pixels, const int v_shift)
 {
   bool ok = true;
+#ifdef HAS_TIFF
   TIFF *tif = TIFFOpen(filename.c_str(), "r");
   if (tif == 0) {
     ok = false;
@@ -85,7 +95,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
 		uint16 *b = (uint16 *)buf;
 		for (int h = 0; h < n_h_pixels; h++) {
 		  for (int v = 0; v < n_v_pixels; v++) {
-		    pixels[angle][h][v] =
+		    pixels[angle][h][v + v_shift] =
 		      pixel_type(b[(n_v_pixels - v - 1) * n_h_pixels + h]);
 		  }
 		}
@@ -100,6 +110,7 @@ bool CCPi::read_tiff(const std::string filename, pixel_data &pixels,
     //ldtime.accumulate();
     //ldtime.output("Tiff load");
   }
+#endif // HAS_TIFF
   return ok;
 }
 
@@ -107,6 +118,7 @@ bool CCPi::write_tiff(const std::string filename, unsigned char data[],
 		      const int nx, const int ny, const int width)
 {
   bool ok = true;
+#ifdef HAS_TIFF
   TIFF *tif = TIFFOpen(filename.c_str(), "w");
   if (tif == 0) {
     ok = false;
@@ -162,5 +174,6 @@ bool CCPi::write_tiff(const std::string filename, unsigned char data[],
     _TIFFfree(buf);
     TIFFClose(tif);
   }
+#endif // HAS_TIFF
   return ok;
 }

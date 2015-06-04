@@ -8,6 +8,11 @@
 #include "Progress_page.h"
 #include "src/ui_calls.hpp"
 #include "src/utils.hpp"
+#include "src/voxels.hpp"
+#include "src/blas.hpp"
+#include "src/cgls.hpp"
+#include "src/sirt.hpp"
+#include "src/mlem.hpp"
 
 CGLSWizard *my_sheet = 0;
 static voxel_data *voxels = 0;
@@ -89,8 +94,14 @@ bool CGLSWizard::main_loop()
 	CCPi::reconstruction_alg *recon_algorithm = 0;
 	switch (algorithm) {
 	case CCPi::alg_CGLS:
-		recon_algorithm = new CCPi::cgls_base(niterations);
-		break;
+	  recon_algorithm = new CCPi::cgls_3d(niterations);
+	  break;
+	case CCPi::alg_SIRT:
+	  recon_algorithm = new CCPi::sirt(niterations);
+	  break;
+	case CCPi::alg_MLEM:
+	  recon_algorithm = new CCPi::mlem(niterations);
+	  break;
 	default:
 		//std::cerr << "ERROR: Unknown algorithm\n";
 		ok = false;
@@ -98,38 +109,31 @@ bool CGLSWizard::main_loop()
 	if (ok) {
 		ok = false;
 		bool phantom = false;
-		//std::string path;
-		//std::string name;
-		//CCPi::split_path_and_name(filename, path, name);
-		if (device->setup_experimental_geometry(get_data_path(), get_data_name(), phantom)) {
-			if (device->read_data_size(get_data_path(), phantom)) {
-				int nx_voxels = device->get_num_h_pixels() / resolution;
-				if (device->get_num_h_pixels() % resolution != 0)
-					nx_voxels++;
-				int ny_voxels = nx_voxels;
-				int nz_voxels = device->get_num_v_pixels() / resolution;
-				if (device->get_num_v_pixels() % resolution != 0)
-					nz_voxels++;
-				int z_data_size = nz_voxels * resolution;
-				device->set_v_block(z_data_size);
+		real rotation_centre = -1.0;
+		if (device->setup_experimental_geometry(get_data_path(), get_data_name(), rotation_centre, resolution, phantom)) {
+		  int nx_voxels = 0;
+		  int ny_voxels = 0;
+		  int maxz_voxels = 0;
+		  int nz_voxels = 0;
+		  int block_size = 0;
+		  int block_step = 0;
+		  calculate_block_sizes(nx_voxels, ny_voxels, nz_voxels, maxz_voxels, block_size, block_step, 1,
+		    0, resolution, device, recon_algorithm->supports_blocks());
+		  int z_data_size = block_size * resolution;
+		  int z_data_step = block_step * resolution;
+		  device->set_v_block(z_data_size);
+		  int block_offset = 0;
+		  int z_data_offset = block_offset * resolution;
 				if (device->finish_voxel_geometry(voxel_origin, voxel_size, nx_voxels, ny_voxels, nz_voxels)) {
 					if (device->read_scans(get_data_path(), 0, z_data_size, true, phantom)) {
-						voxels = new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels], boost::fortran_storage_order());
-						for (int i = 0; i < nz_voxels; i++) {
-							for (int j = 0; j < ny_voxels; j++) {
-								for (int k = 0; k < nx_voxels; k++) {
-									(*voxels)[k][j][i] = 0.0;
-								}
-							}
-						}
+						voxels = new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels], boost::c_storage_order());
+						init_data(*voxels, nx_voxels, ny_voxels, nz_voxels);
 						if (beam_harden)
 							device->apply_beam_hardening();
-						//if (fast_projection and first)
-						//	device->setup_projection_matrix(voxel_origin, voxel_size, nx_voxels, ny_voxels, nz_voxels);
 						ok = recon_algorithm->reconstruct(device, *voxels, voxel_origin, voxel_size);
 					}
 				}
-			}
+			//}
 		}
 	}
 	if (!ok)
@@ -143,6 +147,7 @@ void CGLSWizard::save_results()
 	std::string output_name;
 	CCPi::combine_path_and_name(get_output_path(), get_output_name(), output_name);
 	const voxel_data::size_type *s = voxels->shape();
+	clamp_min(*voxels, 0.0, s[0], s[1], s[2]);
 	CCPi::write_results(output_name, *voxels, voxel_origin, voxel_size, 0, (int)s[2], out_format, clamp_output);
 	delete voxels;
 }

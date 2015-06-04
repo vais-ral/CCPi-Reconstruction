@@ -1,15 +1,18 @@
 
 #include "mpi.hpp"
+#include "omp.h"
 
 #ifdef USE_MPI
 
 #  include "mpi.h"
 
-void machine::initialise()
+void machine::initialise(const int nthreads)
 {
   int argc = 0;
   char **argv = 0;
   MPI_Init(&argc, &argv);
+  if (nthreads > 0)
+    omp_set_num_threads(nthreads);
 }
 
 void machine::exit()
@@ -33,8 +36,10 @@ int machine::get_processor_id()
 
 #else
 
-void machine::initialise()
+void machine::initialise(const int nthreads)
 {
+  if (nthreads > 0)
+    omp_set_num_threads(nthreads);
 }
 
 void machine::exit()

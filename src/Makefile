@@ -1,19 +1,20 @@
 
 CXX = g++
 MKLINC = -I/opt/intel/composerxe/mkl/include -DMKL_ILP64
-TIFFINC =
+TIFFINC = -DHAS_TIFF
 TIFFLIB = -ltiff
 NXINC = -I/usr/local/nexus/include/nexus -DHAS_NEXUS
 NXLIB = -L/usr/local/nexus/lib -lNeXusCPP
-CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(MKLINC) -DTEST2D
+CXXFLAGS = -g -O2 -ansi -pedantic -Wall -Wno-long-long -DUSE_TIMER=true -fopenmp $(NXINC) $(TIFFINC)
 LD = $(CXX)
 LDFLAGS = $(CXXFLAGS)
 MKLLIB = /opt/intel/composerxe/mkl/lib/intel64/libmkl_gf_ilp64.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_gnu_thread.a /opt/intel/composerxe/mkl/lib/intel64/libmkl_core.a
-LIBS = $(MKLLIB) $(NXLIB) $(TIFFLIB) 
+LIBS = $(NXLIB) $(TIFFLIB)
 
 OBJECTS = recon.o results.o instruments.o parallel.o cone.o diamond.o xtek.o\
 	cgls.o fbp.o p2D.o tv_reg.o tv_core.o nexus.o tiff.o timer.o utils.o \
-	ui_calls.o mpi.o point.o c2D.o voxels.o
+	ui_calls.o mpi.o point.o c2D.o voxels.o landweber.o mlem.o sirt.o \
+	tikhonov.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -21,38 +22,54 @@ recon: $(OBJECTS)
 clean:
 	rm recon *.o
 
-$(OBJECTS): base_types.hpp
+$(OBJECTS): base_types.hpp allocator.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $(@F:.o=.cpp)
 
 recon.o: recon.cpp algorithms.hpp instruments.hpp results.hpp utils.hpp \
-	mpi.hpp voxels.hpp fbp.hpp blas.hpp
+	mpi.hpp voxels.hpp cgls.hpp tv_reg.hpp landweber.hpp mlem.hpp sirt.hpp \
+	fbp.hpp filters.hpp
 
-cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp fbp.hpp blas.hpp \
-	ui_calls.hpp
+cgls.o: cgls.cpp algorithms.hpp instruments.hpp timer.hpp ui_calls.hpp\
+	cgls.hpp blas.hpp regularize.hpp filters.hpp
 
-instruments.o: instruments.cpp instruments.hpp ui_calls.hpp
+instruments.o: instruments.cpp instruments.hpp ui_calls.hpp filters.hpp
 
 parallel.o: parallel.cpp instruments.hpp parallel_f.hpp parallel_b.hpp \
-	project_line.hpp fbp.hpp timer.hpp
+	project_line.hpp filters.hpp timer.hpp
 
-cone.o: cone.cpp instruments.hpp cone_f.hpp project_line.hpp timer.hpp fbp.hpp
+cone.o: cone.cpp instruments.hpp cone_f.hpp project_line.hpp timer.hpp \
+	filters.hpp
 
-diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp
+diamond.o: diamond.cpp instruments.hpp nexus.hpp utils.hpp ui_calls.hpp \
+	filters.hpp
 
-xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp ui_calls.hpp
+xtek.o: xtek.cpp instruments.hpp tiff.hpp utils.hpp ui_calls.hpp filters.hpp
 
 results.o: results.cpp results.hpp tiff.hpp mpi.hpp ui_calls.hpp
 
-tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp
+tv_reg.o: tv_reg.cpp algorithms.hpp instruments.hpp ui_calls.hpp blas.hpp \
+	tv_reg.hpp cgls.hpp filters.hpp
 
-tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp
+tv_core.o: tv_core.cpp instruments.hpp algorithms.hpp blas.hpp ui_calls.hpp \
+	tv_reg.hpp filters.hpp
 
-fbp.o: fbp.cpp fft.hpp instruments.hpp algorithms.hpp fbp.hpp timer.hpp \
-	ui_calls.hpp
+fbp.o: fbp.cpp fft.hpp instruments.hpp algorithms.hpp filters.hpp timer.hpp \
+	ui_calls.hpp fbp.hpp
 
-p2D.o: p2D.cpp instruments.hpp ui_calls.hpp fbp.hpp
+landweber.o: landweber.cpp algorithms.hpp instruments.hpp timer.hpp \
+	ui_calls.hpp landweber.hpp blas.hpp filters.hpp
 
-c2D.o: c2D.cpp instruments.hpp ui_calls.hpp fbp.hpp
+mlem.o: mlem.cpp algorithms.hpp instruments.hpp timer.hpp \
+	ui_calls.hpp mlem.hpp blas.hpp filters.hpp
+
+sirt.o: sirt.cpp algorithms.hpp instruments.hpp timer.hpp \
+	ui_calls.hpp sirt.hpp blas.hpp filters.hpp
+
+tikhonov.o: tikhonov.cpp regularize.hpp
+
+p2D.o: p2D.cpp instruments.hpp ui_calls.hpp filters.hpp
+
+c2D.o: c2D.cpp instruments.hpp ui_calls.hpp filters.hpp
 
 tiff.o: tiff.cpp tiff.hpp timer.hpp ui_calls.hpp
 
@@ -66,6 +83,7 @@ ui_calls.o: ui_calls.cpp ui_calls.hpp
 
 mpi.o: mpi.cpp mpi.hpp
 
-voxels.o: voxels.cpp instruments.hpp utils.hpp voxels.hpp fbp.hpp
+voxels.o: voxels.cpp voxels.hpp instruments.hpp algorithms.hpp mpi.hpp \
+	utils.hpp ui_calls.hpp results.hpp blas.hpp filters.hpp
 
 point.o: point.cpp

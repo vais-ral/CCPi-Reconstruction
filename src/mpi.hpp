@@ -4,7 +4,7 @@
 
 namespace machine {
 
-  void initialise();
+  void initialise(const int nthreads = 0);
   void exit();
   int get_number_of_processors();
   int get_processor_id();

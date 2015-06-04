@@ -4,7 +4,7 @@
 #include <cstring>
 #include <cctype>
 #include "base_types.hpp"
-#include "fbp.hpp"
+#include "filters.hpp"
 #include "utils.hpp"
 #include "instruments.hpp"
 #include "tiff.hpp"
@@ -37,12 +37,88 @@ static pixel_type interpolate2D(const real_1d &h, const int v_slice,
 bool CCPi::Nikon_XTek::setup_experimental_geometry(const std::string path,
 						   const std::string file,
 						   const real rotation_centre,
+						   const int pixels_per_voxel,
 						   const bool phantom)
 {
   if (phantom)
     return create_phantom();
   else
-    return read_config_file(path, file);
+    return read_config_file(path, file, pixels_per_voxel);
+}
+
+bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
+						   const numpy_1d &angle_array,
+						   const real rotation_centre,
+						   const int pixels_per_voxel)
+{
+  report_error("XTek python SAVU interface not implemented");
+  return false;
+}
+
+bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
+						   const numpy_1d &angle_array,
+						   const numpy_1d &h_offsets,
+						   const numpy_1d &v_offsets,
+						   const int pixels_per_voxel,
+						   const real source_x,
+						   const real detector_x,
+						   const real pixel_h_size,
+						   const real pixel_v_size)
+{
+  bool ok = true;
+  int nangles = (int)angle_array.shape()[0];
+  if (nangles < 1) {
+    report_error("Bad angle array");
+    ok = false;
+  } else {
+    const pixel_data::size_type *s = pix_array.shape();
+    int na = (int)s[0];
+    // Todo - what order should these be
+    int nh_pixels = (int)s[1];
+    int nv_pixels = (int)s[2];
+    if (na != nangles) {
+      report_error("Number of projections doesn't match angle array");
+      ok = false;
+    } else if (nh_pixels < 1 or nv_pixels < 1) {
+      report_error("Bad array index for pixels");
+      ok = false;
+    } else if (h_offsets.shape()[0] > 1) {
+      if (nh_pixels != (int)h_offsets.shape()[0])
+	report_error("Number of horizontal pixels doesn't match");
+      report_error("Todo - use horizontal offsets");
+    } else if (h_offsets.shape()[0] > 1) {
+      if (nv_pixels != (int)v_offsets.shape()[0])
+	report_error("Number of vertical pixels doesn't match");
+      report_error("Todo - use vertical offsets");
+    } else {
+      // copied from read_data_size
+      nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
+      real shift = 0.0;
+      /*
+      if (rotation_centre > 0.0) {
+	// shift h_pixels
+	// if 4 pixels and centre = 2.0 nothing happens
+	real pixel_shift = rotation_centre - real(nh_pixels) / 2.0;
+	shift = hsize * pixel_shift;
+      }
+      */
+      // store data in class
+      real_1d &h_pixels = set_h_pixels(nh_pixels);
+      h_pixels[0] = - ((nh_pixels - 1) * pixel_h_size) / real(2.0) - shift;
+      for (int i = 1; i < nh_pixels; i++)
+	h_pixels[i] = h_pixels[0] + real(i) * pixel_h_size;
+      real_1d &v_pixels = set_v_pixels(nv_pixels);
+      v_pixels[0] = - ((nv_pixels - 1) * pixel_v_size) / real(2.0);
+      for (int i = 1; i < nv_pixels; i++)
+	v_pixels[i] = v_pixels[0] + real(i) * pixel_v_size;
+      real_1d &angles = set_phi(nangles);
+      for (int i = 0; i < nangles; i++)
+	angles[i] = M_PI * (angle_array[i] / 180.0);
+      report_error("Mask radius? - interface probably incomplete");
+      //report_error("Todo - find_centre");
+    }
+  }
+  return ok;
 }
 
 bool CCPi::Nikon_XTek::create_phantom()
@@ -52,25 +128,25 @@ bool CCPi::Nikon_XTek::create_phantom()
   int c;
   for (c = 0; c < 1000; c++) {
     //real p = -100.0 + c * 0.250;
-    real p = -99.8 + real(c) * 0.400;
+    real p = -99.8046875 + real(c) * 0.390625;
     if (p >= 100.0 + 0.001)
       break;
   }
   real_1d &h_pixels = set_h_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + i * 0.250;
-    h_pixels[i] = -99.8 + real(i) * 0.400;
+    h_pixels[i] = -99.8046875 + real(i) * 0.390625;
   }
   for (c = 0; c < 1000; c++) {
     //real p = -100.0 + real(c) * 0.250;
-    real p = -99.8 + real(c) * 0.400;
+    real p = -99.8046875 + real(c) * 0.390625;
     if (p >= 100.0 + 0.001)
       break;
   }
   real_1d &v_pixels = set_v_pixels(c);
   for (int i = 0; i < c; i++) {
     //real p = -100.0 + real(i) * 0.250;
-    v_pixels[i] = -99.8 + real(i) * 0.400;
+    v_pixels[i] = -99.8046875 + real(i) * 0.390625;
   }
   // 501 values from 0 to 2pi
   //geom.angles = linspace(0,2*pi,501);
@@ -90,7 +166,8 @@ bool CCPi::Nikon_XTek::create_phantom()
 }
 
 bool CCPi::Nikon_XTek::read_config_file(const std::string path,
-					const std::string file)
+					const std::string file,
+					const int pixels_per_voxel)
 {
   bool ok = false;
   // read Xtek .xtekct file
@@ -105,6 +182,13 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
     real ypixel_size = 0.0;
     real init_angle = 0.0;
     white_level = 0.0;
+    scattering = 0.0;
+    coeff_x4 = 0.0;
+    coeff_x3 = 0.0;
+    coeff_x2 = 1.0;
+    coeff_x1 = 0.0;
+    coeff_x0 = 0.0;
+    scale = 1.0;
     int n_h_pixels = 0;
     int n_v_pixels = 0;
     int n_phi = 0;
@@ -145,15 +229,28 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	  white_level = std::atof(&line[11]);
 	  ndata++;
 	} else if (strncmp(line, "InputSeparator", 14) == 0) {
-	  sep = line[15];
+	  if (int(line[15]) != 13)
+	    sep = line[15];
+	} else if (strncmp(line, "Scattering", 10) == 0) {
+	  scattering = std::atof(&line[11]);
+	} else if (strncmp(line, "CoefX4", 6) == 0) {
+	  coeff_x4 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX3", 6) == 0) {
+	  coeff_x3 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX2", 6) == 0) {
+	  coeff_x2 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX1", 6) == 0) {
+	  coeff_x1 = std::atof(&line[7]);
+	} else if (strncmp(line, "CoefX0", 6) == 0) {
+	  coeff_x0 = std::atof(&line[7]);
+	} else if (strncmp(line, "Scale", 5) == 0) {
+	  scale = std::atof(&line[6]);
 	} else if (strncmp(line, "Name", 4) == 0) {
 	  while (isspace(line[strlen(line) - 1]))
 	    line[strlen(line) - 1] = '\0';
 	  basename = &line[5];
 	  ndata++;
 	}
-	if (ndata == 11)
-	  break;
       }
       if (ndata == 11) {
 	set_detector(det_x + get_source_x());
@@ -161,6 +258,7 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	  ok = false;
 	  std::cerr << "No name found for tiff files\n";
 	} else if (n_h_pixels > 0 and n_v_pixels > 0 and n_phi > 0) {
+	  n_v_pixels = calc_v_alignment(n_v_pixels, pixels_per_voxel, true);
 	  real_1d &h_pixels = set_h_pixels(n_h_pixels);
 	  real_1d &v_pixels = set_v_pixels(n_v_pixels);
 	  real pixel_base = -((n_h_pixels - 1) * xpixel_size / real(2.0));
@@ -169,9 +267,7 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
 	  pixel_base = -((n_v_pixels - 1) * ypixel_size / real(2.0));
 	  for (int i = 0; i < n_v_pixels; i++)
 	    v_pixels[i] = pixel_base + real(i) * ypixel_size;
-	  std::string ctfile;
-	  combine_path_and_name(path, "_ctdata.txt", ctfile);
-	  ok = read_angles(ctfile, init_angle, n_phi);
+	  ok = read_angles(path, init_angle, n_phi);
 	} else {
 	  ok = false;
 	  report_error("Negative pixel values");
@@ -192,12 +288,12 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
   return ok;
 }
 
-bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
+bool CCPi::Nikon_XTek::read_angles(const std::string path,
 				   const real init_angle, const int n)
 {
-  // since we read actual angles the answer is probably no
-  //std::cout << "Should we use initial angle?\n";
-  std::ifstream data(datafile.c_str());
+  std::string ctfile;
+  combine_path_and_name(path, "_ctdata.txt", ctfile);
+  std::ifstream data(ctfile.c_str());
   if (data.good()) {
     real_1d &p = set_phi(n);
     // get first 3 string labels
@@ -219,14 +315,42 @@ bool CCPi::Nikon_XTek::read_angles(const std::string datafile,
       data >> tmp;
       data >> tmp;
       // everything else is radians
-      p[i] = real(M_PI) * tmp / real(180.0);
+      p[i] = real(M_PI) * (init_angle + tmp) / real(180.0);
       data >> tmp;
     }
     data.close();
     return true;
   } else {
-    report_error("Error opening ctdata file");
-    return false;
+    // Try stop/start angles file rather than continuous scan one
+    std::string ang_base;
+    combine_path_and_name(path, basename, ang_base);
+    std::string ang_name = ang_base + ".ang";
+    std::ifstream ang_file(ang_name.c_str());
+    if (ang_file.good()) {
+      real_1d &p = set_phi(n);
+      // skip first line
+      char line[128];
+      ang_file.getline(line, 128);
+      real tmp;
+      char colon;
+      for (int i = 0; i < n; i++) {
+	// skip index
+	ang_file >> tmp;
+	// skip colon
+	ang_file >> colon;
+	ang_file >> tmp;
+	// everything else is radians
+	p[i] = real(M_PI) * (init_angle + tmp) / real(180.0);
+	// Do we need to skip //^M?
+	ang_file.getline(line, 128);
+      }
+      // Todo
+      ang_file.close();
+      return true;
+    } else {
+      report_error("Error opening ctdata file");
+      return false;
+    }
   }
 }
 
@@ -258,9 +382,9 @@ bool CCPi::Nikon_XTek::read_scans(const std::string path, const int offset,
 bool CCPi::Nikon_XTek::build_phantom()
 {
   // build small voxel set to project to produce initial pixels
-  int nx = 500;
-  int ny = 500;
-  int nz = 500;
+  int nx = 512;
+  int ny = 512;
+  int nz = 512;
 
   //real *h_pixels = get_h_pixels();
   //int n_h_pixels = get_num_h_pixels();
@@ -331,38 +455,81 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
   combine_path_and_name(path, basename, pathbase);
   char index[8];
   initialise_progress(get_num_angles(), "Loading data...");
+  int v_shift = get_data_v_offset();
+  int v_size = get_data_v_size();
   for (sl_int i = 0; (i < get_num_angles() and ok); i++) {
     snprintf(index, 8, "%04d", int(i + 1));
     std::string name = pathbase + index + ".tif";
-    ok = read_tiff(name, pixels, i, get_num_h_pixels(), get_num_v_pixels());
+    ok = read_tiff(name, pixels, i, get_num_h_pixels(), v_size, v_shift);
     update_progress(i + 1);
   }
   if (ok) {
-    /*
     real max_v = 0.0;
-    for (sl_int j = 0; j < n_rays; j++)
-      if (max_v < pixel_data[j])
-	max_v = pixel_data[j];
-    if (max_v > white_level + 0.01)
-      std::cout << "Values exceed white level\n";
-    else
-      max_v = white_level;
-    */
-    real max_v = real(65535.0);
+    int v_end = v_shift + v_size;
+    bool fail = false;
+    for (int i = 0; i < get_num_angles(); i++) {
+      for (int j = 0; j < get_num_h_pixels(); j++) {
+        for (int k = v_shift; k < v_end; k++) {
+          if (max_v < pixels[i][j][k])
+            max_v = pixels[i][j][k];
+          if (max_v > white_level)
+            fail = true;
+        }
+      }
+    }
+    if (fail)
+      report_error("Values exceed white level");
+    max_v = white_level;
     // scale and take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < get_num_angles(); i++) {
       for (int j = 0; j < get_num_h_pixels(); j++) {
-	for (int k = 0; k < get_num_v_pixels(); k++) {
+	// initialise aligned areas
+	for (int k = 0; k < v_shift; k++)
+	  pixels[i][j][k] = 0.0;
+	for (int k = v_shift; k < v_end; k++) {
+	  pixels[i][j][k] -= white_level * scattering / real(100.0);
 	  if (pixels[i][j][k] < real(1.0))
 	    pixels[i][j][k] = - std::log(real(0.00001) / max_v);
 	  else
 	    pixels[i][j][k] = - std::log(pixels[i][j][k] / max_v);
 	}
+	for (int k = v_end; k < get_num_v_pixels(); k++)
+	  pixels[i][j][k] = 0.0;
       }
     }
     find_centre(get_num_v_pixels() / 2 + 1);
   }
   return ok;
+}
+
+bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
+				  const int offset, const int block_size)
+{
+  // bits from read_data
+  int nv = get_num_v_pixels();
+  int nh = get_num_h_pixels();
+  int nangles = get_num_angles();
+  int v_offset = get_data_v_offset();
+  int v_size = get_data_v_size();
+  int v_end = v_offset + v_size;
+  set_v_offset(offset);
+  // Copy pixels
+  pixel_data &pixels = create_pixel_data();
+  for (int i = 0; i < nangles; i++) {
+    for (sl_int j = 0; j < nh; j++) {
+      // initialise aligned bits that don't contain data
+      for (sl_int k = 0; k < v_offset; k++) {
+	pixels[i][j][k] = 0.0;
+      }
+      for (sl_int k = v_offset; k < v_end; k++)
+	pixels[i][j][k] = - std::log(pixel_array[i][j][k - v_offset]);
+      for (sl_int k = v_end; k < nv; k++) {
+	pixels[i][j][k] = 0.0;
+      }
+    }
+  }
+  find_centre(get_num_v_pixels() / 2 + 1);
+  return true;
 }
 
 pixel_type linear(const real x1, const real x2, const pixel_type f1,
@@ -586,10 +753,17 @@ void CCPi::Nikon_XTek::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)
 
 void CCPi::Nikon_XTek::apply_beam_hardening()
 {
-  // Todo - does this belong in the base class?
+  // Todo - vectorize
   pixel_data &pixels = get_pixel_data();
-  for (sl_int i = 0; i < get_num_angles(); i++)
-    for (sl_int j = 0; j < get_num_h_pixels(); j++)
-      for (sl_int k = 0; k < get_num_v_pixels(); k++)
-	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
+  for (sl_int i = 0; i < get_num_angles(); i++) {
+    for (sl_int j = 0; j < get_num_h_pixels(); j++) {
+      for (sl_int k = 0; k < get_num_v_pixels(); k++) {
+	pixels[i][j][k] = ((((((coeff_x4 * pixels[i][j][k])
+			       + coeff_x3) * pixels[i][j][k]
+			      + coeff_x2) * pixels[i][j][k]
+			     + coeff_x1) * pixels[i][j][k]) + coeff_x0)
+	  * scale;
+      }
+    }
+  }
 }

@@ -7,6 +7,7 @@
 #include "base_types.hpp"
 #include "nexus.hpp"
 #include "timer.hpp"
+#include "ui_calls.hpp"
 
 #ifndef USE_TIMER
 #  define USE_TIMER false
@@ -17,7 +18,8 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      int &nv_pixels, std::vector<real> &angles, int &nangles,
 		      real &hsize, real &vsize, const std::string filename,
 		      const bool all_angles, const bool read_data,
-		      const int start_idx, const int block_size)
+		      const int start_idx, const int block_size,
+		      const int v_shift)
 {
   bool ok = true;
   timer ldtime(USE_TIMER);
@@ -268,7 +270,7 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		  if (read_data) {
 		    for (sl_int k = 0; k < sizes[1]; k++) {
 		      for (sl_int j = 0; j < sizes[2]; j++) {
-			pixels[n_angles][j][(block_size - k - 1)] =
+			pixels[n_angles][j][v_shift + (block_size - k - 1)] =
 			  pixel_type(ptr[k * sizes[2] + j]);
 		      }
 		    }
@@ -285,11 +287,10 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_fbright++;
 		    } else
 		      n_ibright++;
-		    sl_int j = 0;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
-			bptr[j] += pixel_type(ptr[v * sizes[2] + h]);
-			j++;
+			bptr[h * nv_pixels + v_shift + (block_size - v - 1)] +=
+			  pixel_type(ptr[v * sizes[2] + h]);
 		      }
 		    }
 		  }
@@ -302,11 +303,10 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
 		      n_fdark++;
 		    } else
 		      n_idark++;
-		    sl_int j = 0;
 		    for (int h = 0; h < sizes[2]; h++) {
 		      for (int v = 0; v < sizes[1]; v++) {
-			dptr[j] += pixel_type(ptr[v * sizes[2] + h]);
-			j++;
+			dptr[h * nv_pixels + v_shift + (block_size - v - 1)] +=
+			  pixel_type(ptr[v * sizes[2] + h]);
 		      }
 		    }
 		  }
@@ -330,18 +330,76 @@ bool CCPi::read_NeXus(pixel_data &pixels, pixel_2d &i_dark, pixel_2d &f_dark,
     ldtime.accumulate();
     ldtime.output("NeXus load");
     // Average bright/dark frames - Todo, something else? outside here?
-    for (int i = 0; i < nh_pixels; i++)
-      for (int j = 0; j < nv_pixels; j++)
-	i_dark[i][j] /= pixel_type(n_idark);
-    for (int i = 0; i < nh_pixels; i++)
-      for (int j = 0; j < nv_pixels; j++)
-	f_dark[i][j] /= pixel_type(n_fdark);
-    for (int i = 0; i < nh_pixels; i++)
-      for (int j = 0; j < nv_pixels; j++)
-	i_bright[i][j] /= pixel_type(n_ibright);
-    for (int i = 0; i < nh_pixels; i++)
-      for (int j = 0; j < nv_pixels; j++)
-	f_bright[i][j] /= pixel_type(n_fbright);
+    if (n_idark > 0) {
+      for (int i = 0; i < nh_pixels; i++)
+	for (int j = 0; j < nv_pixels; j++)
+	  i_dark[i][j + v_shift] /= pixel_type(n_idark);
+    }
+    if (n_fdark > 0) {
+      for (int i = 0; i < nh_pixels; i++)
+	for (int j = 0; j < nv_pixels; j++)
+	  f_dark[i][j + v_shift] /= pixel_type(n_fdark);
+    }
+    if (n_ibright > 0) {
+      for (int i = 0; i < nh_pixels; i++)
+	for (int j = 0; j < nv_pixels; j++)
+	  i_bright[i][j + v_shift] /= pixel_type(n_ibright);
+    }
+    if (n_fbright > 0) {
+      for (int i = 0; i < nh_pixels; i++)
+	for (int j = 0; j < nv_pixels; j++)
+	  f_bright[i][j + v_shift] /= pixel_type(n_fbright);
+    }
+    if (n_idark == 0) {
+      if (n_fdark == 0) {
+	add_output("Warning no darks found");
+	send_output();
+	for (int i = 0; i < nh_pixels; i++)
+	  for (int j = 0; j < nv_pixels; j++)
+	    i_dark[i][j + v_shift] = 0.0;
+	for (int i = 0; i < nh_pixels; i++)
+	  for (int j = 0; j < nv_pixels; j++)
+	    f_dark[i][j + v_shift] = 0.0;
+      } else {
+	for (int i = 0; i < nh_pixels; i++)
+	  for (int j = 0; j < nv_pixels; j++)
+	    i_dark[i][j + v_shift] = f_dark[i][j + v_shift];
+      }
+    } else if (n_fdark == 0) {
+      for (int i = 0; i < nh_pixels; i++)
+	for (int j = 0; j < nv_pixels; j++)
+	  f_dark[i][j + v_shift] = i_dark[i][j + v_shift];
+    }
+    if (n_ibright == 0) {
+      if (n_fbright == 0) {
+	add_output("Warning no flats found");
+	send_output();
+	// find max value and use that?
+	pixel_type max_pixel = 0.0;
+	for (int i = 0; i < nangles; i++) {
+	  for (int j = 0; j < nh_pixels; j++) {
+	    for (int k = 0; k < nv_pixels; k++) {
+	      if (pixels[i][j][k] > max_pixel)
+		max_pixel = pixels[i][j][k];
+	    }
+	  }
+	}
+	for (int i = 0; i < nh_pixels; i++)
+	  for (int j = 0; j < nv_pixels; j++)
+	    i_bright[i][j + v_shift] = max_pixel;
+	for (int i = 0; i < nh_pixels; i++)
+	  for (int j = 0; j < nv_pixels; j++)
+	    f_bright[i][j + v_shift] = max_pixel;
+      } else {
+	for (int i = 0; i < nh_pixels; i++)
+	  for (int j = 0; j < nv_pixels; j++)
+	    i_bright[i][j + v_shift] = f_bright[i][j + v_shift];
+      }
+    } else if (n_fbright == 0) {
+      for (int i = 0; i < nh_pixels; i++)
+	for (int j = 0; j < nv_pixels; j++)
+	  f_bright[i][j + v_shift] = i_bright[i][j + v_shift];
+    }
     // destructor closes file
   }
   return ok;

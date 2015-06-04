@@ -26,6 +26,8 @@ void CCPi::write_results(const std::string basename, const voxel_data &voxels,
 			 const output_format format, const bool clamp)
 {
   switch (format) {
+  case no_output:
+    break;
   case unsigned_byte_tiff:
     write_as_tiff(basename, voxels, offset, 255, 8, clamp);
     break;
@@ -57,7 +59,10 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
 			 const int offset, const unsigned int max_value,
 			 const unsigned int width, const bool clamp)
 {
-  std::cerr << "Tiff data range issue with blocks - Todo\n";
+  // Problem normalising output over range of data if we only have a
+  // sub-block of the voxels.
+  if (offset > 0)
+    report_error("Tiff data range issue with blocks - Todo");
   if (width != 8 and width != 16)
     report_error("Width not supported for tiff writing");
   else {
