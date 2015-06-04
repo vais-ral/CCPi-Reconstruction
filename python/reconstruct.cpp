@@ -23,12 +23,16 @@ numpy_boost<float, 2> test(const numpy_boost<float, 3> &pixels,
 */
 
 // assuming normalised data from SAVU
-void ring_artefacts_aml(numpy_boost<float, 3> &pixels, const real param_n,
-			const real param_r, const int num_series)
+numpy_boost<double, 3> ring_artefacts_aml(const numpy_boost<double, 3> &pixels,
+					  const float param_n,
+					  const float param_r,
+					  const int num_series)
 {
+  // Todo - worry about float/double precision loss
   sl_int nangles = (sl_int)pixels.shape()[0];
-  sl_int nh = (sl_int)pixels.shape()[1];
-  sl_int nv = (sl_int)pixels.shape()[2];
+  sl_int nh = (sl_int)pixels.shape()[2];
+  sl_int nv = (sl_int)pixels.shape()[1];
+  // issue with change of precision?
   pixel_3d p(boost::extents[nangles][nh][nv]);
   for (int i = 0; i < nangles; i++) {
     for (sl_int j = 0; j < nh; j++) {
@@ -39,13 +43,17 @@ void ring_artefacts_aml(numpy_boost<float, 3> &pixels, const real param_n,
   }
   CCPi::remove_aml_ring_artefacts(p, nangles, nh, nv, param_n,
 				  param_r, num_series);
-  for (int i = 0; i < nangles; i++) {
-    for (sl_int j = 0; j < nh; j++) {
-      for (sl_int k = 0; k < nv; k++) {
-	pixels[i][k][j] = std::exp(- p[i][j][k]);
-      }
-    }
-  }
+  int dims[3];
+  dims[0] = nangles;
+  dims[1] = nv;
+  dims[2] = nh;
+  numpy_boost<double, 3> varray(dims);
+  // Todo - vector? and remove buffered region
+  for (int i = 0; i < dims[0]; i++)
+    for (int j = 0; j < dims[1]; j++)
+      for (int k = 0; k < dims[2]; k++)
+	varray[i][j][k] = std::exp(- p[i][k][j]);
+  return varray;
 }
 
 numpy_boost<float, 3> reconstruct_iter(const numpy_boost<float, 3> &pixels,
