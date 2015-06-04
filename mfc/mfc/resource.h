@@ -50,8 +50,11 @@
 #define IDC_HT_CHECK                    1017
 #define IDC_MESSAGES                    1018
 #define IDC_MLEM                        1019
-#define IDC_RADIO2                      1020
 #define IDC_SIRT                        1020
+#define IDC_REG_PARAM                   1021
+#define IDC_REG_LABEL                   1022
+#define IDC_RADIO1                      1023
+#define IDC_CGLS_TIK                    1023
 
 // Next default values for new objects
 // 
@@ -59,7 +62,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        311
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1021
+#define _APS_NEXT_CONTROL_VALUE         1024
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif

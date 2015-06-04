@@ -25,4 +25,5 @@ public:
 	afx_msg void OnBnClickedHtCheck();
 	afx_msg void OnBnClickedMLEM();
 	afx_msg void OnBnClickedSIRT();
+	afx_msg void OnBnClickedCGLSTik();
 };

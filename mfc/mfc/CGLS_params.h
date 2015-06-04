@@ -1,5 +1,6 @@
 #pragma once
 #include "afxcmn.h"
+#include "afxwin.h"
 
 
 // CGLS_params dialog
@@ -26,4 +27,7 @@ public:
 private:
 	CSliderCtrl iter_slider;
 	CSliderCtrl pix_slider;
+        CEdit param;
+//public:
+  //double regularise;
 };

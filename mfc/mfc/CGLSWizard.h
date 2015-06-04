@@ -53,6 +53,7 @@ protected:
 	std::string get_output_name() const;
 	std::string get_output_path() const;
 	bool use_hyper_threads() const;
+	double get_regularisation() const;
 
 private:
 	int resolution;
@@ -67,6 +68,8 @@ private:
 	bool beam_harden;
 	bool hyper_threads;
 	class Progress_page *progress;
+public:
+	double regularise;
 };
 
 extern CGLSWizard *my_sheet;
@@ -149,6 +152,11 @@ inline CCPi::algorithms CGLSWizard::get_algorithm() const
 inline bool CGLSWizard::get_beam_harden() const
 {
 	return beam_harden;
+}
+
+inline double CGLSWizard::get_regularisation() const
+{
+  return regularise;
 }
 
 inline std::string CGLSWizard::get_data_name() const

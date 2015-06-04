@@ -33,6 +33,7 @@ BEGIN_MESSAGE_MAP(Initial_page, CPropertyPage)
 	ON_BN_CLICKED(IDC_HT_CHECK, &Initial_page::OnBnClickedHtCheck)
 	ON_BN_CLICKED(IDC_MLEM, &Initial_page::OnBnClickedMLEM)
 	ON_BN_CLICKED(IDC_SIRT, &Initial_page::OnBnClickedSIRT)
+	ON_BN_CLICKED(IDC_CGLS_TIK, &Initial_page::OnBnClickedCGLSTik)
 END_MESSAGE_MAP()
 
 
@@ -44,12 +45,10 @@ void Initial_page::OnBnClickedRadioXtek()
 	my_sheet->set_instrument(CCPi::dev_Nikon_XTek);
 }
 
-
 void Initial_page::OnBnClickedCgls()
 {
 	my_sheet->set_algorithm(CCPi::alg_CGLS);
 }
-
 
 BOOL Initial_page::OnSetActive()
 {
@@ -61,20 +60,22 @@ BOOL Initial_page::OnSetActive()
 	return CPropertyPage::OnSetActive();
 }
 
-
 void Initial_page::OnBnClickedHtCheck()
 {
 	my_sheet->toggle_hyper_threads();
 }
-
 
 void Initial_page::OnBnClickedMLEM()
 {
   my_sheet->set_algorithm(CCPi::alg_MLEM);
 }
 
-
 void Initial_page::OnBnClickedSIRT()
 {
   my_sheet->set_algorithm(CCPi::alg_SIRT);
+}
+
+void Initial_page::OnBnClickedCGLSTik()
+{
+  my_sheet->set_algorithm(CCPi::alg_CGLS_Tikhonov);
 }
