@@ -14,6 +14,7 @@ IMPLEMENT_DYNAMIC(CGLS_params, CPropertyPage)
 
 CGLS_params::CGLS_params()
 	: CPropertyPage(CGLS_params::IDD)
+	//, regularise(0.01)
 {
 
 }
@@ -24,9 +25,12 @@ CGLS_params::~CGLS_params()
 
 void CGLS_params::DoDataExchange(CDataExchange* pDX)
 {
-	CPropertyPage::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_ITER_SLIDER, iter_slider);
-	DDX_Control(pDX, IDC_RES_SLIDER, pix_slider);
+  CPropertyPage::DoDataExchange(pDX);
+  DDX_Control(pDX, IDC_ITER_SLIDER, iter_slider);
+  DDX_Control(pDX, IDC_RES_SLIDER, pix_slider);
+  DDX_Control(pDX, IDC_REG_PARAM, param);
+  //DDX_Text(pDX, IDC_REG_PARAM, regularise);
+  DDV_MinMaxDouble(pDX, my_sheet->regularise, 0.0, 1.0);
 }
 
 
@@ -83,6 +87,16 @@ BOOL CGLS_params::OnSetActive()
 	iter_slider.SetPos(my_sheet->get_iterations());
 	text.Format(_T("%d"), my_sheet->get_iterations());
 	SetDlgItemText(IDC_ITER_VALUE, text);
+	if (my_sheet->get_algorithm() == CCPi::alg_CGLS_Tikhonov) {
+	  text.Format(_T("%f"), my_sheet->get_regularisation());
+	  SetDlgItemText(IDC_REG_PARAM, text);
+	  //my_sheet->regularise = 0.01;
+	  SetDlgItemText(IDC_REG_LABEL, _T("Regularisation parameter"));
+	  param.ShowWindow(SW_SHOWNORMAL);
+	} else {
+	  param.ShowWindow(SW_HIDE);
+	  SetDlgItemText(IDC_REG_LABEL, _T(""));
+	}
 	CheckDlgButton(IDC_BEAM_HARDEN, (int)my_sheet->get_beam_harden());
 	return CPropertyPage::OnSetActive();
 }
