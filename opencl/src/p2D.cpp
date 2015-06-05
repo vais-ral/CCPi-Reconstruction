@@ -12,6 +12,10 @@
 #include "instruments.hpp"
 #include "ui_calls.hpp"
 #include "accel.hpp"
+#ifdef WIN32
+#  undef min
+#  undef max
+#endif // WIN32
 #ifdef TEST2D
 #  include <iostream>
 #endif // TEST2D

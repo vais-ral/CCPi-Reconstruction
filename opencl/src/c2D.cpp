@@ -1,5 +1,6 @@
 
 #include <float.h>
+#include <algorithm>
 #ifdef MATLAB_MEX_FILE
 #  include "mex_types.hpp"
 #else
@@ -9,6 +10,10 @@
 #include "timer.hpp"
 #include "ui_calls.hpp"
 #include "accel.hpp"
+#ifdef WIN32
+#  undef min
+#  undef max
+#endif // WIN32
 #if defined(TEST2D) || defined(CBZCHECK) 
 #  include <iostream>
 #endif // TEST2D
@@ -649,11 +654,11 @@ void CCPi::cone_beam::calc_ah_z(const pixel_ptr_1d &pixels,
   // z_nm = (bz + (nz - 1) * dz - p1z) / vpix_step
   // We have rounding issues with pzdv, so add a small increment
   // since epsilon is 1 + epsilon, we need to scale so its meaningful
-  recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
-  recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
-  recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
-  recon_type *axy0_ptr = assume_aligned(&(alpha_xy_0[0]), recon_type);
-  recon_type *axy1_ptr = assume_aligned(&(alpha_xy_1[0]), recon_type);
+  const recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  const recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  const recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  const recon_type *axy0_ptr = assume_aligned(&(alpha_xy_0[0]), recon_type);
+  const recon_type *axy1_ptr = assume_aligned(&(alpha_xy_1[0]), recon_type);
   int *k_ptr = assume_aligned(&kv[0], int);
   voxel_type *const vox = assume_aligned(voxels, voxel_type);
   for (int m = 0; m < n; m++) {

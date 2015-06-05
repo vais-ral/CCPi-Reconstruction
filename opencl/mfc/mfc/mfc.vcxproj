@@ -162,8 +162,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_TIMER;HAS_TIFF;BOOST_DISABLE_ASSERTS;WIN32;_WINDOWS;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>\Users\bgs42\Projects\boost_1_55_0;\Users\bgs42\Projects\cgls;\Users\bgs42\Projects\cgls\tiff-4.0.3\libtiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>USE_TIMER;USE_OPENCL;HAS_TIFF;BOOST_DISABLE_ASSERTS;WIN32;_WINDOWS;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>\Users\bgs42\Projects\boost_1_55_0;\Users\bgs42\Projects\opencl;\Users\bgs42\Projects\cgls\tiff-4.0.3\libtiff;\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -176,8 +176,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>\Users\bgs42\Projects\cgls\tiff-4.0.3\libtiff;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libtiff.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>\Users\bgs42\Projects\cgls\tiff-4.0.3\libtiff;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libtiff.lib;OpenCL.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
@@ -195,11 +195,13 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\accel.hpp" />
     <ClInclude Include="..\..\src\algorithms.hpp" />
     <ClInclude Include="..\..\src\allocator.hpp" />
     <ClInclude Include="..\..\src\base_types.hpp" />
     <ClInclude Include="..\..\src\blas.hpp" />
     <ClInclude Include="..\..\src\cgls.hpp" />
+    <ClInclude Include="..\..\src\cl.hpp" />
     <ClInclude Include="..\..\src\cone_b.hpp" />
     <ClInclude Include="..\..\src\cone_f.hpp" />
     <ClInclude Include="..\..\src\instruments.hpp" />
@@ -231,6 +233,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\accel.cpp" />
     <ClCompile Include="..\..\src\c2D.cpp" />
     <ClCompile Include="..\..\src\cgls.cpp" />
     <ClCompile Include="..\..\src\cone.cpp" />
@@ -275,6 +278,7 @@
     <Image Include="res\mfc.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\src\kernels.cl" />
     <None Include="res\mfc.rc2" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

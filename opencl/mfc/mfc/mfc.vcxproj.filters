@@ -120,6 +120,12 @@
     <ClInclude Include="..\..\src\regularize.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\accel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\cl.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mfc.cpp">
@@ -215,6 +221,9 @@
     <ClCompile Include="..\..\src\tikhonov.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\accel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="mfc.rc">
@@ -229,6 +238,9 @@
   <ItemGroup>
     <None Include="res\mfc.rc2">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\src\kernels.cl">
+      <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
 </Project>

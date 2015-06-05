@@ -45,9 +45,22 @@ void report_error(const std::string message, const std::string arg1, const std::
 	strncat(buff, arg1.c_str(), 1024 - l);
 	buff[1023] = '\0';
 	l = strlen(buff);
-	strncat(buff, arg2.c_str(), 1024 - l);
+	strncat(buff, arg2.c_str(), 1024 - l);	
 	buff[1023] = '\0';
 	my_sheet->MessageBox(CA2T(buff), _T("CGLS Error"), MB_ICONERROR | MB_OK);
+}
+
+void report_error(const std::string message, const int err)
+{
+  char buff[1024];
+  strncpy(buff, message.c_str(), 1024);
+  buff[1023] = '\0';
+  char ibuff[32];
+  snprintf(ibuff, 32, "%1d", err);
+  int l = strlen(buff);
+  strncat(buff, ibuff, 1024 - l);
+  buff[1023] = '\0';
+  my_sheet->MessageBox(CA2T(buff), _T("CGLS Error"), MB_ICONERROR | MB_OK);
 }
 
 void add_output(const std::string str)
@@ -72,6 +85,13 @@ void add_output(const sl_int i)
 	char buff[32];
 	snprintf(buff, 32, "%1ld", i);
 	buffer += buff;
+}
+
+void add_output(const unsigned int i)
+{
+  char buff[32];
+  snprintf(buff, 32, "%1u", i);
+  buffer += buff;
 }
 
 void add_output(const int i, const int w, const bool fill)

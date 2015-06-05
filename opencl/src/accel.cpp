@@ -9,6 +9,7 @@
 #endif // MEX_FILE
 #include "accel.hpp"
 #include "ui_calls.hpp"
+#include "utils.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -20,9 +21,9 @@ namespace machine {
 
   bool accelerator = false;
   int num_devices = 0;
-  int max_work0 = 1000000;
-  int max_work1 = 10000000;
-  int max_work2 = 1000000;
+  sl_int max_work0 = 1000000;
+  sl_int max_work1 = 10000000;
+  sl_int max_work2 = 1000000;
   cl::Context context;
   cl::Program program;
   cl::Kernel kernel;
@@ -156,7 +157,7 @@ void machine::init_accelerator()
 	      add_output("Max work item sizes =");
 	      for (int z = 0; z < (int)val; z++) {
 		add_output(" ");
-		add_output(wval[z]);
+		add_output((sl_int)wval[z]);
 	      }
 	      send_output();
 	      if ((int)wval[0] < max_work0)
@@ -176,7 +177,7 @@ void machine::init_accelerator()
 	      /*std::cerr << "Work group size failed " << err << '\n'*/;
 	    else {
 	      add_output("Max work group size = ");
-	      add_output(tval);
+	      add_output((sl_int)tval);
 	      send_output();
 	    }
 	    cl_ulong lval;
@@ -185,7 +186,7 @@ void machine::init_accelerator()
 	      /*std::cerr << "Constant buffer size failed " << err << '\n'*/;
 	    else {
 	      add_output("Max constant buffer size = ");
-	      add_output(lval);
+	      add_output((sl_int)lval);
 	      send_output();
 	    }
 	    err = devices[i].getInfo(CL_DEVICE_MAX_CONSTANT_ARGS, &val);
@@ -203,7 +204,7 @@ void machine::init_accelerator()
 	      if ((sl_int)lval < max_mem)
 		max_mem = (sl_int)lval;
 	      add_output("Max memory size = ");
-	      add_output(lval);
+	      add_output((sl_int)lval);
 	      send_output();
 	    }
 	    err = devices[i].getInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE, &lval);
@@ -213,7 +214,7 @@ void machine::init_accelerator()
 	      if ((sl_int)lval < max_alloc)
 		max_alloc = (sl_int)lval;
 	      add_output("Max block allocation size = ");
-	      add_output(lval);
+	      add_output((sl_int)lval);
 	      send_output();
 	    }
 
@@ -238,7 +239,7 @@ void machine::init_accelerator()
 	if (ok) {
 	  //std::cout<<"Loading and compiling CL source\n";
 	  const char name[] = "kernels.cl";
-	  if (access(name, R_OK) != 0) {
+	  if (CCPi::access(name)) {
 	    report_error("We couldn't load CL source code");
 	    ok = false;
 	  } else {

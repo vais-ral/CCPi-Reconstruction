@@ -8,6 +8,7 @@ namespace CCPi {
 			   std::string &name);
   void combine_path_and_name(const std::string path, const std::string name,
 			     std::string &fullname);
+  bool access(const char name[]);
 
 }
 

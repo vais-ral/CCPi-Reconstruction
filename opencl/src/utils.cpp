@@ -3,6 +3,7 @@
 #include "utils.hpp"
 
 #ifdef WIN32
+#  include <io.h>
 #  define DIR_SEPARATOR '\\'
 #else
 #  define DIR_SEPARATOR '/'
@@ -34,3 +35,19 @@ void CCPi::combine_path_and_name(const std::string path, const std::string name,
 		fullname += DIR_SEPARATOR;
   fullname += name;
 }
+
+#ifdef WIN32
+
+bool CCPi::access(const char name[])
+{
+  return _access(name, 0) == 0;
+}
+
+#else
+
+bool CCPi::access(const char name[])
+{
+  return access(name, R_OK) == 0;
+}
+
+#endif // WIN32
