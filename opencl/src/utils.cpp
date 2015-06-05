@@ -47,7 +47,7 @@ bool CCPi::access(const char name[])
 
 bool CCPi::access(const char name[])
 {
-  return access(name, R_OK) == 0;
+  return ::access(name, R_OK) == 0;
 }
 
 #endif // WIN32
