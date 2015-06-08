@@ -314,7 +314,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string path,
       data >> tmp;
       data >> tmp;
       // everything else is radians
-      p[i] = real(M_PI) * (init_angle + tmp) / real(180.0);
+      p[i] = real(M_PI) * tmp / real(180.0);
       data >> tmp;
     }
     data.close();
@@ -339,7 +339,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string path,
 	ang_file >> colon;
 	ang_file >> tmp;
 	// everything else is radians
-	p[i] = real(M_PI) * (init_angle + tmp) / real(180.0);
+	p[i] = real(M_PI) * tmp / real(180.0);
 	// Do we need to skip //^M?
 	ang_file.getline(line, 128);
       }
@@ -476,8 +476,10 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
         }
       }
     }
-    if (fail)
-      report_error("Values exceed white level");
+    if (fail) {
+      add_output("Values exceed white level");
+      send_output();
+    }
     max_v = white_level;
     // scale and take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < get_num_angles(); i++) {
@@ -496,7 +498,7 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
 	  pixels[i][j][k] = 0.0;
       }
     }
-    find_centre(get_num_v_pixels() / 2 + 1);
+    find_centre(get_num_v_pixels() / 2);
   }
   return ok;
 }
@@ -527,7 +529,7 @@ bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
       }
     }
   }
-  find_centre(get_num_v_pixels() / 2 + 1);
+  find_centre(get_num_v_pixels() / 2);
   return true;
 }
 
