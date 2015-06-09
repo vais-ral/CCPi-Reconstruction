@@ -39,8 +39,8 @@ XTek_recon::XTek_recon() :
   portAction.setLabel(0,"DoIt");
   algorithm.setNum(3);
   algorithm.setLabel(0, "CGLS");
-  algorithm.setLabel(0, "SIRT");
-  algorithm.setLabel(0, "MLEM");
+  algorithm.setLabel(1, "SIRT");
+  algorithm.setLabel(2, "MLEM");
   algorithm.setValue(0);
   iterations.setMinMax(5, 30);
   iterations.setValue(20);
