@@ -6,7 +6,7 @@
 #include "base_types.hpp"
 #include "ui_messages.hpp"
 
-HxMessage *ccpi_recon::messages = 0;
+HxMessage *ccpi_recon::messages = theMsg;
 HxWorkArea *ccpi_recon::progress = theWorkArea;
 bool ccpi_recon::do_progress = false;
 

@@ -7,6 +7,7 @@
 #include <hxcore/HxMessage.h>
 #include <hxcore/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
+#include <hxcore/HxFileDialog.h>
 
 #include "XTek_recon.h"
 #include "base_types.hpp"
@@ -55,28 +56,22 @@ XTek_recon::~XTek_recon()
 
 void XTek_recon::compute()
 {
-  if (portAction.wasHit()) {
-    HxFileDialog *dialog = HxFileDialog::_getTheFileDialog();
-    QString filter = dialog->getFileNameFilter(QString::fromAscii("XTek"),
-					       QString::fromAscii("xketct"));
-    QString *selected_filter;
-    QString filename;
-    QString thisfilter;
-    dialog->getFileNameAndFilter(QString::fromAscii("XTek Data"),
-				 QString::fromAscii(""), filter,
-				 selected_filter, filename, thisfilter);
-    ccpi_recon::do_progress = false;
-    ccpi_recon::messages = theMsg;
-    ccpi_recon::progress = theWorkArea;
-    const QByteArray asc = filename.toAscii();
-    std::string file(asc.constData(), asc.length());
-    run_reconstruction(file);
-    // end progress area
-    if (ccpi_recon::do_progress) {
-      theWorkArea->stopWorking();
-      theWorkArea->undivide();
-    }
-  }
+	if (portAction.wasHit()) {
+		HxFileDialog *dialog = HxFileDialog::_getTheFileDialog();
+		QString filter = dialog->getFileNameFilter(QString::fromAscii("XTek"),
+			QString::fromAscii("xtekct"));
+		QString filename = dialog->getOpenFileName(QString("Select XTek File"),QString(""), filter).first;
+		std::string str_filename = filename.toUtf8().constData();
+		ccpi_recon::do_progress = false;
+		ccpi_recon::messages = theMsg;
+		ccpi_recon::progress = theWorkArea;
+		theMsg->printf("Loading File: %s", str_filename.c_str());
+		run_reconstruction(str_filename);
+		if(ccpi_recon::do_progress) {
+			theWorkArea->stopWorking();
+			theWorkArea->undivide();
+		}
+	}
 }
 
 
@@ -94,16 +89,20 @@ void XTek_recon::run_reconstruction(const std::string filename)
     //if (blocking_factor > 0 and instrument->supports_blocks())
     //  recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
     recon_algorithm = new CCPi::cgls_3d(niterations);
+	theMsg->printf("Running CGLS algorithm");
     break;
   case 1:
     recon_algorithm = new CCPi::sirt(niterations);
-    break;
+	theMsg->printf("Running SIRT algorithm");
+	break;
   case 2:
     recon_algorithm = new CCPi::mlem(niterations);
+	theMsg->printf("Running MLEM algorithm");
     break;
   }
 
   machine::initialise(0);
+  theMsg->printf("Iniitalised machine cores");
   // instrument setup from pixels/angles will probably copy
   real vox_origin[3];
   real vox_size[3];
