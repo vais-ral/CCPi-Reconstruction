@@ -485,8 +485,9 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
     if (fail) {
       add_output("Values exceed white level");
       send_output();
-    }
-    max_v = white_level;
+    } else
+      max_v = white_level;
+    max_v -= white_level * scattering / real(100.0);
     // scale and take -ve log, due to exponential extinction in sample.
     for (int i = 0; i < get_num_angles(); i++) {
       for (int j = 0; j < get_num_h_pixels(); j++) {
@@ -765,11 +766,13 @@ void CCPi::Nikon_XTek::apply_beam_hardening()
   for (sl_int i = 0; i < get_num_angles(); i++) {
     for (sl_int j = 0; j < get_num_h_pixels(); j++) {
       for (sl_int k = 0; k < get_num_v_pixels(); k++) {
+	pixels[i][j][k] = pixels[i][j][k] * pixels[i][j][k];
+	/*
 	pixels[i][j][k] = ((((((coeff_x4 * pixels[i][j][k])
 			       + coeff_x3) * pixels[i][j][k]
 			      + coeff_x2) * pixels[i][j][k]
-			     + coeff_x1) * pixels[i][j][k]) + coeff_x0)
-	  * scale;
+			     + coeff_x1) * pixels[i][j][k]) + coeff_x0) * scale;
+	*/
       }
     }
   }

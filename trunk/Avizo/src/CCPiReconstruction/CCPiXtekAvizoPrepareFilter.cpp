@@ -172,7 +172,8 @@ int CCPiXtekAvizoPrepareFilter::normalize(float *pixels, int iNumberOfProjection
 	if (fail) {
 		theMsg->stream() << "Values exceed white level"<<std::endl;
 //		return false;
-	}
+	} else
+	  max_v = whiteLevel;
 	max_v -= whiteLevel * scattering / float(100.0); 
 	for (index = 0; index < iNumberOfProjections*iNumberOfHorizontalPixels*(unsigned long long)iNumberOfVerticalPixels; index++) {
 				pixels[index] -= whiteLevel * scattering / float(100.0);
