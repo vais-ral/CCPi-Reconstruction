@@ -52,6 +52,6 @@ module -name     "XTekPrepareFilter" \
 module -name "XTekReconstructionNoShifts"\
 	   -primary "HxUniformScalarField3"\
 	   -class "CCPiXtekNoShiftReconstruction"\
-	   -categorgy "CCPi"\
+	   -category "CCPi"\
 	   -package "CCPiReconstruction"\
 	   -icon "TVDefCompute"

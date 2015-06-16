@@ -82,7 +82,9 @@ bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
 						const real source_x,
 						const real detector_x,
 						const real pixel_h_size,
-						const real pixel_v_size)
+						const real pixel_v_size,
+						const real m_radius,
+						const bool has_offsets)
 {
   report_error("Diamond Avizo interface not implemented");
   return false;

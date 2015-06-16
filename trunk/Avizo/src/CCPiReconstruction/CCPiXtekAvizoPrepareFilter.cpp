@@ -3,18 +3,14 @@
 #include <hxcore/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
 #include "CCPiXtekAvizoPrepareFilter.h"
-#include "base_types.hpp"
 
 HX_INIT_CLASS(CCPiXtekAvizoPrepareFilter,HxCompModule)
 
 CCPiXtekAvizoPrepareFilter::CCPiXtekAvizoPrepareFilter() :
     HxCompModule(HxUniformScalarField3::getClassTypeId()),
-    portAction(this,"action",QApplication::translate("CCPiXtekAvizoPrepareFilter", "Action")),
-    resolution(this, "resolution", QApplication::translate("XTek_recon", "Pixels per Voxel"))
+    portAction(this,"action",QApplication::translate("CCPiXtekAvizoPrepareFilter", "Action"))
 {
     portAction.setLabel(0,"DoIt");
-	resolution.setMinMax(1, 8);
-	resolution.setValue(1);
 }
 
 CCPiXtekAvizoPrepareFilter::~CCPiXtekAvizoPrepareFilter()
@@ -37,36 +33,16 @@ void CCPiXtekAvizoPrepareFilter::compute()
 
 	numberOfVerticalPixels = field->lattice.dims()[0];
 	numberOfHorizontalPixels = field->lattice.dims()[1];
-	numberOfProjections = field->lattice.dims()[2];
-	///// original xtek.cpp translation
-	int npix = calculateVerticalAlignment(numberOfVerticalPixels, resolution.getValue(), true);
-	int diff = npix - numberOfVerticalPixels;
-	dataVerticalOffset = diff / 2;
-	// try and check that midpoint is in aligned middle of pixels?
-	// if n is an even number then they must be, mustn't they?
-	numberOfVerticalPixels = npix;
-	verticalPixels = new double[numberOfVerticalPixels];
-	horizontalPixels = new double[numberOfHorizontalPixels];
 	double pixelSize[2];
 	field->parameters.findReal("DetectorPixelSize",2,pixelSize);
+	numberOfProjections = field->lattice.dims()[2];
 	detectorPixelSize[0] = pixelSize[0];
 	detectorPixelSize[1] = pixelSize[1];
-	real pixel_base = -((numberOfHorizontalPixels - 1) * pixelSize[0] / real(2.0));
-	for (int i = 0; i < numberOfHorizontalPixels; i++)
-		horizontalPixels[i] = pixel_base + real(i) * pixelSize[0];
-	pixel_base = -((numberOfVerticalPixels - 1) * pixelSize[1] / real(2.0));
-	for (int i = 0; i < numberOfVerticalPixels; i++)
-		horizontalPixels[i] = pixel_base + real(i) * pixelSize[1];
-
-	//convert angles to radians
-	angles = new double[numberOfProjections];
-	field->parameters.findReal("Angles", numberOfProjections, angles);
-	for(int i=0;i<numberOfProjections;i++)
-		angles[i] = angles[i] *  real(M_PI)/real(180.0);
 
 	//source to Detector and object
 	field->parameters.findReal("SourceToDetector", sourceToDetector);
 	field->parameters.findReal("SourceToObject", sourceToObject);
+	field->parameters.findReal("MaskRadius", maskRadius);
 
     // Create an output with same size as input. Data type will be unsigned char
     // as we produce a labelled image.
@@ -159,32 +135,7 @@ void CCPiXtekAvizoPrepareFilter::setParameters(HxUniformScalarField3* field)
 	field->parameters.set("DetectorPixelSize", 2, detectorPixelSize);
 	field->parameters.set("SourceToObject", sourceToObject);
 	field->parameters.set("SourceToDetector", sourceToDetector);
-	field->parameters.set("Resolution", resolution.getValueToInt());
-}
-
-/**
- * Method calculates the vertical alignment
- * @param n number of pixels
- * @param pix_per_vox number of pixels per voxel
- * @param cone whether the beam type is cone
- * @return the number of pixels after vertical alignment
- */
-int CCPiXtekAvizoPrepareFilter::calculateVerticalAlignment(const int n, const int pix_per_vox, const bool cone)
-{
-	int nvox = n / pix_per_vox;
-	if (n % pix_per_vox != 0)
-		nvox++;
-	int align = aligned_allocator<voxel_type>::alignment / sizeof(voxel_type);
-	int vox_blocks = nvox / align;
-	if (nvox % align != 0)
-		vox_blocks++;
-	// make sure the cone can split into 2 equal aligned halves
-	if (cone) {
-		if (vox_blocks %2 != 0)
-			vox_blocks++;
-	}
-	int npix = vox_blocks * align * pix_per_vox;
-	return npix;
+	field->parameters.set("MaskRadius", maskRadius);
 }
 
 /**
@@ -199,7 +150,7 @@ int CCPiXtekAvizoPrepareFilter::calculateVerticalAlignment(const int n, const in
  */
 int CCPiXtekAvizoPrepareFilter::normalize(float *pixels, int iNumberOfProjections, int iNumberOfHorizontalPixels, int iNumberOfVerticalPixels, double whiteLevel,double scattering)
 {
-	real max_v = 0.0;
+	float max_v = 0.0;
 	bool fail = false;
 	unsigned long long index = 0;
 	unsigned long long tmpIndexI = 0;
@@ -222,14 +173,10 @@ int CCPiXtekAvizoPrepareFilter::normalize(float *pixels, int iNumberOfProjection
 		theMsg->stream() << "Values exceed white level"<<std::endl;
 //		return false;
 	}
-	max_v = whiteLevel; 
-	// scale and take -ve log, due to exponential extinction in sample.
+	max_v -= whiteLevel * scattering / float(100.0); 
 	for (index = 0; index < iNumberOfProjections*iNumberOfHorizontalPixels*(unsigned long long)iNumberOfVerticalPixels; index++) {
-				pixels[index] -= whiteLevel * scattering / real(100.0);
-				if (pixels[index] < real(1.0))
-					pixels[index] = - std::log(real(0.00001) / max_v);
-				else
-					pixels[index] = - std::log(pixels[index] / max_v);
+				pixels[index] -= whiteLevel * scattering / float(100.0);
+				pixels[index] = pixels[index] / max_v;
 	}
 	return true;
 }

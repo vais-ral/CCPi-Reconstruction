@@ -62,11 +62,16 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
 						   const real source_x,
 						   const real detector_x,
 						   const real pixel_h_size,
-						   const real pixel_v_size)
+						   const real pixel_v_size,
+						   const real m_radius,
+						   const bool has_offsets)
 {
   bool ok = true;
   int nangles = (int)angle_array.shape()[0];
-  if (nangles < 1) {
+  if (has_offsets) {
+    report_error("Detector offsets not supported for XTek");
+    ok = false;
+  } else if (nangles < 1) {
     report_error("Bad angle array");
     ok = false;
   } else {
@@ -81,6 +86,7 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
     } else if (nh_pixels < 1 or nv_pixels < 1) {
       report_error("Bad array index for pixels");
       ok = false;
+    /*
     } else if (h_offsets.shape()[0] > 1) {
       if (nh_pixels != (int)h_offsets.shape()[0])
 	report_error("Number of horizontal pixels doesn't match");
@@ -89,6 +95,7 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
       if (nv_pixels != (int)v_offsets.shape()[0])
 	report_error("Number of vertical pixels doesn't match");
       report_error("Todo - use vertical offsets");
+    */
     } else {
       // copied from read_data_size
       nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
@@ -113,8 +120,7 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
       real_1d &angles = set_phi(nangles);
       for (int i = 0; i < nangles; i++)
 	angles[i] = M_PI * (angle_array[i] / 180.0);
-      report_error("Mask radius? - interface probably incomplete");
-      //report_error("Todo - find_centre");
+      mask_radius = m_radius;
     }
   }
   return ok;

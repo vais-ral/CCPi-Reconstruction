@@ -6,20 +6,11 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
-#ifdef HAS_TIFF
-#  include "tiffio.h"
-#endif // HAS_TIFF
-
-// Due to Avizo's different tiff lib this comes after the above include.
-#ifdef AMIRA_RELEASE
-#  define HAS_TIFF
-#  include "exlibtiff.h"
-#  include "tiffio.h"
+#include "exlibtiff.h"
+#include "tiffio.h"
 #include <hxcore/HxMessage.h>
 #define Message theMsg->stream()
-#else
-#define Message std::cout
-#endif // AMIRA/AVIZO
+
 //Constructor
 XtekReader::XtekReader(std::string filename)
 {
@@ -66,7 +57,7 @@ XtekReader::~XtekReader()
 bool XtekReader::readXtekCTFile(std::string filename)
 {
 	//Open the xxx.xtetct file
-	std::ifstream ctfile(filename);
+	std::ifstream ctfile(filename.c_str());
 	if(!ctfile.is_open()) return false;
 	//read the header
 	std::string line;
@@ -244,7 +235,7 @@ bool XtekReader::readXtekCTFile(std::string filename)
 bool XtekReader::readCTDataFile(std::string filename)
 {
 	//Open the _ctdata.txt file
-	std::ifstream ctfile(filename);
+	std::ifstream ctfile(filename.c_str());
 	if(!ctfile.is_open()) return false;
 	//read the header
 	std::string line;
@@ -281,7 +272,7 @@ bool XtekReader::readCTDataFile(std::string filename)
 bool XtekReader::readAngFile(std::string filename)
 {
 	//Open the xxx.ang file
-	std::ifstream ctfile(filename);
+	std::ifstream ctfile(filename.c_str());
 	if(!ctfile.is_open()) return false;
 	//read the header
 	std::string line;

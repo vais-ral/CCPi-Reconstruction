@@ -116,9 +116,9 @@ void XTek_recon::run_reconstruction(const std::string filename)
   if (voxels != 0) {
     int dims[3];
     
-    dims[0] = voxels->shape()[2];
+    dims[0] = voxels->shape()[0];
     dims[1] = voxels->shape()[1];
-    dims[2] = voxels->shape()[0];
+    dims[2] = voxels->shape()[2];
     HxUniformScalarField3* output =
       new HxUniformScalarField3(dims, McPrimType::mc_float);
     for (int i = 0; i < dims[0]; i++)
@@ -128,12 +128,12 @@ void XTek_recon::run_reconstruction(const std::string filename)
     delete voxels;
     HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice.coords();
     float *bx = coords->bbox();
-    bx[0] = vox_origin[2];
-    bx[1] = vox_origin[2] + float(dims[0]) * vox_size[2];
+    bx[0] = vox_origin[0];
+    bx[1] = vox_origin[0] + float(dims[0]) * vox_size[0];
     bx[2] = vox_origin[1];
-    bx[3] = vox_origin[1] + float(dims[0]) * vox_size[1];
-    bx[4] = vox_origin[0];
-    bx[5] = vox_origin[0] + float(dims[2]) * vox_size[0];
+    bx[3] = vox_origin[1] + float(dims[1]) * vox_size[1];
+    bx[4] = vox_origin[2];
+    bx[5] = vox_origin[2] + float(dims[2]) * vox_size[2];
     // publish reconstruction
     setResult(output);
   }
