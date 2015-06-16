@@ -22,23 +22,19 @@ class CCPIRECONSTRUCTION_API CCPiXtekAvizoPrepareFilter : public HxCompModule
 
     /** Port providing a button to click to run the module */
     HxPortDoIt portAction;
-	/** for number of pixels per voxel */
-	HxPortIntSlider resolution;
 
     /** Perform the calculation in this module. Called by Avizo. */
     virtual void compute();
 
  private:
-    int calculateVerticalAlignment(const int n, const int pix_per_vox, const bool cone);
 	int normalize(float *pixels, int numberOfProjections, int numberOfHorizontalPixels, int numberOfVerticalPixels, double whiteLevel,double scattering);
 	int dataVerticalOffset;
 	int numberOfVerticalPixels;
 	int numberOfHorizontalPixels;
-	int detectorPixelSize[2];
+	float detectorPixelSize[2];
 	float sourceToObject;
 	float sourceToDetector;
-	double* horizontalPixels;
-	double* verticalPixels;
+	float maskRadius;
 	double* angles;
 	int numberOfProjections;
 	HxUniformScalarField3* createOutput(HxUniformScalarField3 *field);

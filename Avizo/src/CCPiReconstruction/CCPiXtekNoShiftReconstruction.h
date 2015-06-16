@@ -25,6 +25,7 @@ class CCPIRECONSTRUCTION_API CCPiXtekNoShiftReconstruction : public HxCompModule
     HxPortDoIt portAction;
     HxPortRadioBox algorithm;
     HxPortIntSlider iterations;
+    HxPortIntSlider resolution;
     HxPortOnOff beam_harden;
 
     virtual void compute();

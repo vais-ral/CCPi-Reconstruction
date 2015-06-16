@@ -40,7 +40,9 @@ namespace CCPi {
 					     const real source_x,
 					     const real detector_x,
 					     const real pixel_h_size,
-					     const real pixel_v_size) = 0;
+					     const real pixel_v_size,
+					     const real m_radius,
+					     const bool has_offsets) = 0;
     virtual bool read_scans(const std::string path, const int offset,
 			    const int block_size, const bool first,
 			    const bool phantom = false) = 0;
@@ -334,7 +336,9 @@ namespace CCPi {
 				     const int pixels_per_voxel,
 				     const real source_x, const real detector_x,
 				     const real pixel_h_size,
-				     const real pixel_v_size);
+				     const real pixel_v_size,
+				     const real m_radius,
+				     const bool has_offsets);
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
     bool read_scans(const numpy_3d &pixel_array, const int offset,
@@ -386,7 +390,9 @@ namespace CCPi {
 				     const int pixels_per_voxel,
 				     const real source_x, const real detector_x,
 				     const real pixel_h_size,
-				     const real pixel_v_size);
+				     const real pixel_v_size,
+				     const real m_radius,
+				     const bool has_offsets);
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
     bool read_scans(const numpy_3d &pixel_array, const int offset,
