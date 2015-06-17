@@ -345,7 +345,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string path,
 	ang_file >> colon;
 	ang_file >> tmp;
 	// everything else is radians
-	p[i] = real(M_PI) * tmp / real(180.0);
+	p[n - i - 1] = real(M_PI) * tmp / real(180.0);
 	// Do we need to skip //^M?
 	ang_file.getline(line, 128);
       }
