@@ -5,6 +5,10 @@ set LIBS {
     hxcore amiramesh mclib oiv tcl exlibtiff boost_system qt
 }
 
+set LIBS-Win {
+    boost_math_tr1 vcomp
+}
+
 set SHARE {
     share/resources/CCPiReconstruction.rc
 }
