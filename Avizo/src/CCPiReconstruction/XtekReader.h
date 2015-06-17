@@ -48,7 +48,7 @@ private:
 	//_ctdata.txt parameters
 	int framesPerProjection;
 	double exposureTime;
-	double *angles;
+	float *angles;
 	double *angleTime;
 	//Image data
 	float* imageData;
@@ -74,7 +74,7 @@ public:
 	int getImageHeight(){return detectorPixels[1];}
 	int getFramesPerProjection(){return framesPerProjection;}
 	double getExposureTime(){return exposureTime;}
-	double* getAngles(){return angles;}
+	float* getAngles(){return angles;}
 	double* getVoxelSize(){return voxelSize;}
 	double* getOffset(){return offset;}
 	double getSourceToObject(){return srcToObject;}

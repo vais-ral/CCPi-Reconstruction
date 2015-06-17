@@ -617,6 +617,26 @@ $(INTERMEDIATEDIR)/CCPiXtekNoShiftReconstruction.d: CCPiXtekNoShiftReconstructio
 DEPS += $(INTERMEDIATEDIR)/CCPiXtekNoShiftReconstruction.d
 endif
 
+$(INTERMEDIATEDIR)/CCPiXtekAvizoReader.o: CCPiXtekAvizoReader.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+OBJS += $(INTERMEDIATEDIR)/CCPiXtekAvizoReader.o
+
+ifdef MAKEDEP
+$(INTERMEDIATEDIR)/CCPiXtekAvizoReader.d: CCPiXtekAvizoReader.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
+	@echo "    [$(MAKE_CFG)] Generating dependencies for $(DIRNAME)/$<"
+	@mkdir -p $(@D)
+	$(QUIET)$(MAKEDEP)
+	@cp $@ $@.orig
+	@sed -e 's/\.o:/.d:/' <$@.orig >>$@
+	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d'  -e 's/^ *//' -e 's/$$/ :/' <$@.orig >>$@
+	@rm $@.orig
+
+DEPS += $(INTERMEDIATEDIR)/CCPiXtekAvizoReader.d
+endif
+
 $(INTERMEDIATEDIR)/XtekReader.o: XtekReader.cpp $(UICOUTPUT) $(filter %.h %.hpp, $(COPY))  $(INTERMEDIATEDIR)/CXX  $(INTERMEDIATEDIR)/CC  $(INTERMEDIATEDIR)/CFLAGS  $(INTERMEDIATEDIR)/CXXFLAGS
 	@echo "    [$(MAKE_CFG)] Compiling $(DIRNAME)/$<"
 	@mkdir -p $(@D)

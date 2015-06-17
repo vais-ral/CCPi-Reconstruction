@@ -33,7 +33,9 @@ void CCPiXtekAvizoPrepareFilter::compute()
 	numberOfVerticalPixels = field->lattice.dims()[1];
 	numberOfHorizontalPixels = field->lattice.dims()[0];
 	numberOfProjections = field->lattice.dims()[2];
-	angles = new double[numberOfProjections];
+	angles = new float[numberOfProjections];
+	field->parameters.findReal("Angles", numberOfProjections, angles);
+	  
 	double pixelSize[2];
 	field->parameters.findReal("DetectorPixelSize",2,pixelSize);
 	detectorPixelSize[0] = pixelSize[0];
