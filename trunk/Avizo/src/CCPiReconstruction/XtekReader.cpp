@@ -285,9 +285,9 @@ bool XtekReader::readAngFile(std::string filename)
 		boost::algorithm::trim(line);
 		std::vector<std::string> values;
 		boost::algorithm::split(values, line, boost::is_any_of("\t "), boost::token_compress_on);
-		int proj = atoi(values[0].c_str()) - 1;
+		int proj = atoi(values[0].c_str());
 		if(proj > projections) return false; // projection index cannot be greater than number projections
-		angles[proj] = strtod(values[1].c_str(), NULL); 
+		angles[projections - proj] = strtod(values[1].c_str(), NULL); 
 	}
 	return true;
 }
