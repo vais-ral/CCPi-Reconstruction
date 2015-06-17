@@ -30,12 +30,12 @@ void CCPiXtekAvizoPrepareFilter::compute()
         theMsg->stream() << "This module only works on a Xtek data" <<std::endl;
         return;
     }
-
 	numberOfVerticalPixels = field->lattice.dims()[0];
 	numberOfHorizontalPixels = field->lattice.dims()[1];
+	numberOfProjections = field->lattice.dims()[2];
+	angles = new double[numberOfProjections];
 	double pixelSize[2];
 	field->parameters.findReal("DetectorPixelSize",2,pixelSize);
-	numberOfProjections = field->lattice.dims()[2];
 	detectorPixelSize[0] = pixelSize[0];
 	detectorPixelSize[1] = pixelSize[1];
 
@@ -46,7 +46,7 @@ void CCPiXtekAvizoPrepareFilter::compute()
 
     // Create an output with same size as input. Data type will be unsigned char
     // as we produce a labelled image.
-    HxUniformScalarField3 *output = createOutput(field);
+	HxUniformScalarField3 *output = createOutput(field);
     // Output shall have same bounding box as input
     output->coords()->setBoundingBox(field->bbox());
 	//Set the output parameters
