@@ -22,7 +22,7 @@ XtekReader::XtekReader(std::string filename)
 		//Split and get the file path and append the _ctdata.txt to read angles data
 		boost::filesystem::path xtekfile(filename);
 		boost::filesystem::path ctname("_ctdata.txt");
-		boost::filesystem::path full_ctname = xtekfile.parent_path() / xtekfile.stem();
+		boost::filesystem::path full_ctname = xtekfile.parent_path() / ctname;
 		if(!readCTDataFile(full_ctname.string()))
 		{
 			Message<<"Error reading the _ctdata.txt file"<<std::endl;

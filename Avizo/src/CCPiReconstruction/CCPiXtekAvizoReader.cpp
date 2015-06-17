@@ -10,8 +10,8 @@ int CCPiXTekAvizoReader(const char* filename)
 {
 	XtekReader reader(filename);
 	int newDims[3];
-	newDims[0] = reader.getImageHeight();
-	newDims[1] = reader.getImageWidth();
+	newDims[0] = reader.getImageWidth();
+	newDims[1] = reader.getImageHeight();
 	newDims[2] = reader.getNumberOfProjections();
 	HxUniformScalarField3 *field = new HxUniformScalarField3(newDims, McPrimType::mc_float);
 	float *data = reader.getImageData();

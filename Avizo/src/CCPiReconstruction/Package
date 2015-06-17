@@ -25,6 +25,7 @@ set SRC {
     XTek_recon.cpp
     CCPiXtekAvizoPrepareFilter.cpp
     CCPiXtekNoShiftReconstruction.cpp
+    CCPiXtekAvizoReader.cpp
     XtekReader.cpp
     ui_messages.cpp
     ../../../src/results.cpp
