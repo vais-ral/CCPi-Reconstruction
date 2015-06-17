@@ -97,6 +97,8 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
       report_error("Todo - use vertical offsets");
     */
     } else {
+      set_source(source_x, 0.0, 0.0);
+      set_detector(detector_x);
       // copied from read_data_size
       nv_pixels = calc_v_alignment(nv_pixels, pixels_per_voxel, false);
       real shift = 0.0;
@@ -505,7 +507,7 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
 	  pixels[i][j][k] = 0.0;
       }
     }
-    find_centre(get_num_v_pixels() / 2);
+    ok = find_centre(get_num_v_pixels() / 2);
   }
   return ok;
 }
@@ -536,8 +538,7 @@ bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
       }
     }
   }
-  find_centre(get_num_v_pixels() / 2);
-  return true;
+  return find_centre(get_num_v_pixels() / 2);
 }
 
 pixel_type linear(const real x1, const real x2, const pixel_type f1,
@@ -632,7 +633,7 @@ pixel_type interpolate2D(const real_1d &h, const int v_slice,
   }
 }
 
-void CCPi::Nikon_XTek::find_centre(const int v_slice)
+bool CCPi::Nikon_XTek::find_centre(const int v_slice)
 {
   // converted from matlab find_centre which is based on the method described
   // in T. Liu - "Direct central ray determination in computed microtomography"
@@ -701,8 +702,10 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
 	min_m = M[j];
       }
     }
-    if (ind_m < 0)
+    if (ind_m < 0) {
       report_error("Failure in XTek find centre");
+      return false;
+    }
     real scor_m = scor + ind_m * precision[i];
     add_output("Precision ");
     add_output(precision[i]);
@@ -717,6 +720,7 @@ void CCPi::Nikon_XTek::find_centre(const int v_slice)
   real y_centre = midpoint * get_source_x() / distance;
   set_source(get_source_x(), get_source_y() + y_centre, get_source_z());
   adjust_h_pixels(y_centre);
+  return true;
 }
 
 void CCPi::Nikon_XTek::get_xy_size(int &nx, int &ny, const int pixels_per_voxel)

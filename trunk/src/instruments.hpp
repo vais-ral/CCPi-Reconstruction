@@ -423,7 +423,7 @@ namespace CCPi {
     bool read_angles(const std::string path, const real init_angle,
 		     const int n);
     bool read_images(const std::string path);
-    void find_centre(const int v_slice);
+    bool find_centre(const int v_slice);
   };
 
 }

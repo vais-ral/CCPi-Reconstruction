@@ -67,7 +67,7 @@ void CCPiXtekNoShiftReconstruction::compute()
 		theMsg->stream()<<"Is not connected to uniform scalar field source"<<std::endl;
 		return;
 	}
-	double *angles = new double[field->lattice.dims()[2]];
+	float *angles = new float[field->lattice.dims()[2]];
 	int result = field->parameters.findReal("Angles", field->lattice.dims()[2], angles);
 	//Check the Rotation Angle
 	if (result!=1)
@@ -122,11 +122,11 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 	double srcToObject;
 	field->parameters.findReal("SourceToObject", srcToObject);
 	double srcToDetector;
-	field->parameters.findReal("SourceToDetector", srcToObject);
+	field->parameters.findReal("SourceToDetector", srcToDetector);
 	double MaskRadius;
 	field->parameters.findReal("MaskRadius", MaskRadius);
-	boost::multi_array_ref<float, 1> angles((float *)angles_float,
-		boost::extents[fdims[2]]);
+	boost::multi_array_ref<float, 1> angles(angles_float,
+						boost::extents[fdims[2]]);
 
 	real h_size = pixel_size[0];
 	real v_size = pixel_size[1];

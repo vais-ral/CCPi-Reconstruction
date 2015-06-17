@@ -35,7 +35,7 @@ class CCPIRECONSTRUCTION_API CCPiXtekAvizoPrepareFilter : public HxCompModule
 	float sourceToObject;
 	float sourceToDetector;
 	float maskRadius;
-	double* angles;
+	float* angles;
 	int numberOfProjections;
 	HxUniformScalarField3* createOutput(HxUniformScalarField3 *field);
 	void setParameters(HxUniformScalarField3* );
