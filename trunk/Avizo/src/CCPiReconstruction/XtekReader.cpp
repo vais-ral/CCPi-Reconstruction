@@ -263,7 +263,7 @@ bool XtekReader::readCTDataFile(std::string filename)
 		boost::algorithm::split(values, line, boost::is_any_of("\t "), boost::token_compress_on);
 		int proj = atoi(values[0].c_str()) - 1;
 		if(proj > projections) return false; // projection index cannot be greater than number projections
-		angles[proj] = strtof(values[1].c_str(), NULL); 
+		angles[proj] = strtod(values[1].c_str(), NULL); 
 		angleTime[proj] = strtod(values[2].c_str(), NULL);
 	}
 	return true;
@@ -287,7 +287,7 @@ bool XtekReader::readAngFile(std::string filename)
 		boost::algorithm::split(values, line, boost::is_any_of("\t "), boost::token_compress_on);
 		int proj = atoi(values[0].c_str());
 		if(proj > projections) return false; // projection index cannot be greater than number projections
-		angles[projections - proj] = strtof(values[1].c_str(), NULL); 
+		angles[projections - proj] = strtod(values[1].c_str(), NULL); 
 	}
 	return true;
 }
