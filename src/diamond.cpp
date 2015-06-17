@@ -9,6 +9,13 @@
 #include "utils.hpp"
 #include "ui_calls.hpp"
 
+#ifdef WIN32
+#  ifdef AMIRA64
+#    include <boost/math/tr1.hpp>
+using boost::math::tr1::asinh;
+#  endif // AVIZO/AMIRA
+#endif // WINDOWS
+
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
 						const real rotation_centre,
