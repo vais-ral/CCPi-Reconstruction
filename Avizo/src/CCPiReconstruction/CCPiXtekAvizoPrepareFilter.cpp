@@ -30,8 +30,8 @@ void CCPiXtekAvizoPrepareFilter::compute()
         theMsg->stream() << "This module only works on a Xtek data" <<std::endl;
         return;
     }
-	numberOfVerticalPixels = field->lattice.dims()[0];
-	numberOfHorizontalPixels = field->lattice.dims()[1];
+	numberOfVerticalPixels = field->lattice.dims()[1];
+	numberOfHorizontalPixels = field->lattice.dims()[0];
 	numberOfProjections = field->lattice.dims()[2];
 	angles = new double[numberOfProjections];
 	double pixelSize[2];
@@ -113,13 +113,13 @@ void CCPiXtekAvizoPrepareFilter::copyData(HxUniformScalarField3* src, HxUniformS
 	float *srcPixels = (float *)src->lattice.dataPtr();
 	//Change the data image order
 	long long angval = 1;
-	long long hval = 1;
+	long long vval = 1;
 	for(int ang=0;ang<numberOfProjections;ang++){
 		angval = ang * numberOfHorizontalPixels * numberOfVerticalPixels;
-		for (int h = 0; h < numberOfHorizontalPixels; h++) {
-			hval = h*numberOfVerticalPixels;
-			for (int v = 0; v < numberOfVerticalPixels; v++) {
-				dstPixels[angval+hval+v] = srcPixels[angval+(numberOfVerticalPixels - v - 1) * numberOfHorizontalPixels + h];
+		for (int v = 0; v < numberOfVerticalPixels; v++) {
+			vval = v*numberOfHorizontalPixels;
+			for (int h = 0; h < numberOfHorizontalPixels; h++) {
+				dstPixels[angval+vval+h] = srcPixels[angval+(numberOfVerticalPixels - v - 1) * numberOfHorizontalPixels + h];
 			}
 		}
 	}
@@ -153,19 +153,15 @@ int CCPiXtekAvizoPrepareFilter::normalize(float *pixels, int iNumberOfProjection
 	float max_v = 0.0;
 	bool fail = false;
 	unsigned long long index = 0;
-	unsigned long long tmpIndexI = 0;
-	unsigned long long tmpIndexJ = 0;
 	//Check that the pixel value is always less than whiteLevel value
 	for (int i = 0; i < iNumberOfProjections; i++) {
-		tmpIndexI = i * iNumberOfHorizontalPixels * iNumberOfVerticalPixels;
-		for (int j = 0; j < iNumberOfHorizontalPixels; j++) {
-			tmpIndexJ = j*iNumberOfHorizontalPixels;
-			for (int k = 0; k < iNumberOfVerticalPixels; k++) {
-				index = tmpIndexI + tmpIndexJ + k;
+		for (int k = 0; k < iNumberOfVerticalPixels; k++) {
+			for (int j = 0; j < iNumberOfHorizontalPixels; j++) {
 				if (max_v < pixels[index])
 					max_v = pixels[index];
 				if (max_v > whiteLevel)
 					fail = true;
+				index++;
 			}
 		}
 	}
@@ -176,8 +172,8 @@ int CCPiXtekAvizoPrepareFilter::normalize(float *pixels, int iNumberOfProjection
 	  max_v = whiteLevel;
 	max_v -= whiteLevel * scattering / float(100.0); 
 	for (index = 0; index < iNumberOfProjections*iNumberOfHorizontalPixels*(unsigned long long)iNumberOfVerticalPixels; index++) {
-				pixels[index] -= whiteLevel * scattering / float(100.0);
-				pixels[index] = pixels[index] / max_v;
+		pixels[index] = (pixels[index]
+			      - whiteLevel * scattering / float(100.0)) / max_v;
 	}
 	return true;
 }
