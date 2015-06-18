@@ -76,10 +76,10 @@ bool CCPi::Nikon_XTek::setup_experimental_geometry(const numpy_3d &pix_array,
     ok = false;
   } else {
     const pixel_data::size_type *s = pix_array.shape();
-    int na = (int)s[0];
+    int na = (int)s[2];
     // Todo - what order should these be
-    int nh_pixels = (int)s[1];
-    int nv_pixels = (int)s[2];
+    int nh_pixels = (int)s[0];
+    int nv_pixels = (int)s[1];
     if (na != nangles) {
       report_error("Number of projections doesn't match angle array");
       ok = false;
@@ -532,7 +532,7 @@ bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
 	pixels[i][j][k] = 0.0;
       }
       for (sl_int k = v_offset; k < v_end; k++)
-	pixels[i][j][k] = - std::log(pixel_array[i][k - v_offset][j]);
+	pixels[i][j][k] = - std::log(pixel_array[j][k - v_offset][i]);
       for (sl_int k = v_end; k < nv; k++) {
 	pixels[i][j][k] = 0.0;
       }

@@ -113,7 +113,7 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 	const int *fdims = field->lattice.dims();
 	boost::multi_array_ref<float, 3>
 		pixels((float *)field->lattice.dataPtr(),
-		boost::extents[fdims[2]][fdims[1]][fdims[0]],
+		boost::extents[fdims[0]][fdims[1]][fdims[2]],
 		boost::fortran_storage_order());
 	float *angles_float = new float[field->lattice.dims()[2]];
 	field->parameters.findReal("Angles", field->lattice.dims()[2], angles_float);
