@@ -55,7 +55,7 @@ void setParameters(HxUniformScalarField3 *field, XtekReader reader)
 	field->parameters.set("SourceToDetector", reader.getSourceToDetector());
 	field->parameters.set("Angles", reader.getNumberOfProjections(), reader.getAngles());
 	field->parameters.set("DetectorPixelSize", 2, reader.getDetectorPixelSize());
-	field->parameters.set("InitialAngle", reader.getInitialAngle());
+	//field->parameters.set("InitialAngle", reader.getInitialAngle());
 	field->parameters.set("WhiteLevel", reader.getWhiteLevel());
 	field->parameters.set("Scattering", reader.getScattering());
 	field->parameters.set("CoefX", 5, reader.getCoefX());

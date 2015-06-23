@@ -322,7 +322,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string path,
       data >> tmp;
       data >> tmp;
       // everything else is radians
-      p[i] = real(M_PI) * tmp / real(180.0);
+      p[i] = real(M_PI) * (init_angle + tmp) / real(180.0);
       data >> tmp;
     }
     data.close();
@@ -347,7 +347,7 @@ bool CCPi::Nikon_XTek::read_angles(const std::string path,
 	ang_file >> colon;
 	ang_file >> tmp;
 	// everything else is radians
-	p[n - i - 1] = real(M_PI) * tmp / real(180.0);
+	p[n - i - 1] = real(M_PI) * (init_angle + tmp) / real(180.0);
 	// Do we need to skip //^M?
 	ang_file.getline(line, 128);
       }
@@ -562,23 +562,29 @@ pixel_type angles_linear(const int ph1, const real_1d &h, const int v_slice,
 			 const real new_h, const real new_angle,
 			 const int nh, const int na, const int nv)
 {
-  int pa1 = 0;
-  for (; pa1 < na - 1; pa1++) {
-    if (angles[pa1 + 1] > new_angle)
-      break;
-  }
-  if (angles[pa1] == new_angle) {
-    return data[pa1][ph1][v_slice];
+  if (new_angle < angles[0]) {
+    return linear(angles[na - 1] - real(2.0 * M_PI), angles[0],
+		  data[na - 1][ph1][v_slice], data[0][ph1][v_slice],
+		  new_angle);
   } else {
-    // interp pa1 to pa1 + 1
-    if (pa1 == na - 1)
-      return linear(angles[pa1], angles[0] + real(2.0 * M_PI),
-		    data[pa1][ph1][v_slice], data[0][ph1][v_slice],
-		    new_angle);
-    else
-      return linear(angles[pa1], angles[pa1 + 1],
-		    data[pa1][ph1][v_slice], data[pa1 + 1][ph1][v_slice],
-		    new_angle);
+    int pa1 = 0;
+    for (; pa1 < na - 1; pa1++) {
+      if (angles[pa1 + 1] > new_angle)
+	break;
+    }
+    if (angles[pa1] == new_angle) {
+      return data[pa1][ph1][v_slice];
+    } else {
+      // interp pa1 to pa1 + 1
+      if (pa1 == na - 1)
+	return linear(angles[pa1], angles[0] + real(2.0 * M_PI),
+		      data[pa1][ph1][v_slice], data[0][ph1][v_slice],
+		      new_angle);
+      else 
+	return linear(angles[pa1], angles[pa1 + 1],
+		      data[pa1][ph1][v_slice], data[pa1 + 1][ph1][v_slice],
+		      new_angle);
+    }
   }
 }
 
@@ -587,28 +593,35 @@ pixel_type angles_bilinear(const int ph1, const real_1d &h, const int v_slice,
 			   const real new_h, const real new_angle,
 			   const int nh, const int na, const int nv)
 {
-  int pa1 = 0;
-  for (; pa1 < na - 1; pa1++) {
-    if (angles[pa1 + 1] > new_angle)
-      break;
-  }
-  if (angles[pa1] == new_angle) {
-    return linear(h[ph1], h[ph1 + 1],
-		  data[pa1][ph1][v_slice], data[pa1][ph1 + 1][v_slice], new_h);
+  if (new_angle < angles[0]) {
+    return bilinear(h[ph1], h[ph1 + 1], angles[na - 1] - real(2.0 * M_PI),
+		    angles[0], data[na - 1][ph1][v_slice],
+		    data[0][ph1][v_slice], data[na - 1][ph1 + 1][v_slice],
+		    data[0][ph1 + 1][v_slice], new_h, new_angle);
   } else {
-    // interp pa1 to pa1 + 1
-    if (pa1 == na - 1)
-      return bilinear(h[ph1], h[ph1 + 1], angles[pa1],
-		      angles[0] + real(2.0 * M_PI),
-		      data[pa1][ph1][v_slice], data[0][ph1][v_slice],
-		      data[pa1][ph1 + 1][v_slice], data[0][ph1 + 1][v_slice],
-		      new_h, new_angle);
-    else
-      return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[pa1 + 1],
-		      data[pa1][ph1][v_slice], data[pa1 + 1][ph1][v_slice],
-		      data[pa1][ph1 + 1][v_slice],
-		      data[pa1 + 1][ph1 + 1][v_slice],
-		      new_h, new_angle);
+    int pa1 = 0;
+    for (; pa1 < na - 1; pa1++) {
+      if (angles[pa1 + 1] > new_angle)
+	break;
+    }
+    if (angles[pa1] == new_angle) {
+      return linear(h[ph1], h[ph1 + 1],
+		    data[pa1][ph1][v_slice], data[pa1][ph1 + 1][v_slice], new_h);
+    } else {
+      // interp pa1 to pa1 + 1
+      if (pa1 == na - 1)
+	return bilinear(h[ph1], h[ph1 + 1], angles[pa1],
+			angles[0] + real(2.0 * M_PI),
+			data[pa1][ph1][v_slice], data[0][ph1][v_slice],
+			data[pa1][ph1 + 1][v_slice], data[0][ph1 + 1][v_slice],
+			new_h, new_angle);
+      else
+	return bilinear(h[ph1], h[ph1 + 1], angles[pa1], angles[pa1 + 1],
+			data[pa1][ph1][v_slice], data[pa1 + 1][ph1][v_slice],
+			data[pa1][ph1 + 1][v_slice],
+			data[pa1 + 1][ph1 + 1][v_slice],
+			new_h, new_angle);
+    }
   }
 }
 
@@ -638,8 +651,9 @@ bool CCPi::Nikon_XTek::find_centre(const int v_slice)
   // converted from matlab find_centre which is based on the method described
   // in T. Liu - "Direct central ray determination in computed microtomography"
   // Optical Engineering, April 2009, 046501
-  int n_precs = 5;
-  real precision[5] = { 1, 0.1, 0.01, 0.001, 0.0001 };
+  const int nsamples = 21;
+  const int n_precs = 5;
+  real precision[n_precs] = { 1, 0.1, 0.01, 0.001, 0.0001 };
   real midpoint = 0.0;
   int nv = get_num_v_pixels();
   int nh = get_num_h_pixels();
@@ -652,16 +666,17 @@ bool CCPi::Nikon_XTek::find_centre(const int v_slice)
   std::vector<real> beta(nh);
   std::vector<real> s2(nh);
   for (int i = 0; i < n_precs; i++) {
-    real scor = midpoint - real(10.0) * precision[i];
-    real M[21];
-    for (int j = 0; j < 21; j++) {
+    real scor = midpoint - real(nsamples / 2) * precision[i];
+    real M[nsamples];
+    for (int j = 0; j < nsamples; j++) {
       // angle of each ray relative to theoretical central ray
       // common term arctan(s1/h0) in equations (1) and (2)
       for (int k = 0; k < nh; k++)
 	gamma_i[k] = std::atan(h_pixels[k] / distance);
       // angle of assumed centre of rotation to central ray
       // common term arctan(c0/h0) in equations (1) and (2)
-      real gamma_c = std::atan((midpoint + (j - 10) * precision[i]) / distance);
+      real gamma_c = std::atan((midpoint + (j - nsamples / 2)
+				* precision[i]) / distance);
       // eqn (1) - Matlab differs from paper in + not -, why?
       for (int k = 0; k < nh; k++)
 	beta[k] = real(M_PI) + real(2.0) * (gamma_i[k] - gamma_c);
@@ -676,18 +691,15 @@ bool CCPi::Nikon_XTek::find_centre(const int v_slice)
 	for (int k = 0; k < nh; k++) {
 	  if (s2[k] >= h_pixels[0] and s2[k] <= h_pixels[nh - 1]) {
 	    real alpha_beta = ph[a] + beta[k];
-	    // can it be < -2pi or > 4pi?
-	    if (alpha_beta < real(0.0))
+	    while (alpha_beta < ph[0])
 	      alpha_beta += real(2.0 * M_PI);
-	    else if (alpha_beta > real(2.0 * M_PI))
+	    while (alpha_beta > ph[na - 1])
 	      alpha_beta -= real(2.0 * M_PI);
 	    pixel_type p = interpolate2D(h_pixels, v_slice, ph, px,
 					 s2[k], alpha_beta, nh, na, nv);
-	    // if (p > 0.0) { ?
 	    pixel_type t = px[a][k][v_slice] - p;
 	    sum += t * t;
 	    count++;
-	    //} ?
 	  }
 	}
       }
@@ -696,7 +708,7 @@ bool CCPi::Nikon_XTek::find_centre(const int v_slice)
     // minimum value and index
     int ind_m = -1;
     real min_m = 1e20;
-    for (int j = 0; j < 21; j++) {
+    for (int j = 0; j < nsamples; j++) {
       if (min_m > M[j]) {
 	ind_m = j;
 	min_m = M[j];
