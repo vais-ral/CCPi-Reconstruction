@@ -96,14 +96,35 @@ namespace CCPi {
 		     const real origin[3], const real voxel_size[3]);
   };
 
-  class cgls_tikhonov : public cgls_3d {
+  class cgls_regularize : public cgls_3d {
   public:
-    cgls_tikhonov(const int niterations, const real param);
+    cgls_regularize(const int niterations, const real param);
     bool reconstruct(class instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
 
   private:
     real regularisation_param;
+
+    virtual void regularize(voxel_data &b, const voxel_data &a,
+			    const int nx, const int ny, const int nz) = 0;
+  };
+
+  class cgls_tikhonov : public cgls_regularize {
+  public:
+    cgls_tikhonov(const int niterations, const real param);
+
+  private:
+    void regularize(voxel_data &b, const voxel_data &a,
+		    const int nx, const int ny, const int nz);
+  };
+
+  class cgls_tv_reg : public cgls_regularize {
+  public:
+    cgls_tv_reg(const int niterations, const real param);
+
+  private:
+    void regularize(voxel_data &b, const voxel_data &a,
+		    const int nx, const int ny, const int nz);
   };
 
 }
@@ -138,9 +159,21 @@ inline CCPi::bi_cgstabls_3d::bi_cgstabls_3d(const int niterations)
 {
 }
 
+inline CCPi::cgls_regularize::cgls_regularize(const int niterations,
+					      const real param)
+  : cgls_3d(niterations), regularisation_param(param)
+{
+}
+
 inline CCPi::cgls_tikhonov::cgls_tikhonov(const int niterations,
 					  const real param)
-  : cgls_3d(niterations), regularisation_param(param)
+  : cgls_regularize(niterations, param)
+{
+}
+
+inline CCPi::cgls_tv_reg::cgls_tv_reg(const int niterations,
+				      const real param)
+  : cgls_regularize(niterations, param)
 {
 }
 
