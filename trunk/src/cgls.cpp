@@ -327,9 +327,9 @@ bool CCPi::bi_cgstabls_3d::reconstruct(instrument *device, voxel_data &voxels,
   return true;
 }
 
-bool CCPi::cgls_tikhonov::reconstruct(instrument *device, voxel_data &voxels,
-				      const real origin[3],
-				      const real voxel_size[3])
+bool CCPi::cgls_regularize::reconstruct(instrument *device, voxel_data &voxels,
+					const real origin[3],
+					const real voxel_size[3])
 {
   const voxel_data::size_type *sz = voxels.shape();
   //sl_int n_vox = sl_int(sz[0]) * sl_int(sz[1]) * sl_int(sz[2]);
@@ -361,7 +361,7 @@ bool CCPi::cgls_tikhonov::reconstruct(instrument *device, voxel_data &voxels,
       pixel_data Ad_pix(boost::extents[n_angles][n_h][n_v]);
       device->forward_project(Ad_pix, d, origin, voxel_size, nx, ny, nz);
       voxel_data L(boost::extents[nx][ny][nz]);
-      tikhonov_regularize(L, d, nx, ny, nz);
+      regularize(L, d, nx, ny, nz);
       sum_axpy(regularisation_param, L, Ad_vox, nx, ny, nz);
       pixel_type alpha = (norm_pixels(Ad_pix, n_angles, n_v, n_h)
 			  + norm_voxels(Ad_vox, nx, ny, nz));
@@ -371,7 +371,7 @@ bool CCPi::cgls_tikhonov::reconstruct(instrument *device, voxel_data &voxels,
       // r -= alpha * Ad
       sum_axpy(-alpha, Ad_pix, r_pix, n_angles, n_h, n_v);
       sum_axpy(-alpha, Ad_vox, r_vox, n_angles, n_h, n_v);
-      tikhonov_regularize(L, voxels, nx, ny, nz);
+      regularize(L, voxels, nx, ny, nz);
       sum_axpy(regularisation_param, L, voxels, nx, ny, nz);
     }
     update_progress(2 * iter + 2);
@@ -392,4 +392,16 @@ bool CCPi::cgls_tikhonov::reconstruct(instrument *device, voxel_data &voxels,
   }
   //delete [] d;
   return true;
+}
+
+void CCPi::cgls_tikhonov::regularize(voxel_data &b, const voxel_data &a,
+				     const int nx, const int ny, const int nz)
+{
+  tikhonov_regularize(b, a, nx, ny, nz);
+}
+
+void CCPi::cgls_tv_reg::regularize(voxel_data &b, const voxel_data &a,
+				   const int nx, const int ny, const int nz)
+{
+  tv_regularize(b, a, nx, ny, nz);
 }
