@@ -60,7 +60,8 @@ numpy_boost<float, 3> reconstruct_iter(const numpy_boost<float, 3> &pixels,
 				       const numpy_boost<float, 1> &angles,
 				       double rotation_centre, int resolution,
 				       int niterations, int nthreads,
-				       CCPi::algorithms alg)
+				       CCPi::algorithms alg,
+				       const real regularize = 0.0)
 {
   bool beam_harden = false;
   // vertical size to break data up into for processing
@@ -80,6 +81,12 @@ numpy_boost<float, 3> reconstruct_iter(const numpy_boost<float, 3> &pixels,
     break;
   case CCPi::alg_MLEM:
     algorithm = new CCPi::mlem(niterations);
+    break;
+  case CCPi::alg_CGLS_Tikhonov:
+    algorithm = new CCPi::cgls_tikhonov(niterations, regularize);
+    break;
+  case CCPi::alg_CGLS_TVreg:
+    algorithm = new CCPi::cgls_tv_reg(niterations, regularize);
     break;
   default:
     break;
@@ -144,6 +151,29 @@ numpy_boost<float, 3> reconstruct_mlem(const numpy_boost<float, 3> &pixels,
 {
   return reconstruct_iter(pixels, angles, rotation_centre, resolution,
 			  niterations, nthreads, CCPi::alg_MLEM);
+}
+
+numpy_boost<float, 3>
+reconstruct_cgls_tikhonov(const numpy_boost<float, 3> &pixels,
+			  const numpy_boost<float, 1> &angles,
+			  double rotation_centre, int resolution,
+			  int niterations, int nthreads, double regularize)
+{
+  return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+			  niterations, nthreads, CCPi::alg_CGLS_Tikhonov,
+			  regularize);
+}
+
+numpy_boost<float, 3>
+reconstruct_cgls_tvreg(const numpy_boost<float, 3> &pixels,
+		       const numpy_boost<float, 1> &angles,
+		       double rotation_centre, int resolution,
+		       int niterations, int nthreads,
+		       double regularize)
+{
+  return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+			  niterations, nthreads, CCPi::alg_CGLS_TVreg,
+			  regularize);
 }
 
 void reconstruct_tvreg()

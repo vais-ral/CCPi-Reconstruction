@@ -10,6 +10,7 @@
 #include <hxcore/HxPortIntSlider.h>
 #include <hxcore/HxPortOnOff.h>
 #include <hxcore/HxPortRadioBox.h>
+#include <hxcore/HxPortFloatTextN.h>
 
 #include "api.h"
 
@@ -27,6 +28,7 @@ class CCPIRECONSTRUCTION_API CCPiXtekNoShiftReconstruction : public HxCompModule
     HxPortIntSlider iterations;
     HxPortIntSlider resolution;
     HxPortOnOff beam_harden;
+    HxPortFloatTextN regularize;
 
     virtual void compute();
 

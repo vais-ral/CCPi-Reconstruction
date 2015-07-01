@@ -31,5 +31,7 @@ BOOST_PYTHON_MODULE(reconstruction)
   def("cgls", reconstruct_cgls);
   def("sirt", reconstruct_sirt);
   def("mlem", reconstruct_mlem);
+  def("cgls_tikhonov", reconstruct_cgls_tikhonov);
+  def("cgls_TVreg", reconstruct_cgls_tvreg);
   //def("tvreg", reconstruct_tvreg);
 }
