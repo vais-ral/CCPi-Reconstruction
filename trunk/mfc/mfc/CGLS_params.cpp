@@ -87,7 +87,7 @@ BOOL CGLS_params::OnSetActive()
 	iter_slider.SetPos(my_sheet->get_iterations());
 	text.Format(_T("%d"), my_sheet->get_iterations());
 	SetDlgItemText(IDC_ITER_VALUE, text);
-	if (my_sheet->get_algorithm() == CCPi::alg_CGLS_Tikhonov) {
+	if (my_sheet->get_algorithm() == CCPi::alg_CGLS_Tikhonov or my_sheet->get_algorithm() == CCPi::alg_CGLS_TVreg) {
 	  text.Format(_T("%f"), my_sheet->get_regularisation());
 	  SetDlgItemText(IDC_REG_PARAM, text);
 	  //my_sheet->regularise = 0.01;
