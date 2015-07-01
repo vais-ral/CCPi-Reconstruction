@@ -2,7 +2,11 @@ set PACKAGE {CCPiReconstruction}
 
 set LIBS {
     hxplot hxtime hxsurface hxcolor hxfield
-    hxcore amiramesh mclib oiv tcl exlibtiff qt
+    hxcore amiramesh mclib oiv tcl exlibtiff boost_system qt
+}
+
+set LIBS-Win {
+    boost_math_tr1 vcomp
 }
 
 set SHARE {
@@ -19,6 +23,10 @@ set SRC {
     Cone_Beam_recon.cpp
     NeXus_normalise.cpp
     XTek_recon.cpp
+    CCPiXtekAvizoPrepareFilter.cpp
+    CCPiXtekNoShiftReconstruction.cpp
+    CCPiXtekAvizoReader.cpp
+    XtekReader.cpp
     ui_messages.cpp
     ../../../src/results.cpp
     ../../../src/instruments.cpp
@@ -30,6 +38,7 @@ set SRC {
     ../../../src/sirt.cpp
     ../../../src/mlem.cpp
     ../../../src/tikhonov.cpp
+    ../../../src/total_v.cpp
     ../../../src/p2D.cpp
     ../../../src/tv_reg.cpp
     ../../../src/tv_core.cpp

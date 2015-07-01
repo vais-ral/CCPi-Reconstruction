@@ -7,6 +7,7 @@
 #include <hxcore/HxMessage.h>
 #include <hxcore/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
+#include <hxcore/HxFileDialog.h>
 
 #include "XTek_recon.h"
 #include "base_types.hpp"
@@ -39,8 +40,8 @@ XTek_recon::XTek_recon() :
   portAction.setLabel(0,"DoIt");
   algorithm.setNum(3);
   algorithm.setLabel(0, "CGLS");
-  algorithm.setLabel(0, "SIRT");
-  algorithm.setLabel(0, "MLEM");
+  algorithm.setLabel(1, "SIRT");
+  algorithm.setLabel(2, "MLEM");
   algorithm.setValue(0);
   iterations.setMinMax(5, 30);
   iterations.setValue(20);
@@ -55,28 +56,22 @@ XTek_recon::~XTek_recon()
 
 void XTek_recon::compute()
 {
-  if (portAction.wasHit()) {
-    HxFileDialog *dialog = HxFileDialog::_getTheFileDialog();
-    QString filter = dialog->getFileNameFilter(QString::fromAscii("XTek"),
-					       QString::fromAscii("xketct"));
-    QString *selected_filter;
-    QString filename;
-    QString thisfilter;
-    dialog->getFileNameAndFilter(QString::fromAscii("XTek Data"),
-				 QString::fromAscii(""), filter,
-				 selected_filter, filename, thisfilter);
-    ccpi_recon::do_progress = false;
-    ccpi_recon::messages = theMsg;
-    ccpi_recon::progress = theWorkArea;
-    const QByteArray asc = filename.toAscii();
-    std::string file(asc.constData(), asc.length());
-    run_reconstruction(file);
-    // end progress area
-    if (ccpi_recon::do_progress) {
-      theWorkArea->stopWorking();
-      theWorkArea->undivide();
-    }
-  }
+	if (portAction.wasHit()) {
+		HxFileDialog *dialog = HxFileDialog::_getTheFileDialog();
+		QString filter = dialog->getFileNameFilter(QString::fromAscii("XTek"),
+			QString::fromAscii("xtekct"));
+		QString filename = dialog->getOpenFileName(QString("Select XTek File"),QString(""), filter).first;
+		std::string str_filename = filename.toUtf8().constData();
+		ccpi_recon::do_progress = false;
+		ccpi_recon::messages = theMsg;
+		ccpi_recon::progress = theWorkArea;
+		theMsg->printf("Loading File: %s", str_filename.c_str());
+		run_reconstruction(str_filename);
+		if(ccpi_recon::do_progress) {
+			theWorkArea->stopWorking();
+			theWorkArea->undivide();
+		}
+	}
 }
 
 
@@ -94,16 +89,20 @@ void XTek_recon::run_reconstruction(const std::string filename)
     //if (blocking_factor > 0 and instrument->supports_blocks())
     //  recon_algorithm = new CCPi::cgls_2d(niterations, pixels_per_voxel);
     recon_algorithm = new CCPi::cgls_3d(niterations);
+	theMsg->printf("Running CGLS algorithm");
     break;
   case 1:
     recon_algorithm = new CCPi::sirt(niterations);
-    break;
+	theMsg->printf("Running SIRT algorithm");
+	break;
   case 2:
     recon_algorithm = new CCPi::mlem(niterations);
+	theMsg->printf("Running MLEM algorithm");
     break;
   }
 
   machine::initialise(0);
+  theMsg->printf("Iniitalised machine cores");
   // instrument setup from pixels/angles will probably copy
   real vox_origin[3];
   real vox_size[3];
@@ -117,9 +116,9 @@ void XTek_recon::run_reconstruction(const std::string filename)
   if (voxels != 0) {
     int dims[3];
     
-    dims[0] = voxels->shape()[2];
+    dims[0] = voxels->shape()[0];
     dims[1] = voxels->shape()[1];
-    dims[2] = voxels->shape()[0];
+    dims[2] = voxels->shape()[2];
     HxUniformScalarField3* output =
       new HxUniformScalarField3(dims, McPrimType::mc_float);
     for (int i = 0; i < dims[0]; i++)
@@ -129,12 +128,12 @@ void XTek_recon::run_reconstruction(const std::string filename)
     delete voxels;
     HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice.coords();
     float *bx = coords->bbox();
-    bx[0] = vox_origin[2];
-    bx[1] = vox_origin[2] + float(dims[0]) * vox_size[2];
+    bx[0] = vox_origin[0];
+    bx[1] = vox_origin[0] + float(dims[0]) * vox_size[0];
     bx[2] = vox_origin[1];
-    bx[3] = vox_origin[1] + float(dims[0]) * vox_size[1];
-    bx[4] = vox_origin[0];
-    bx[5] = vox_origin[0] + float(dims[2]) * vox_size[0];
+    bx[3] = vox_origin[1] + float(dims[1]) * vox_size[1];
+    bx[4] = vox_origin[2];
+    bx[5] = vox_origin[2] + float(dims[2]) * vox_size[2];
     // publish reconstruction
     setResult(output);
   }

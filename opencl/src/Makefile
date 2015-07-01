@@ -16,7 +16,7 @@ LIBS = $(NXLIB) $(TIFFLIB) $(OCLLIB)
 OBJECTS = recon.o results.o instruments.o parallel.o cone.o diamond.o xtek.o\
 	cgls.o p2D.o tv_reg.o tv_core.o nexus.o tiff.o timer.o utils.o \
 	ui_calls.o mpi.o point.o c2D.o voxels.o landweber.o mlem.o sirt.o \
-	tikhonov.o accel.o
+	tikhonov.o total_v.o accel.o
 
 recon: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
@@ -62,6 +62,8 @@ sirt.o: sirt.cpp algorithms.hpp instruments.hpp timer.hpp \
 	ui_calls.hpp sirt.hpp blas.hpp
 
 tikhonov.o: tikhonov.cpp regularize.hpp
+
+total_v.o: total_v.cpp regularize.hpp
 
 p2D.o: p2D.cpp instruments.hpp ui_calls.hpp accel.hpp
 

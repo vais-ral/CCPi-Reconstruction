@@ -14,7 +14,7 @@ LIBS = $(PYTHONLIB)
 PYOBJS = ccpi_wrapper.o
 OBJECTS = results.o instruments.o parallel.o cone.o diamond.o xtek.o cgls.o \
 	p2D.o tv_reg.o tv_core.o tiff.o timer.o utils.o ui_calls.o \
-	mpi.o c2D.o voxels.o sirt.o mlem.o tikhonov.o accel.o
+	mpi.o c2D.o voxels.o sirt.o mlem.o tikhonov.o total_v.o accel.o
 
 reconstruction.so: $(PYOBJS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(PYOBJS) $(OBJECTS) $(LIBS)
@@ -44,6 +44,10 @@ sirt.o: ../src/sirt.cpp ../src/algorithms.hpp ../src/instruments.hpp \
 	../src/timer.hpp ../src/ui_calls.hpp ../src/sirt.hpp ../src/blas.hpp
 
 tikhonov.o: ../src/tikhonov.cpp ../src/regularize.hpp
+
+total_v.o: ../src/total_v.cpp ../src/regularize.hpp
+
+total_v.o: ../src/total_v.cpp ../src/regularize.hpp
 
 instruments.o: ../src/instruments.cpp ../src/instruments.hpp ../src/ui_calls.hpp
 

@@ -216,8 +216,9 @@ voxel_data *reconstruct(CCPi::instrument *device,
 			const numpy_1d &h_offsets, const numpy_1d &v_offsets,
 			const int pixels_per_voxel, const real source_x,
 			const real detector_x, const real pixel_h_size,
-			const real pixel_v_size, const bool beam_harden,
-			real full_vox_origin[3], real voxel_size[3])
+			const real pixel_v_size, const real mask_radius,
+			const bool beam_harden, real full_vox_origin[3],
+			real voxel_size[3], const bool has_offsets)
 {
   int num_processors = machine::get_number_of_processors();
   const int blocking_factor = 0;
@@ -225,7 +226,8 @@ voxel_data *reconstruct(CCPi::instrument *device,
   if (device->setup_experimental_geometry(pixels, angles, h_offsets, v_offsets,
 					  pixels_per_voxel, source_x,
 					  detector_x, pixel_h_size,
-					  pixel_v_size)) {
+					  pixel_v_size, mask_radius,
+					  has_offsets)) {
     int nx_voxels = 0;
     int ny_voxels = 0;
     int maxz_voxels = 0;

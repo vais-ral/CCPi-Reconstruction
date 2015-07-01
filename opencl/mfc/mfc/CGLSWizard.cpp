@@ -31,7 +31,7 @@ CGLSWizard::CGLSWizard(UINT nIDCaption, CWnd* pParentWnd, UINT iSelectPage)
 	, instrument(CCPi::dev_Nikon_XTek)
 	, algorithm(CCPi::alg_CGLS)
 	, out_format(CCPi::unsigned_short_tiff)
-	, beam_harden(true), hyper_threads(true), progress(0)
+	, beam_harden(true), hyper_threads(true), progress(0), regularise(0.01)
 {
 
 }
@@ -43,7 +43,7 @@ CGLSWizard::CGLSWizard(LPCTSTR pszCaption, CWnd* pParentWnd, UINT iSelectPage)
 	, instrument(CCPi::dev_Nikon_XTek)
 	, algorithm(CCPi::alg_CGLS)
 	, out_format(CCPi::unsigned_short_tiff)
-	, beam_harden(true), hyper_threads(true), progress(0)
+	, beam_harden(true), hyper_threads(true), progress(0), regularise(0.01)
 {
 
 }
@@ -101,6 +101,12 @@ bool CGLSWizard::main_loop()
 	  break;
 	case CCPi::alg_MLEM:
 	  recon_algorithm = new CCPi::mlem(niterations);
+	  break;
+	case CCPi::alg_CGLS_Tikhonov:
+	  recon_algorithm = new CCPi::cgls_tikhonov(niterations, regularise);
+	  break;
+	case CCPi::alg_CGLS_TVreg:
+	  recon_algorithm = new CCPi::cgls_tv_reg(niterations, regularise);
 	  break;
 	default:
 		//std::cerr << "ERROR: Unknown algorithm\n";

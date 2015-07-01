@@ -7,6 +7,10 @@ void mcExitClass_NeXus_normalise();
 void mcInitClass_NeXus_normalise();
 void mcExitClass_Cone_Beam_recon();
 void mcInitClass_Cone_Beam_recon();
+void mcExitClass_CCPiXtekNoShiftReconstruction();
+void mcInitClass_CCPiXtekNoShiftReconstruction();
+void mcExitClass_CCPiXtekAvizoPrepareFilter();
+void mcInitClass_CCPiXtekAvizoPrepareFilter();
 
 
 extern "C"
@@ -25,6 +29,8 @@ void amirapackage_CCPiReconstruction_init()
     mcInitClass_Parallel_Beam_recon();
     mcInitClass_NeXus_normalise();
     mcInitClass_Cone_Beam_recon();
+    mcInitClass_CCPiXtekNoShiftReconstruction();
+    mcInitClass_CCPiXtekAvizoPrepareFilter();
 
 }
 
@@ -42,6 +48,8 @@ void amirapackage_CCPiReconstruction_finish()
     isFinished = true;
 
 
+    mcExitClass_CCPiXtekAvizoPrepareFilter();
+    mcExitClass_CCPiXtekNoShiftReconstruction();
     mcExitClass_Cone_Beam_recon();
     mcExitClass_NeXus_normalise();
     mcExitClass_Parallel_Beam_recon();

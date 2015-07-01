@@ -41,7 +41,8 @@ extern voxel_data *reconstruct(CCPi::instrument *device,
 			       const int pixels_per_voxel,
 			       const real source_x, const real detector_x,
 			       const real pixel_h_size, const real pixel_v_size,
-			       const bool beam_harden, real full_vox_origin[3],
-			       real voxel_size[3]);
+			       const real mask_radius, const bool beam_harden,
+			       real full_vox_origin[3], real voxel_size[3],
+			       const bool has_offsets);
 
 #endif // CCPI_VOXEL_SETUP

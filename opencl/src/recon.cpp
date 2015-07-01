@@ -102,6 +102,9 @@ int main()
   case CCPi::alg_CGLS_Tikhonov:
     recon_algorithm = new CCPi::cgls_tikhonov(niterations, 0.01);
     break;
+  case CCPi::alg_CGLS_TVreg:
+    recon_algorithm = new CCPi::cgls_tv_reg(niterations, 0.01);
+    break;
   default:
     std::cerr << "ERROR: Unknown algorithm\n";
     setup_ok = false;

@@ -248,6 +248,7 @@
     <ClCompile Include="..\..\src\tiff.cpp" />
     <ClCompile Include="..\..\src\tikhonov.cpp" />
     <ClCompile Include="..\..\src\timer.cpp" />
+    <ClCompile Include="..\..\src\total_v.cpp" />
     <ClCompile Include="..\..\src\tv_core.cpp" />
     <ClCompile Include="..\..\src\tv_reg.cpp" />
     <ClCompile Include="..\..\src\utils.cpp" />
