@@ -34,19 +34,26 @@ HxCompModule(HxUniformScalarField3::getClassTypeId()),
 	QApplication::translate("CCPiXtekNoShiftReconstruction", "Iterations")),
 	resolution(this, "resolution", QApplication::translate("CCPiXtekNoShiftReconstruction", "Pixels per Voxel")),
 	beam_harden(this, "beam harden",
-	QApplication::translate("CCPiXtekNoShiftReconstruction", "Beam Hardening"))
+	QApplication::translate("CCPiXtekNoShiftReconstruction", "Beam Hardening")),
+	regularize(this, "regularize", QApplication::translate("CCPiXtekNoShiftReconstruction", "Regularization parameter"))
 {
 	portAction.setLabel(0,"DoIt");
-	algorithm.setNum(3);
+	algorithm.setNum(5);
 	algorithm.setLabel(0, "CGLS");
 	algorithm.setLabel(1, "SIRT");
 	algorithm.setLabel(2, "MLEM");
+	algorithm.setLabel(3, "CGLS/Tikhonov");
+	algorithm.setLabel(4, "CGLS/TV reg");
 	algorithm.setValue(0);
 	iterations.setMinMax(5, 30);
 	iterations.setValue(20);
 	resolution.setMinMax(1, 8);
 	resolution.setValue(1);
 	beam_harden.setValue(false);
+	regularize.setNum(1);
+	regularize.setMinMax(0.00001, 0.2);
+	regularize.setValue(0.01);
+	regularize.hide();
 }
 
 CCPiXtekNoShiftReconstruction::~CCPiXtekNoShiftReconstruction()
@@ -56,7 +63,15 @@ CCPiXtekNoShiftReconstruction::~CCPiXtekNoShiftReconstruction()
 void CCPiXtekNoShiftReconstruction::compute()
 {
 	// Check whether the action port button was clicked
-	if (!portAction.wasHit()) return;
+  if (!portAction.wasHit()) {
+    if (algorithm.isNew()) {
+      if (algorithm.getValue() < 3)
+	regularize.hide();
+      else
+	regularize.show();
+    }
+    return;
+  }
 	ccpi_recon::do_progress = false;
 	ccpi_recon::messages = theMsg;
 	ccpi_recon::progress = theWorkArea;
@@ -137,6 +152,7 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 	int pixels_per_voxel = resolution.getValue();
 	int niterations = iterations.getValue();
 	bool beam_hardening = beam_harden.getValue();
+	float reg_param = regularize.getValue();
 
 	CCPi::instrument *instrument = new CCPi::Nikon_XTek();
 
@@ -152,6 +168,12 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 		break;
 	case 2:
 		recon_algorithm = new CCPi::mlem(niterations);
+		break;
+	case 3:
+	  recon_algorithm = new CCPi::cgls_tikhonov(niterations, reg_param);
+		break;
+	case 4:
+	  recon_algorithm = new CCPi::cgls_tv_reg(niterations, reg_param);
 		break;
 	}
 
