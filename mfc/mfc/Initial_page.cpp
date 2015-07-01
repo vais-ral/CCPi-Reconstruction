@@ -34,6 +34,7 @@ BEGIN_MESSAGE_MAP(Initial_page, CPropertyPage)
 	ON_BN_CLICKED(IDC_MLEM, &Initial_page::OnBnClickedMLEM)
 	ON_BN_CLICKED(IDC_SIRT, &Initial_page::OnBnClickedSIRT)
 	ON_BN_CLICKED(IDC_CGLS_TIK, &Initial_page::OnBnClickedCGLSTik)
+	ON_BN_CLICKED(IDC_RADIO1, &Initial_page::OnBTNClickedCGLS_TV)
 END_MESSAGE_MAP()
 
 
@@ -78,4 +79,10 @@ void Initial_page::OnBnClickedSIRT()
 void Initial_page::OnBnClickedCGLSTik()
 {
   my_sheet->set_algorithm(CCPi::alg_CGLS_Tikhonov);
+}
+
+
+void Initial_page::OnBTNClickedCGLS_TV()
+{
+  my_sheet->set_algorithm(CCPi::alg_CGLS_TVreg);
 }
