@@ -11,8 +11,1114 @@
 #ifdef TEST2D
 #  include <iostream>
 #endif // TEST2D
+#include <immintrin.h>
 
 static const recon_type epsilon = FLT_EPSILON;
+
+#if defined(__AVX2__)
+
+void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
+				const voxel_ptr_1d &voxels,
+				const recon_1d &alpha_xy, const int n,
+				const recon_type pzbz, const recon_type inv_dz,
+				const int nv, const int nz, const int midp,
+				const recon_1d &delta_z,
+				const recon_1d &inv_delz, const recon_1d &vox_z)
+{
+  // alpha always increases
+  // delta_z[i] = v_pixels[i] - source_z
+  // inv_delz[i] = 1.0 / delta_z[i] = 1.0 / (v_pixels[i] - source_z)
+  // vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z
+  // so alpha_z is intercept of line at voxel[k] position
+  // (vox_origin[2] + k * vox_size[2]) = p1_z + alpha_z * (v_pix[v] - p1_z)
+  // alpha_z = ((vox_origin[2] + k * vox_size[2]) - p1_z) / (v_pix[v] - p1_z)
+  // alpha_z = vox_z[k] / delta_z[v] = vox_z[k] * inv_delz[v]
+  // and for k calc
+  // k = int((p1_z + alpha_xy[m - 1] * (v_pix[v] - p1_z) - b_z) / d_z)
+  // k = int((p1_z + alpha_xy[m - 1] * (p2_z[v] - p1_z) - b_z) / d_z)
+  // k = int((p1_z + alpha_xy[m - 1] * delta_z[v] - b_z) * inv_dz)
+  // k = int((p1_z - b_z) * inv_dz + (alpha_xy[m - 1] * delta_z[v]) * inv_dz)
+  // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
+  // k = int((pzbz + alpha_inv * delta_z[v])
+  const int nzm1 = nz - 1;
+  const recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  const recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  const recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  const recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
+  recon_1d alpha_inv(n);
+  recon_type *ainv_ptr = assume_aligned(&(alpha_inv[0]), recon_type);
+  for (int l = 0; l < n; l++)
+    ainv_ptr[l] = axy_ptr[l] * inv_dz;
+  int min_xy_all = n;
+  for (int m = 1; m < n; m++) {
+    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[0]));
+    if (k <= 0) {
+      if (k == 0)
+	min_xy_all = m;
+      else {
+	min_xy_all = 0;
+#ifdef TEST2D
+	std::cerr << "Lower miss " << a << ' ' << h << '\n';
+#endif // TEST2D
+      }
+      break;
+    }
+  }
+  int max_xy_all = n;
+  for (int m = 1; m < n; m++) {
+    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[nv - 1]));
+    if (k >= nzm1) {
+      if (k == nzm1)
+	max_xy_all = m;
+      else {
+	max_xy_all = 0;
+#ifdef TEST2D
+	std::cerr << "Upper miss " << a << ' ' << h << '\n';
+#endif // TEST2D
+      }
+      break;
+    }
+  }
+  // Now find the range of v for which all m fit in the voxels
+  int min_v_all = midp;
+  for (int v = 0; v < midp; v++) {
+    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
+    if (k > 0) {
+      min_v_all = v;
+      break;
+    }
+  }
+  int max_v_all = midp - 1;
+  for (int v = nv - 1; v >= midp; v--) {
+    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
+    if (k < nzm1) {
+      max_v_all = v;
+      break;
+    }
+  }
+  int ncom = std::min(min_xy_all, max_xy_all);
+  int_1d kv(nv);
+  int *k_ptr = assume_aligned(&(kv[0]), int);
+  int min_v8 = min_v_all - (min_v_all % 8);
+  if (min_v8 < min_v_all)
+    min_v8 += 8;
+  int max_v8 = max_v_all - (max_v_all % 8);
+  // test expansion range - at ncom as its widest part of cone
+  int block1[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int block2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  {
+    int m = ncom - 1;
+    recon_type alpha_val = ainv_ptr[m - 1];
+    for (int v = 0; v < nv; v++)
+      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+    // Todo - this should be safe based on alignment but check it is
+    for (int v = 0; v < midp; v += 4) {
+      block1[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    for (int v = midp; v < nv; v += 4) {
+      block1[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    block1[4] += block1[5] + block1[6] + block1[7];
+    // block1[3] > 0 means steps range of 4 so k +/- 1 goes to 5
+    // block1[2] or less means fits in 4 even with k +/- 1
+    // also check the second block v min/max at n - 1
+    m = n - 1;
+    alpha_val = ainv_ptr[m - 1];
+    for (int v = 0; v < nv; v++)
+      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+    for (int v = min_v8; v < midp; v += 4) {
+      block2[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    for (int v = midp; v < max_v8; v += 4) {
+      block2[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    block2[4] += block2[5] + block2[6] + block2[7];
+  }
+  // end test
+  pixel_type *const pix = assume_aligned(pixels, pixel_type);
+  recon_type alpha_m0 = axy_ptr[0];
+  if (block1[4] > 0) {
+    //report_error("BUG-xy");
+    for (int m = 1; m < ncom; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = 0; v < nv; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = 0; v < midp; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      for (int v = midp; v < nv; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  } else if (block1[3] > 0) {
+    __m256 alpha_v0 = _mm256_set1_ps(alpha_m0);
+    for (int m = 1; m < ncom; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = 0; v < nv; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      __m256 alpha_v1 = _mm256_set1_ps(alpha_m1);
+      for (int v = 0; v < midp; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	// Todo - single load but then need to split?
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	// Todo is this best? or 2 set1s and blend? or insert
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb0a = _mm_loadu_ps(&vox[k0]);
+	__m128 vb1a = _mm_loadu_ps(&vox[k0 - 1]);
+	__m256 vb0 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb0a),
+					  _mm_loadu_ps(&vox[k1]), 0x1);
+	__m256 vb1 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb1a),
+					  _mm_loadu_ps(&vox[k1 - 1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb0, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb1, kdiff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < nv; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0 + 1]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1 + 1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0a = _mm_loadu_ps(&vox[k0]);
+	__m128 vb1a = _mm_loadu_ps(&vox[k0 + 1]);
+	__m256 vb0 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb0a),
+					  _mm_loadu_ps(&vox[k1]), 0x1);
+	__m256 vb1 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb1a),
+					  _mm_loadu_ps(&vox[k1 + 1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb0, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb1, kdiff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      alpha_m0 = alpha_m1;
+    }
+  } else {
+    __m256i one = _mm256_set1_epi32(1);
+    __m256 alpha_v0 = _mm256_set1_ps(alpha_m0);
+    for (int m = 1; m < ncom; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = 0; v < nv; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      __m256 alpha_v1 = _mm256_set1_ps(alpha_m1);
+      for (int v = 0; v < midp; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0 - 1]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1 - 1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256i k1dff = _mm256_sub_epi32(kdiff, one);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb1a = _mm_loadu_ps(&vox[k0 - 1]);
+	__m256 vb1 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb1a),
+					  _mm_loadu_ps(&vox[k1 - 1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb1, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb1, k1dff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < nv; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0 + 1]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1 + 1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256i k1dff = _mm256_add_epi32(kdiff, one);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0a = _mm_loadu_ps(&vox[k0]);
+	__m256 vb0 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb0a),
+					  _mm_loadu_ps(&vox[k1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb0, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb0, k1dff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      alpha_m0 = alpha_m1;
+    }
+  }
+  // Do the rest where its all inside
+  if (block2[4] > 0) {
+    for (int m = ncom; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = min_v_all; v <= max_v_all; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = min_v_all; v < midp; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      for (int v = midp; v <= max_v_all; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  } else if (block2[3] > 0) {
+    __m256 alpha_v0 = _mm256_set1_ps(alpha_m0);
+    for (int m = ncom; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = min_v_all; v <= max_v_all; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = min_v_all; v < min_v8; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      __m256 alpha_v1 = _mm256_set1_ps(alpha_m1);
+      for (int v = min_v8; v < midp; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	// Todo - single load but then need to split?
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb0a = _mm_loadu_ps(&vox[k0]);
+	__m128 vb1a = _mm_loadu_ps(&vox[k0 - 1]);
+	__m256 vb0 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb0a),
+					  _mm_loadu_ps(&vox[k1]), 0x1);
+	__m256 vb1 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb1a),
+					  _mm_loadu_ps(&vox[k1 - 1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb0, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb1, kdiff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < max_v8; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0 + 1]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1 + 1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0a = _mm_loadu_ps(&vox[k0]);
+	__m128 vb1a = _mm_loadu_ps(&vox[k0 + 1]);
+	__m256 vb0 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb0a),
+					  _mm_loadu_ps(&vox[k1]), 0x1);
+	__m256 vb1 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb1a),
+					  _mm_loadu_ps(&vox[k1 + 1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb0, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb1, kdiff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      for (int v = max_v8; v <= max_v_all; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  } else {
+    __m256i one = _mm256_set1_epi32(1);
+    __m256 alpha_v0 = _mm256_set1_ps(alpha_m0);
+    for (int m = ncom; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = min_v_all; v <= max_v_all; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = min_v_all; v < min_v8; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      __m256 alpha_v1 = _mm256_set1_ps(alpha_m1);
+      for (int v = min_v8; v < midp; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0 - 1]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1 - 1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256i k1dff = _mm256_sub_epi32(kdiff, one);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb1a = _mm_loadu_ps(&vox[k0 - 1]);
+	__m256 vb1 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb1a),
+					  _mm_loadu_ps(&vox[k1 - 1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb1, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb1, k1dff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < max_v8; v += 8) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k0v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k0 = _mm_cvtsi128_si32(k0v); // k[v0]
+	__m128i k1v = _mm_load_si128((__m128i *)&k_ptr[v+4]);
+	int k1 = _mm_cvtsi128_si32(k1v); // k[v0]
+	__m128i kb0 = _mm_set1_epi32(k0);
+	__m128i kb1 = _mm_set1_epi32(k1);
+	__m128i ks0 = _mm_sub_epi32(k0v, kb0);
+	__m128i ks1 = _mm_sub_epi32(k1v, kb1);
+	__m256i kdiff = _mm256_insertf128_si256(_mm256_castsi128_si256(ks0),
+						ks1, 0x1);
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m256 iz4 = _mm256_load_ps(&iz_ptr[v]);
+	__m128 vz4fa = _mm_loadu_ps(&vz_ptr[k0 + 1]);
+	__m256 vz4f = _mm256_insertf128_ps(_mm256_castps128_ps256(vz4fa),
+					   _mm_loadu_ps(&vz_ptr[k1 + 1]), 0x1);
+	__m256 vz4 = _mm256_permutevar_ps(vz4f, kdiff);
+	__m256i k1dff = _mm256_add_epi32(kdiff, one);
+	__m256 alpha_z = _mm256_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m256 min_z = _mm256_min_ps(alpha_z, alpha_v1);
+	__m256 pv = _mm256_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0a = _mm_loadu_ps(&vox[k0]);
+	__m256 vb0 = _mm256_insertf128_ps(_mm256_castps128_ps256(vb0a),
+					  _mm_loadu_ps(&vox[k1]), 0x1);
+	__m256 vk0 = _mm256_permutevar_ps(vb0, kdiff);
+	__m256 vk1 = _mm256_permutevar_ps(vb0, k1dff);
+	__m256 sub1 = _mm256_sub_ps(min_z, alpha_v0);
+	__m256 sub2 = _mm256_sub_ps(alpha_v1, min_z);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk0, sub1), pv);
+	pv = _mm256_add_ps(_mm256_mul_ps(vk1, sub2), pv);
+	_mm256_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      for (int v = max_v8; v <= max_v_all; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  }
+  // The bits along the edge
+  alpha_m0 = axy_ptr[ncom - 1];
+  const recon_type pzbz1 = pzbz + 1.0;
+  for (int m = ncom; m < n; m++) {
+    const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
+    const recon_type alpha_m1 = axy_ptr[m];
+    for (int v = min_v_all - 1; v >= 0; v--) {
+      int k = int(pzbz1 + alpha_val * dz_ptr[v]);
+      k--;
+      if (k > 0) {
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      } else if (k == 0) {
+	recon_type alpha_z = vz_ptr[0] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += vox[0] * (min_z - alpha_m0);
+      } else
+	break;
+    }
+    alpha_m0 = alpha_m1;
+  }
+  alpha_m0 = axy_ptr[ncom - 1];
+  for (int m = ncom; m < n; m++) {
+    const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
+    const recon_type alpha_m1 = axy_ptr[m];
+    for (int v = max_v_all + 1; v < nv; v++) {
+      int k = int(pzbz + alpha_val * dz_ptr[v]);
+      if (k < nzm1) {
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      } else if (k == nzm1) {
+	recon_type alpha_z = vz_ptr[nz] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += vox[nzm1] * (min_z - alpha_m0);
+      } else
+	break;
+    }
+    alpha_m0 = alpha_m1;
+  }
+}
+
+#elif defined(__AVX__)
+
+// This is almost SSE apart from the permute instructions.
+// Could make an AVX version of the AVX2 code by replacing _mm256_sub_epi32
+void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
+				const voxel_ptr_1d &voxels,
+				const recon_1d &alpha_xy, const int n,
+				const recon_type pzbz, const recon_type inv_dz,
+				const int nv, const int nz, const int midp,
+				const recon_1d &delta_z,
+				const recon_1d &inv_delz, const recon_1d &vox_z)
+{
+  // alpha always increases
+  // delta_z[i] = v_pixels[i] - source_z
+  // inv_delz[i] = 1.0 / delta_z[i] = 1.0 / (v_pixels[i] - source_z)
+  // vox_z[i] = vox_origin[2] + real(i) * vox_size[2] - source_z
+  // so alpha_z is intercept of line at voxel[k] position
+  // (vox_origin[2] + k * vox_size[2]) = p1_z + alpha_z * (v_pix[v] - p1_z)
+  // alpha_z = ((vox_origin[2] + k * vox_size[2]) - p1_z) / (v_pix[v] - p1_z)
+  // alpha_z = vox_z[k] / delta_z[v] = vox_z[k] * inv_delz[v]
+  // and for k calc
+  // k = int((p1_z + alpha_xy[m - 1] * (v_pix[v] - p1_z) - b_z) / d_z)
+  // k = int((p1_z + alpha_xy[m - 1] * (p2_z[v] - p1_z) - b_z) / d_z)
+  // k = int((p1_z + alpha_xy[m - 1] * delta_z[v] - b_z) * inv_dz)
+  // k = int((p1_z - b_z) * inv_dz + (alpha_xy[m - 1] * delta_z[v]) * inv_dz)
+  // k = int((pzbz + (alpha_xy[m - 1] * inv_dz) * delta_z[v])
+  // k = int((pzbz + alpha_inv * delta_z[v])
+  const int nzm1 = nz - 1;
+  const recon_type *dz_ptr = assume_aligned(&(delta_z[0]), recon_type);
+  const recon_type *iz_ptr = assume_aligned(&(inv_delz[0]), recon_type);
+  const recon_type *vz_ptr = assume_aligned(&(vox_z[0]), recon_type);
+  const recon_type *axy_ptr = assume_aligned(&(alpha_xy[0]), recon_type);
+  recon_1d alpha_inv(n);
+  recon_type *ainv_ptr = assume_aligned(&(alpha_inv[0]), recon_type);
+  for (int l = 0; l < n; l++)
+    ainv_ptr[l] = axy_ptr[l] * inv_dz;
+  int min_xy_all = n;
+  for (int m = 1; m < n; m++) {
+    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[0]));
+    if (k <= 0) {
+      if (k == 0)
+	min_xy_all = m;
+      else {
+	min_xy_all = 0;
+#ifdef TEST2D
+	std::cerr << "Lower miss " << a << ' ' << h << '\n';
+#endif // TEST2D
+      }
+      break;
+    }
+  }
+  int max_xy_all = n;
+  for (int m = 1; m < n; m++) {
+    int k = int(std::floor(pzbz + ainv_ptr[m - 1] * dz_ptr[nv - 1]));
+    if (k >= nzm1) {
+      if (k == nzm1)
+	max_xy_all = m;
+      else {
+	max_xy_all = 0;
+#ifdef TEST2D
+	std::cerr << "Upper miss " << a << ' ' << h << '\n';
+#endif // TEST2D
+      }
+      break;
+    }
+  }
+  // Now find the range of v for which all m fit in the voxels
+  int min_v_all = midp;
+  for (int v = 0; v < midp; v++) {
+    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
+    if (k > 0) {
+      min_v_all = v;
+      break;
+    }
+  }
+  int max_v_all = midp - 1;
+  for (int v = nv - 1; v >= midp; v--) {
+    int k = int(std::floor(pzbz + ainv_ptr[n - 2] * dz_ptr[v]));
+    if (k < nzm1) {
+      max_v_all = v;
+      break;
+    }
+  }
+  int ncom = std::min(min_xy_all, max_xy_all);
+  int_1d kv(nv);
+  int *k_ptr = assume_aligned(&(kv[0]), int);
+  int min_v4 = min_v_all - (min_v_all % 4);
+  if (min_v4 < min_v_all)
+    min_v4 += 4;
+  int max_v4 = max_v_all - (max_v_all % 4);
+  // test expansion range - at ncom as its widest part of cone
+  int block1[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int block2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  {
+    int m = ncom - 1;
+    recon_type alpha_val = ainv_ptr[m - 1];
+    for (int v = 0; v < nv; v++)
+      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+    // Todo - this should be safe based on alignment but check it is
+    for (int v = 0; v < midp; v += 4) {
+      block1[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    for (int v = midp; v < nv; v += 4) {
+      block1[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    block1[4] += block1[5] + block1[6] + block1[7];
+    // block1[3] > 0 means steps range of 4 so k +/- 1 goes to 5
+    // block1[2] or less means fits in 4 even with k +/- 1
+    // also check the second block v min/max at n - 1
+    m = n - 1;
+    alpha_val = ainv_ptr[m - 1];
+    for (int v = 0; v < nv; v++)
+      k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+    for (int v = min_v4; v < midp; v += 4) {
+      block2[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    for (int v = midp; v < max_v4; v += 4) {
+      block2[k_ptr[v + 3] - k_ptr[v + 0]]++;
+    }
+    block2[4] += block2[5] + block2[6] + block2[7];
+  }
+  // end test
+  pixel_type *const pix = assume_aligned(pixels, pixel_type);
+  recon_type alpha_m0 = axy_ptr[0];
+  if (block1[4] > 0) {
+    //report_error("BUG-xy");
+    for (int m = 1; m < ncom; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = 0; v < nv; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = 0; v < midp; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      for (int v = midp; v < nv; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  } else if (block1[3] > 0) {
+    __m128 alpha_v0 = _mm_set1_ps(alpha_m0);
+    for (int m = 1; m < ncom; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = 0; v < nv; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      __m128 alpha_v1 = _mm_set1_ps(alpha_m1);
+      for (int v = 0; v < midp; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k); // k[v0] k[v0] k[v0] k[v0]
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb0 = _mm_loadu_ps(&vox[k]);
+	__m128 vb1 = _mm_loadu_ps(&vox[k - 1]);
+	__m128 vk0 = _mm_permutevar_ps(vb0, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb1, kdiff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < nv; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k); // k[v0] k[v0] k[v0] k[v0]
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k + 1]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0 = _mm_loadu_ps(&vox[k]);
+	__m128 vb1 = _mm_loadu_ps(&vox[k + 1]);
+	__m128 vk0 = _mm_permutevar_ps(vb0, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb1, kdiff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      alpha_m0 = alpha_m1;
+    }
+  } else {
+    __m128i one = _mm_set1_epi32(1);
+    __m128 alpha_v0 = _mm_set1_ps(alpha_m0);
+    for (int m = 1; m < ncom; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = 0; v < nv; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      __m128 alpha_v1 = _mm_set1_ps(alpha_m1);
+      for (int v = 0; v < midp; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k - 1);
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k - 1]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128i k1dff = _mm_sub_epi32(kdiff, one);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb1 = _mm_loadu_ps(&vox[k - 1]);
+	__m128 vk0 = _mm_permutevar_ps(vb1, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb1, k1dff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < nv; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k); // k[v0] k[v0] k[v0] k[v0]
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k + 1]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128i k1dff = _mm_add_epi32(kdiff, one);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0 = _mm_loadu_ps(&vox[k]);
+	__m128 vk0 = _mm_permutevar_ps(vb0, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb0, k1dff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      alpha_m0 = alpha_m1;
+    }
+  }
+  // Do the rest where its all inside
+  if (block2[4] > 0) {
+    for (int m = ncom; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = min_v_all; v <= max_v_all; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = min_v_all; v < midp; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      for (int v = midp; v <= max_v_all; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  } else if (block2[3] > 0) {
+    __m128 alpha_v0 = _mm_set1_ps(alpha_m0);
+    for (int m = ncom; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = min_v_all; v <= max_v_all; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = min_v_all; v < min_v4; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      __m128 alpha_v1 = _mm_set1_ps(alpha_m1);
+      for (int v = min_v4; v < midp; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k); // k[v0] k[v0] k[v0] k[v0]
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb0 = _mm_loadu_ps(&vox[k]);
+	__m128 vb1 = _mm_loadu_ps(&vox[k - 1]);
+	__m128 vk0 = _mm_permutevar_ps(vb0, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb1, kdiff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < max_v4; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k); // k[v0] k[v0] k[v0] k[v0]
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k + 1]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0 = _mm_loadu_ps(&vox[k]);
+	__m128 vb1 = _mm_loadu_ps(&vox[k + 1]);
+	__m128 vk0 = _mm_permutevar_ps(vb0, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb1, kdiff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      for (int v = max_v4; v <= max_v_all; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  } else {
+    __m128i one = _mm_set1_epi32(1);
+    __m128 alpha_v0 = _mm_set1_ps(alpha_m0);
+    for (int m = ncom; m < n; m++) {
+      const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+      const recon_type alpha_val = ainv_ptr[m - 1];
+      for (int v = min_v_all; v <= max_v_all; v++)
+	k_ptr[v] = int(pzbz + alpha_val * dz_ptr[v]);
+      const recon_type alpha_m1 = axy_ptr[m];
+      for (int v = min_v_all; v < min_v4; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      }
+      __m128 alpha_v1 = _mm_set1_ps(alpha_m1);
+      for (int v = min_v4; v < midp; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k - 1);
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k - 1]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128i k1dff = _mm_sub_epi32(kdiff, one);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k - 1] * (alpha_m1 - min_z));
+	__m128 vb1 = _mm_loadu_ps(&vox[k - 1]);
+	__m128 vk0 = _mm_permutevar_ps(vb1, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb1, k1dff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      for (int v = midp; v < max_v4; v += 4) {
+	// k[v0] k[v1] k[v2] k[v3]
+	__m128i k4v = _mm_load_si128((__m128i *)&k_ptr[v]);
+	int k = _mm_cvtsi128_si32(k4v); // k[v0]
+	__m128i kbase = _mm_set1_epi32(k); // k[v0] k[v0] k[v0] k[v0]
+	__m128i kdiff = _mm_sub_epi32(k4v, kbase); // 0, 1 or 2 as block1[3]==0
+	//recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	__m128 iz4 = _mm_load_ps(&iz_ptr[v]);
+	__m128 vz4f = _mm_loadu_ps(&vz_ptr[k + 1]);
+	__m128 vz4 = _mm_permutevar_ps(vz4f, kdiff);
+	__m128i k1dff = _mm_add_epi32(kdiff, one);
+	__m128 alpha_z = _mm_mul_ps(vz4, iz4);
+	//recon_type min_z = std::min(alpha_z, alpha_m1);
+	__m128 min_z = _mm_min_ps(alpha_z, alpha_v1);
+	__m128 pv = _mm_load_ps(&pix[v]);
+	// pix[v] += (vox[k] * (min_z - alpha_m0)
+	// + vox[k + 1] * (alpha_m1 - min_z));
+	__m128 vb0 = _mm_loadu_ps(&vox[k]);
+	__m128 vk0 = _mm_permutevar_ps(vb0, kdiff);
+	__m128 vk1 = _mm_permutevar_ps(vb0, k1dff);
+	__m128 sub1 = _mm_sub_ps(min_z, alpha_v0);
+	__m128 sub2 = _mm_sub_ps(alpha_v1, min_z);
+	pv = _mm_add_ps(_mm_mul_ps(vk0, sub1), pv);
+	pv = _mm_add_ps(_mm_mul_ps(vk1, sub2), pv);
+	_mm_store_ps(&pix[v], pv);
+      }
+      alpha_v0 = alpha_v1;
+      for (int v = max_v4; v <= max_v_all; v++) {
+	int k = k_ptr[v];
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      }
+      alpha_m0 = alpha_m1;
+    }
+  }
+  // The bits along the edge
+  alpha_m0 = axy_ptr[ncom - 1];
+  const recon_type pzbz1 = pzbz + 1.0;
+  for (int m = ncom; m < n; m++) {
+    const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
+    const recon_type alpha_m1 = axy_ptr[m];
+    for (int v = min_v_all - 1; v >= 0; v--) {
+      int k = int(pzbz1 + alpha_val * dz_ptr[v]);
+      k--;
+      if (k > 0) {
+	recon_type alpha_z = vz_ptr[k] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k - 1] * (alpha_m1 - min_z));
+      } else if (k == 0) {
+	recon_type alpha_z = vz_ptr[0] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += vox[0] * (min_z - alpha_m0);
+      } else
+	break;
+    }
+    alpha_m0 = alpha_m1;
+  }
+  alpha_m0 = axy_ptr[ncom - 1];
+  for (int m = ncom; m < n; m++) {
+    const voxel_type *const vox = assume_aligned(voxels[m], voxel_type);
+    const recon_type alpha_val = ainv_ptr[m - 1];
+    const recon_type alpha_m1 = axy_ptr[m];
+    for (int v = max_v_all + 1; v < nv; v++) {
+      int k = int(pzbz + alpha_val * dz_ptr[v]);
+      if (k < nzm1) {
+	recon_type alpha_z = vz_ptr[k + 1] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += (vox[k] * (min_z - alpha_m0)
+		   + vox[k + 1] * (alpha_m1 - min_z));
+      } else if (k == nzm1) {
+	recon_type alpha_z = vz_ptr[nz] * iz_ptr[v];
+	recon_type min_z = std::min(alpha_z, alpha_m1);
+	pix[v] += vox[nzm1] * (min_z - alpha_m0);
+      } else
+	break;
+    }
+    alpha_m0 = alpha_m1;
+  }
+}
+
+#else
 
 void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
 				const voxel_ptr_1d &voxels,
@@ -189,6 +1295,8 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
     alpha_m0 = alpha_m1;
   }
 }
+
+#endif // AVX/SSE
 
 void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 				  const real p2_x, const real p2_y,
