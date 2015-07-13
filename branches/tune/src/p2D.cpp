@@ -66,27 +66,91 @@ void CCPi::parallel_beam::calc_xy_z(pixel_type *const pixels,
 				    const int nv, const int nz,
 				    const int_1d &mapping, const int map_type)
 {
+  const int block = 64;
   pixel_type *const pix = assume_aligned(pixels, pixel_type);
   const recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
+  const int mv = nv - nv % block;
   switch (map_type) {
   case 1:
-#if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+#if defined(__AVX2__) && PIXEL_SIZE == 4
+    for (int v = 0; v < mv; v += block) {
+      __m256 p0 = _mm256_load_ps(&pix[v + 0]);
+      __m256 p1 = _mm256_load_ps(&pix[v + 8]);
+      __m256 p2 = _mm256_load_ps(&pix[v + 16]);
+      __m256 p3 = _mm256_load_ps(&pix[v + 24]);
+      __m256 p4 = _mm256_load_ps(&pix[v + 32]);
+      __m256 p5 = _mm256_load_ps(&pix[v + 40]);
+      __m256 p6 = _mm256_load_ps(&pix[v + 48]);
+      __m256 p7 = _mm256_load_ps(&pix[v + 56]);
+      for (int m = 0; m < n; m++) {
+	const voxel_type *const vox = voxels[m];
+	const recon_type alpha = lptr[m];
+	__m256 al = _mm256_set1_ps(alpha);
+	p0 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 0]), p0);
+	p1 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 8]), p1);
+	p2 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 16]), p2);
+	p3 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 24]), p3);
+	p4 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 32]), p4);
+	p5 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 40]), p5);
+	p6 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 48]), p6);
+	p7 = _mm256_fmadd_ps(al, _mm256_load_ps(&vox[v + 56]), p7);
+      }
+      _mm256_store_ps(&pix[v + 0], p0);
+      _mm256_store_ps(&pix[v + 8], p1);
+      _mm256_store_ps(&pix[v + 16], p2);
+      _mm256_store_ps(&pix[v + 24], p3);
+      _mm256_store_ps(&pix[v + 32], p4);
+      _mm256_store_ps(&pix[v + 40], p5);
+      _mm256_store_ps(&pix[v + 48], p6);
+      _mm256_store_ps(&pix[v + 56], p7);
+    }
     for (int m = 0; m < n; m++) {
       const voxel_type *const vox = voxels[m];
       const recon_type alpha = lptr[m];
       __m256 al = _mm256_set1_ps(alpha);
-      for (int v = 0; v < nv; v += 8) {
+      for (int v = mv; v < nv; v += 8) {
 	_mm256_store_ps(&pix[v],
 			_mm256_fmadd_ps(al,_mm256_load_ps(&vox[v]),
 					_mm256_load_ps(&pix[v])));
       }
     }
-#elif defined(__AVX__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+#elif defined(__AVX__) && PIXEL_SIZE == 4
+    for (int v = 0; v < mv; v += block) {
+      __m256 p0 = _mm256_load_ps(&pix[v + 0]);
+      __m256 p1 = _mm256_load_ps(&pix[v + 8]);
+      __m256 p2 = _mm256_load_ps(&pix[v + 16]);
+      __m256 p3 = _mm256_load_ps(&pix[v + 24]);
+      __m256 p4 = _mm256_load_ps(&pix[v + 32]);
+      __m256 p5 = _mm256_load_ps(&pix[v + 40]);
+      __m256 p6 = _mm256_load_ps(&pix[v + 48]);
+      __m256 p7 = _mm256_load_ps(&pix[v + 56]);
+      for (int m = 0; m < n; m++) {
+	const voxel_type *const vox = voxels[m];
+	const recon_type alpha = lptr[m];
+	__m256 al = _mm256_set1_ps(alpha);
+	p0 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 0])), p0);
+	p1 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 8])), p1);
+	p2 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 16])), p2);
+	p3 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 24])), p3);
+	p4 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 32])), p4);
+	p5 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 40])), p5);
+	p6 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 48])), p6);
+	p7 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&vox[v + 56])), p7);
+      }
+      _mm256_store_ps(&pix[v + 0], p0);
+      _mm256_store_ps(&pix[v + 8], p1);
+      _mm256_store_ps(&pix[v + 16], p2);
+      _mm256_store_ps(&pix[v + 24], p3);
+      _mm256_store_ps(&pix[v + 32], p4);
+      _mm256_store_ps(&pix[v + 40], p5);
+      _mm256_store_ps(&pix[v + 48], p6);
+      _mm256_store_ps(&pix[v + 56], p7);
+    }
     for (int m = 0; m < n; m++) {
       const voxel_type *const vox = voxels[m];
       const recon_type alpha = lptr[m];
       __m256 al = _mm256_set1_ps(alpha);
-      for (int v = 0; v < nv; v += 8) {
+      for (int v = mv; v < nv; v += 8) {
 	_mm256_store_ps(&pix[v],
 			_mm256_add_ps(_mm256_mul_ps(al,_mm256_load_ps(&vox[v])),
 				      _mm256_load_ps(&pix[v])));
@@ -616,11 +680,44 @@ void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
 				    const int nv, const int nz,
 				    const int_1d &mapping, const int map_type)
 {
+  const int block = 64;
   voxel_type *const vox = assume_aligned(voxels, voxel_type);
   const recon_type *lptr = assume_aligned(&(l_xy[0]), recon_type);
+  const int mv = nv - nv % block;
   switch (map_type) {
   case 1:
 #if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+    for (int v = 0; v < mv; v += block) {
+      __m256 p0 = _mm256_load_ps(&vox[v + 0]);
+      __m256 p1 = _mm256_load_ps(&vox[v + 8]);
+      __m256 p2 = _mm256_load_ps(&vox[v + 16]);
+      __m256 p3 = _mm256_load_ps(&vox[v + 24]);
+      __m256 p4 = _mm256_load_ps(&vox[v + 32]);
+      __m256 p5 = _mm256_load_ps(&vox[v + 40]);
+      __m256 p6 = _mm256_load_ps(&vox[v + 48]);
+      __m256 p7 = _mm256_load_ps(&vox[v + 56]);
+      for (int m = 0; m < n; m++) {
+	const pixel_type *const pix = pixels[m];
+	const recon_type alpha = lptr[m];
+	__m256 al = _mm256_set1_ps(alpha);
+	p0 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 0]), p0);
+	p1 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 8]), p1);
+	p2 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 16]), p2);
+	p3 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 24]), p3);
+	p4 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 32]), p4);
+	p5 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 40]), p5);
+	p6 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 48]), p6);
+	p7 = _mm256_fmadd_ps(al, _mm256_load_ps(&pix[v + 56]), p7);
+      }
+      _mm256_store_ps(&vox[v + 0], p0);
+      _mm256_store_ps(&vox[v + 8], p1);
+      _mm256_store_ps(&vox[v + 16], p2);
+      _mm256_store_ps(&vox[v + 24], p3);
+      _mm256_store_ps(&vox[v + 32], p4);
+      _mm256_store_ps(&vox[v + 40], p5);
+      _mm256_store_ps(&vox[v + 48], p6);
+      _mm256_store_ps(&vox[v + 56], p7);
+    }
     for (int m = 0; m < n; m++) {
       const pixel_type *const pix = pixels[m];
       const recon_type alpha = lptr[m];
@@ -631,12 +728,43 @@ void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
 					_mm256_load_ps(&vox[v])));
       }
     }
-#elif defined(__AVX__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+#elif defined(__AVX__) && PIXEL_SIZE == 4&& !defined(__GNUC__)
+    for (int v = 0; v < mv; v += block) {
+      __m256 p0 = _mm256_load_ps(&vox[v + 0]);
+      __m256 p1 = _mm256_load_ps(&vox[v + 8]);
+      __m256 p2 = _mm256_load_ps(&vox[v + 16]);
+      __m256 p3 = _mm256_load_ps(&vox[v + 24]);
+      __m256 p4 = _mm256_load_ps(&vox[v + 32]);
+      __m256 p5 = _mm256_load_ps(&vox[v + 40]);
+      __m256 p6 = _mm256_load_ps(&vox[v + 48]);
+      __m256 p7 = _mm256_load_ps(&vox[v + 56]);
+      for (int m = 0; m < n; m++) {
+	const pixel_type *const pix = pixels[m];
+	const recon_type alpha = lptr[m];
+	__m256 al = _mm256_set1_ps(alpha);
+	p0 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 0])), p0);
+	p1 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 8])), p1);
+	p2 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 16])), p2);
+	p3 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 24])), p3);
+	p4 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 32])), p4);
+	p5 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 40])), p5);
+	p6 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 48])), p6);
+	p7 = _mm256_add_ps(_mm256_mul_ps(al, _mm256_load_ps(&pix[v + 56])), p7);
+      }
+      _mm256_store_ps(&vox[v + 0], p0);
+      _mm256_store_ps(&vox[v + 8], p1);
+      _mm256_store_ps(&vox[v + 16], p2);
+      _mm256_store_ps(&vox[v + 24], p3);
+      _mm256_store_ps(&vox[v + 32], p4);
+      _mm256_store_ps(&vox[v + 40], p5);
+      _mm256_store_ps(&vox[v + 48], p6);
+      _mm256_store_ps(&vox[v + 56], p7);
+    }
     for (int m = 0; m < n; m++) {
       const pixel_type *const pix = pixels[m];
       const recon_type alpha = lptr[m];
       __m256 al = _mm256_set1_ps(alpha);
-      for (int v = 0; v < nv; v += 8) {
+      for (int v = mv; v < nv; v += 8) {
 	_mm256_store_ps(&vox[v],
 			_mm256_add_ps(_mm256_mul_ps(al,_mm256_load_ps(&pix[v])),
 				      _mm256_load_ps(&vox[v])));
