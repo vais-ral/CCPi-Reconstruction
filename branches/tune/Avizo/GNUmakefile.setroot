@@ -1,0 +1,11 @@
+# This file is to reside in the base AvizoLocal directory
+#
+# In order to port your local packages to a new Avizo version,
+# adjust the path below and type gmake clean and gmake in 
+# every package.
+
+ifndef AVIZO_ROOT
+    AVIZO_ROOT=_AVIZO_ROOT_
+endif
+
+

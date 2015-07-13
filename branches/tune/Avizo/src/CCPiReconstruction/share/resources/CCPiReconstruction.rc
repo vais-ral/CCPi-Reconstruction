@@ -1,0 +1,57 @@
+################################################################################
+#
+# Resource file of custom package CCPi
+#
+################################################################################
+
+
+module -name     "ParallelB_recon" \
+       -primary  "HxUniformScalarField3" \
+       -class    "Parallel_Beam_recon" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "ConeB_recon" \
+       -primary  "HxUniformScalarField3" \
+       -class    "Cone_Beam_recon" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "NeXus_norm" \
+       -primary  "HxUniformScalarField3" \
+       -class    "NeXus_normalise" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "XTek" \
+       -primary  "HxUniformScalarField3" \
+       -class    "XTek_recon" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+dataFile -name	"XTek Format(CCPi)" \
+	   -option "ccpi_xtekct" \
+	   -ext		"xtekct" \
+	   -load	"CCPiXTekAvizoReader"\
+	   -package "CCPiReconstruction"
+
+module -name     "XTekPrepareFilter" \
+       -primary  "HxUniformScalarField3" \
+       -class    "CCPiXtekAvizoPrepareFilter" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+module -name "XTekReconstructionNoShifts"\
+	   -primary "HxUniformScalarField3"\
+	   -class "CCPiXtekNoShiftReconstruction"\
+	   -category "CCPi"\
+	   -package "CCPiReconstruction"\
+	   -icon "TVDefCompute"
