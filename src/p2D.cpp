@@ -686,7 +686,7 @@ void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
   const int mv = nv - nv % block;
   switch (map_type) {
   case 1:
-#if defined(__AVX2__) && PIXEL_SIZE == 4 && !defined(__GNUC__)
+#if defined(__AVX2__) && PIXEL_SIZE == 4
     for (int v = 0; v < mv; v += block) {
       __m256 p0 = _mm256_load_ps(&vox[v + 0]);
       __m256 p1 = _mm256_load_ps(&vox[v + 8]);
@@ -728,7 +728,7 @@ void CCPi::parallel_beam::calc_ah_z(const pixel_ptr_1d &pixels,
 					_mm256_load_ps(&vox[v])));
       }
     }
-#elif defined(__AVX__) && PIXEL_SIZE == 4&& !defined(__GNUC__)
+#elif defined(__AVX__) && PIXEL_SIZE == 4
     for (int v = 0; v < mv; v += block) {
       __m256 p0 = _mm256_load_ps(&vox[v + 0]);
       __m256 p1 = _mm256_load_ps(&vox[v + 8]);
