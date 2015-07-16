@@ -29,6 +29,7 @@ BOOST_PYTHON_MODULE(reconstruction)
   //def("test", test);
   def("aml_ring_artefacts", ring_artefacts_aml);
   def("cgls", reconstruct_cgls);
+  def("cgls_conv", reconstruct_cgls2);
   def("sirt", reconstruct_sirt);
   def("mlem", reconstruct_mlem);
   def("cgls_tikhonov", reconstruct_cgls_tikhonov);

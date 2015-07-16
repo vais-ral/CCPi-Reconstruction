@@ -61,7 +61,8 @@ numpy_boost<float, 3> reconstruct_iter(const numpy_boost<float, 3> &pixels,
 				       double rotation_centre, int resolution,
 				       int niterations, int nthreads,
 				       CCPi::algorithms alg,
-				       const real regularize = 0.0)
+				       const real regularize = 0.0,
+				       numpy_boost<float, 1> *norm = 0)
 {
   bool beam_harden = false;
   // vertical size to break data up into for processing
@@ -99,6 +100,16 @@ numpy_boost<float, 3> reconstruct_iter(const numpy_boost<float, 3> &pixels,
 			 resolution, blocking_factor, beam_harden);
     machine::exit();
     delete instrument;
+    if (norm != 0) {
+      if (voxels == 0) {
+	for (int i = 0; i < niterations; i++)
+	  (*norm)[i] = 0.0;
+      } else {
+	real_1d data(niterations);
+	for (int i = 0; i < niterations; i++)
+	  (*norm)[i] = data[i];
+      }
+    }
     delete algorithm;
   }
   int dims[3];
@@ -157,11 +168,12 @@ numpy_boost<float, 3>
 reconstruct_cgls_tikhonov(const numpy_boost<float, 3> &pixels,
 			  const numpy_boost<float, 1> &angles,
 			  double rotation_centre, int resolution,
-			  int niterations, int nthreads, double regularize)
+			  int niterations, int nthreads, double regularize,
+			  numpy_boost<float, 1> norm_r)
 {
   return reconstruct_iter(pixels, angles, rotation_centre, resolution,
 			  niterations, nthreads, CCPi::alg_CGLS_Tikhonov,
-			  regularize);
+			  regularize, &norm_r);
 }
 
 numpy_boost<float, 3>
@@ -169,11 +181,22 @@ reconstruct_cgls_tvreg(const numpy_boost<float, 3> &pixels,
 		       const numpy_boost<float, 1> &angles,
 		       double rotation_centre, int resolution,
 		       int niterations, int nthreads,
-		       double regularize)
+		       double regularize, numpy_boost<float, 1> norm_r)
 {
   return reconstruct_iter(pixels, angles, rotation_centre, resolution,
 			  niterations, nthreads, CCPi::alg_CGLS_TVreg,
-			  regularize);
+			  regularize, &norm_r);
+}
+
+numpy_boost<float, 3> reconstruct_cgls2(const numpy_boost<float, 3> &pixels,
+					const numpy_boost<float, 1> &angles,
+					double rotation_centre, int resolution,
+					int niterations, int nthreads,
+					numpy_boost<float, 1> norm_r)
+{
+  return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+			  niterations, nthreads, CCPi::alg_CGLS, 0.0,
+			  &norm_r);
 }
 
 void reconstruct_tvreg()

@@ -13,6 +13,16 @@
 #  define USE_TIMER false
 #endif // USE_TIMER
 
+void CCPi::reconstruction_alg::convergence_data(real_1d &data) const
+{
+}
+
+void CCPi::cgls_base::convergence_data(real_1d &data) const
+{
+  for (int i = 0; i < iterations; i++)
+    data[i] = norm_r[i];
+}
+
 bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
 				  const real origin[3],
 				  const real voxel_size[3])
@@ -65,7 +75,10 @@ bool CCPi::cgls_base::reconstruct(instrument *device, voxel_data &voxels,
     }
     update_progress(2 * iter + 3);
     iter_time.accumulate();
-    iter_time.output("Iteration ");
+    add_output("|R| = ");
+    add_output(std::sqrt(normr2[0]));
+    set_norm(std::sqrt(normr2[0]), iter);
+    iter_time.output(", iteration ");
   }
   //delete [] d;
   return true;
@@ -388,7 +401,10 @@ bool CCPi::cgls_regularize::reconstruct(instrument *device, voxel_data &voxels,
     }
     update_progress(2 * iter + 3);
     iter_time.accumulate();
-    iter_time.output("Iteration ");
+    add_output("|R| = ");
+    add_output(std::sqrt(normr2));
+    set_norm(std::sqrt(normr2), iter);
+    iter_time.output(", iteration ");
   }
   //delete [] d;
   return true;
