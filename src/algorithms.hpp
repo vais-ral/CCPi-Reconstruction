@@ -17,6 +17,7 @@ namespace CCPi {
 			     const real origin[3],
 			     const real voxel_size[3]) = 0;
     virtual bool supports_blocks() const = 0;
+    virtual void convergence_data(real_1d &data) const;
   };
 
 }
