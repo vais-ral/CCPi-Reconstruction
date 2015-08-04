@@ -3,19 +3,28 @@
 #include <hxcore/HxData.h>
 #include <hxfield/HxUniformScalarField3.h>
 #include <amiramesh/HxParamBundle.h>
+#include "CCPiAvizoUserInterface.h"
+#include <hxcore/HxWorkArea.h>
+#include <QApplication.h>
+#include <hxcore/HxThread.h>
+#include <boost/filesystem.hpp>
 
 void setParameters(HxUniformScalarField3 *field, XtekReader reader);
+
 CCPIRECONSTRUCTION_API
 int CCPiXTekAvizoReader(const char* filename)
 {
-	XtekReader reader(filename);
+//    theWorkArea->startWorking(
+//     QApplication::translate("CCPiXTekAvizoReader", "Reading xtekct data"));   
+	 CCPiAvizoUserInterface *msg = new CCPiAvizoUserInterface();
+	XtekReader reader(filename,msg);
 	int newDims[3];
 	newDims[0] = reader.getImageWidth();
 	newDims[1] = reader.getImageHeight();
 	newDims[2] = reader.getNumberOfProjections();
-	HxUniformScalarField3 *field = new HxUniformScalarField3(newDims, McPrimType::mc_float);
-	float *data = reader.getImageData();
-	float *rawout=(float *)field->lattice.dataPtr();
+	HxUniformScalarField3 *field = new HxUniformScalarField3(newDims, McPrimType::mc_uint16);
+	uint16_t *data = reader.getImageData();
+	uint16_t *rawout=(uint16_t *)field->lattice.dataPtr();
 	unsigned long long totalsize = 1;
 	for(int i=0;i<3;i++)
 		totalsize *= newDims[i];
@@ -44,6 +53,7 @@ int CCPiXTekAvizoReader(const char* filename)
 
 	HxData::registerData(field, reader.getName().c_str());
 	setParameters(field, reader);
+//	theWorkArea->stopWorking();
 	return 1;
 }
 
