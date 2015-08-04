@@ -9,7 +9,7 @@
 #include <hxcore/HxPortDoIt.h>
 
 #include "api.h"
-
+class HxMultiChannelField3;
 class CCPIRECONSTRUCTION_API NeXus_normalise : public HxCompModule
 {
   HX_HEADER(NeXus_normalise);
@@ -25,9 +25,14 @@ class CCPIRECONSTRUCTION_API NeXus_normalise : public HxCompModule
   HxConnection pixelSize;
 
   virtual void compute();
-
  private:
-  void normalise();
+  void normalise(HxMultiChannelField3 *);
+  bool validateAndPopulateData(HxMultiChannelField3 *mcf);
+  void normalise2();
+  double *angles;
+  int   *imageKeyIds;
+  double *pixelSizeXY;
+  int   numberOfKeys;
 };
 
 #endif // NEXUS_NORMALISE_H

@@ -53,8 +53,8 @@ Parallel_Beam_recon::Parallel_Beam_recon() :
   portAction.setLabel(0,"DoIt");
   algorithm.setNum(3);
   algorithm.setLabel(0, "CGLS");
-  algorithm.setLabel(0, "SIRT");
-  algorithm.setLabel(0, "MLEM");
+  algorithm.setLabel(1, "SIRT");
+  algorithm.setLabel(2, "MLEM");
   algorithm.setValue(0);
   iterations.setMinMax(5, 30);
   iterations.setValue(20);
@@ -106,8 +106,8 @@ void Parallel_Beam_recon::run_reconstruction()
   const int *fdims = field->lattice.dims();
   boost::multi_array_ref<float, 3>
     pixels((float *)field->lattice.dataPtr(),
-	   boost::extents[fdims[0]][fdims[1]][fdims[2]],
-	   boost::fortran_storage_order());
+	   boost::extents[fdims[2]][fdims[1]][fdims[0]]);//,
+	   //boost::fortran_storage_order());
   //messages->error(QApplication::translate("Parallel_Beam",std::to_string((long double)fdims[2]).c_str()));// std::to_string((long double)fdims[2])));
   HxUniformScalarField3* rot_angle =
     (HxUniformScalarField3*) rotationAngle.source();
@@ -159,7 +159,7 @@ void Parallel_Beam_recon::run_reconstruction()
     for (int i = 0; i < dims[0]; i++)
       for (int j = 0; j < dims[1]; j++)
 	for (int k = 0; k < dims[2]; k++)
-	  output->set(i, j, k, (*voxels)[i][j][k]);
+	  output->set(i, j, k, (*voxels)[k][j][i]);
     delete voxels;
     // set bounding box for coords based on pixel sizes - is this right?
     HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice.coords();
@@ -173,6 +173,7 @@ void Parallel_Beam_recon::run_reconstruction()
     bx[5] = float(dims[2] / 2) * pixels_per_voxel * h_size;
     bx[4] = - bx[1];
     // publish reconstruction
+	output->setLabel("ReconstructedVolume");
     setResult(output); 
   }
 }
