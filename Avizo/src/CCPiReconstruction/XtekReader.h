@@ -4,7 +4,10 @@
  */
 #ifndef XTEKREADER_H
 #define XTEKREADER_H
+
 #include <string>
+#include <cstdint>
+#include "CCPiUserApplicationInterface.h"
 
 class XtekReader
 {
@@ -51,24 +54,27 @@ private:
 	float *angles;
 	double *angleTime;
 	//Image data
-	float* imageData;
+	uint16_t* imageData;
 
+	//init method
+	void initialize(std::string filename, CCPiUserApplicationInterface* msg);
 	//Read xtekct file
 	bool readXtekCTFile(std::string filename);
 	bool readCTDataFile(std::string filename);
 	bool readAngFile(std::string filename);
-	bool readImageFiles(std::string filePrefix, int numberOfAngles, float *data);
-	bool readTiffFile(std::string filename,int width, int height, float *data);
 
+	bool readTiffFile(std::string filename,int width, int height, uint16_t *data);
+	//user message
+	CCPiUserApplicationInterface* msg;
 	//test
 	bool test;
 public:
 	//Constructor
-	XtekReader(std::string filename);
+	XtekReader(std::string filename, CCPiUserApplicationInterface* msg);
 	//Destructor
 	~XtekReader();
 	//return data
-	float* getImageData(){return imageData;}
+	uint16_t* getImageData(){return imageData;}
 	int getNumberOfProjections(){return projections;}
 	int getImageWidth(){return detectorPixels[0];}
 	int getImageHeight(){return detectorPixels[1];}
@@ -87,5 +93,7 @@ public:
 	double* getCoefX(){return coefX;}
 	double getScale(){return scale;}
 	double getMaskRadius(){return maskRadius;}
+	bool readImageFiles(std::string filePrefix, int numberOfAngles, uint16_t *data);
 };
+
 #endif

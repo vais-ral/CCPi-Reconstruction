@@ -8,51 +8,53 @@
 #include <boost/filesystem.hpp>
 #include "exlibtiff.h"
 #include "tiffio.h"
-#include <hxcore/HxMessage.h>
-#define Message theMsg->stream()
 
 //Constructor
-XtekReader::XtekReader(std::string filename)
+
+XtekReader::XtekReader(std::string filename,CCPiUserApplicationInterface* msg)
 {
 	test = true;
-	Message<<"Starting to read the .xtekct file"<<std::endl;
+	this->msg = msg;
+	msg->LogMessage("Starting to read the .xtekct file");
 	if(readXtekCTFile(filename))
 	{
-		Message<<"Completed reading .xtekct file"<<std::endl;
+		msg->SetProgressValue(0.1);
+		msg->SetStatusMessage("Completed reading .xtekct file");
+		msg->LogMessage("Completed reading .xtekct file");
 		//Split and get the file path and append the _ctdata.txt to read angles data
 		boost::filesystem::path xtekfile(filename);
 		boost::filesystem::path ctname("_ctdata.txt");
 		boost::filesystem::path full_ctname = xtekfile.parent_path() / ctname;
 		if(!readCTDataFile(full_ctname.string()))
 		{
-			Message<<"Error reading the _ctdata.txt file"<<std::endl;
+			msg->LogMessage("Error reading the _ctdata.txt file");
 			//Try ang file
 			boost::filesystem::path full_ang = xtekfile.replace_extension("ang");
-			Message<<"Reading ang file instead"<<full_ang.string()<<std::endl;
+			msg->LogMessage(std::string("Reading ang file instead ")+full_ang.string());
 			if(!readAngFile(full_ang.string()))
 				return;
 		}
-		Message<<"Completed reading the _ctdata.txt file"<<std::endl;
+		msg->SetProgressValue(0.2);
+		msg->LogMessage("Completed reading the _ctdata.txt file");
 		//allocate memory for the images
 		unsigned long long width = detectorPixels[0];
 		unsigned long long height = detectorPixels[1];
-		std::cout<<projections<<"x"<<width<<"x"<<height<<std::endl;
-		imageData = new float[projections * width * height];
-		Message<<"Allocated the image data ("<<projections*width*height<<")"<<std::endl;
+		imageData = new uint16_t[projections * width * height];
 		boost::filesystem::path imgname(name); //prefix of the images
 		boost::filesystem::path prefix_image = xtekfile.parent_path() / imgname;
-		std::cout<<"Tiff file prefix: "<<prefix_image.string()<<std::endl;
-		std::cout<<"File prefix: "<<imgname.string()<<std::endl;
-		std::cout<<"File name: "<<name<<std::endl;
 		//read the images
 		readImageFiles(prefix_image.string(), projections, imageData);
+		msg->SetProgressValue(1.0);
+		msg->SetStatusMessage("Done");
 	}
 }
 
 //Destructor
+
 XtekReader::~XtekReader()
 {
 }
+
 
 bool XtekReader::readXtekCTFile(std::string filename)
 {
@@ -232,6 +234,7 @@ bool XtekReader::readXtekCTFile(std::string filename)
 	return true;
 }
 
+
 bool XtekReader::readCTDataFile(std::string filename)
 {
 	//Open the _ctdata.txt file
@@ -269,6 +272,7 @@ bool XtekReader::readCTDataFile(std::string filename)
 	return true;
 }
 
+
 bool XtekReader::readAngFile(std::string filename)
 {
 	//Open the xxx.ang file
@@ -292,7 +296,8 @@ bool XtekReader::readAngFile(std::string filename)
 	return true;
 }
 
-bool XtekReader::readImageFiles(std::string filePrefix, int numberOfAngles, float *data)
+
+bool XtekReader::readImageFiles(std::string filePrefix, int numberOfAngles, uint16_t *data)
 {
 	unsigned long long width,height;
 	width = detectorPixels[0];
@@ -300,17 +305,22 @@ bool XtekReader::readImageFiles(std::string filePrefix, int numberOfAngles, floa
 	for (unsigned long long i=0;i<numberOfAngles;i++) {
 		std::stringstream fullpath;
 		fullpath << boost::format("%s%s%|04d|.tif")%filePrefix %inputSeperator %(i+1);
+		msg->SetStatusMessage(fullpath.str());
 		bool ok = readTiffFile(fullpath.str(), width, height, data+i*width*height);
+		msg->SetProgressValue(((float)i+1)/numberOfAngles);
+		if(msg->isCancel()) return false;
 		if(!ok)
 		{
 			std::cout<<"Error reading file: "<<fullpath.str()<<std::endl;
+			msg->LogMessage(std::string("Error reading file: ")+fullpath.str());
 			return false;
 		}
 	}
 	return true;
 }
 
-bool XtekReader::readTiffFile(std::string filename, int width, int height, float *data)
+
+bool XtekReader::readTiffFile(std::string filename, int width, int height, uint16_t *data)
 {
 	TIFF *tif = TIFFOpen(filename.c_str(), "r");
 	if (tif == 0) {
@@ -377,7 +387,7 @@ bool XtekReader::readTiffFile(std::string filename, int width, int height, float
 								uint16 *b = (uint16 *)buf;
 								for(unsigned long i=0;i<width;i++)
 									for(unsigned long j=0;j<height;j++)
-										data[i*height+j] = float(b[i*height+j]);		
+										data[i*height+j] = uint16_t(b[i*height+j]);		
 							}
 							_TIFFfree(buf);
 						}
