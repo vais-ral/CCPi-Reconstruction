@@ -1,0 +1,30 @@
+\begin{hxmodule2}{Normalisation-DLS}{This filter takes the raw data and normalises the data. }
+
+\hxlabel{NeXus_normalise}
+\hxpackname{amira}
+
+\begin{hxdescription}
+This filter takes the raw data only in unsigned short values (16bit data)and normalises the data to [0 1]. This filter works best with the Diamond Light Source tomography data.
+\end{hxdescription}
+
+\begin{hxconnections}
+\hxlabel{NeXus_normalise_data}
+\hxport{Data}{\tt [required]}\\
+Input projection raw data. This can contain "data parameters" that provide angles and pixel sizes. If external rotation angles, image keys and/or pixel sizes,are not connected to this then data from the "data parameters" is used.
+It should be (X x Y x N), dimension where N is the number of projection. and X, Y are the image dimension.
+
+\hxlabel{NeXus_normalise_rotation angle}
+\hxport{Rotation Angle}{\tt [optional]}\\
+Rotation angles corresponding to the projection data. It should be (N x 1 x 1) dimensions where N is the number of projections
+
+\hxlabel{NeXus_normalise_image key}
+\hxport{Image Key}{\tt [optional]}\\
+Image key corresponding to the images. (0 - normal, 1 - bright field, 2 - dark field). It should be (N x 1 x 1) dimension where N is number of projections.
+
+\hxlabel{NeXus_normalise_pixel size}
+\hxport{Pixel Size(x,y)}{\tt [optional]}\\
+two values corresponding to the pixel sizes in x and y. It should be (2 x 1 x 1) dimension.
+
+\end{hxconnections}
+
+\end{hxmodule2}

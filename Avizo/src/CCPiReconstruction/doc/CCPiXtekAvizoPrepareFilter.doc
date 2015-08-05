@@ -1,0 +1,22 @@
+\begin{hxmodule2}{XTekPrepareFilter}{This filter normalises Xtek Data to go into reconstruction module}
+
+\hxlabel{CCPiXtekAvizoPrepareFilter}
+\hxpackname{amira}
+
+\begin{hxdescription}
+ This filter module takes Xtek data as input and does normalisation of data and prepares the data to go into reconstruction module. 
+ Rotation angles and other parameters are passed on from the source data read using Xtek Data Reader (CCPi).
+\end{hxdescription}
+
+\begin{hxconnections}
+\hxlabel{CCPiXtekAvizoPrepareFilter_data}
+\hxport{Data}{\tt [required]}\\
+Xtek Data from XtekReader
+
+\end{hxconnections}
+
+\begin{hxports}
+Does the normalisation of data.
+\end{hxports}
+
+\end{hxmodule2}

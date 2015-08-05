@@ -1,0 +1,57 @@
+\begin{hxmodule2}{Reconstruction-ParallelBeam}{This module does the 3D reconstruction for data from parallel beam. }
+
+\hxlabel{Parallel_Beam_recon}
+\hxpackname{amira}
+
+\begin{hxdescription}
+This module does 3D reconstruction for parallel beam data. 
+\end{hxdescription}
+
+\begin{hxconnections}
+\hxlabel{Parallel_Beam_recon_data}
+\hxport{Data}{\tt [required]}\\
+This is the input normalised data for reconstruction. It should be in (X x Y x N) dimensions. where N is number of projections and X, Y are the image dimensions.
+
+\hxlabel{Parallel_Beam_recon_rotation angle}
+\hxport{Rotation Angle}{\tt [optional]}\\
+This is rotation angles and it should be in (N x 1 x 1) dimensions. where N is number of projections.
+
+\hxlabel{Parallel_Beam_recon_pixel size}
+\hxport{Pixel Size(x,y)}{\tt [optional]}\\
+This is the pixel sizes and it should be in (2 x 1 x 1) dimensions. where first value corresponds to x and second y.
+
+\end{hxconnections}
+
+\begin{hxports}
+
+\hxlabel{Parallel_Beam_recon_algorithm}
+\hxport{Reconstruction Algorithm}\\
+\hximage{Parallel_Beam_recon_algorithm}\\
+Select one of the reconstruction algorithms. 
+\\CGLS - Conjugate Gradient Least Squares.
+\\SIRT - Statistical Image Reconstruction Techniques.
+\\MLEM - Maximum Likelihood Expectation Maximization.
+
+\hxlabel{Parallel_Beam_recon_number of iterations}
+\hxport{Iterations}\\
+\hximage{Parallel_Beam_recon_number of iterations}\\
+The maximum number of iterations to use.
+
+\hxlabel{Parallel_Beam_recon_resolution}
+\hxport{Pixels per Voxel}\\
+\hximage{Parallel_Beam_recon_resolution}\\
+The number of pixels in the image correspond to a single voxel in the volume.
+
+\hxlabel{Parallel_Beam_recon_rotation centre}
+\hxport{Rotation Centre}\\
+\hximage{Parallel_Beam_recon_rotation centre}\\
+This values gives the centre of rotation. (This value is important for accurate reconstruction).
+
+\hxlabel{Parallel_Beam_recon_beam harden}
+\hxport{Beam Hardening}\\
+\hximage{Parallel_Beam_recon_beam harden}\\
+Whether beam hardening should be applied to the data.
+
+\end{hxports}
+
+\end{hxmodule2}

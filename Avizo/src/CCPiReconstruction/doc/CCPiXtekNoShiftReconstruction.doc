@@ -1,0 +1,45 @@
+\begin{hxmodule2}{XTekReconstructionNoShifts}{This compute module reconstructs Xtek data without any shifts}
+
+\hxlabel{CCPiXtekNoShiftReconstruction}
+\hxpackname{amira}
+
+\begin{hxdescription}
+This module takes in normalised Xtek projection data with rotation angles and distances between source to detectors, source to sample.
+angles and other information is passed to this module via data parameters.
+\end{hxdescription}
+
+\begin{hxconnections}
+\hxlabel{CCPiXtekNoShiftReconstruction_data}
+\hxport{Data}{\tt [required]}\\
+This port contains the projection data and in data parameters has angles and distances. this can be edited in the data parameters editor.
+
+\end{hxconnections}
+
+\begin{hxports}
+
+\hxlabel{CCPiXtekNoShiftReconstruction_algorithm}
+\hxport{Reconstruction Algorithm}\\
+\hximage{CCPiXtekNoShiftReconstruction_algorithm}\\
+Select one of the reconstruction algorithms. 
+\\CGLS - Conjugate Gradient Least Squares.
+\\SIRT - Statistical Image Reconstruction Techniques.
+\\MLEM - Maximum Likelihood Expectation Maximization.
+
+\hxlabel{CCPiXtekNoShiftReconstruction_number of iterations}
+\hxport{Iterations}\\
+\hximage{CCPiXtekNoShiftReconstruction_number of iterations}\\
+The maximum number of iterations to use.
+
+\hxlabel{CCPiXtekNoShiftReconstruction_resolution}
+\hxport{Pixels per Voxel}\\
+\hximage{CCPiXtekNoShiftReconstruction_resolution}\\
+The number of pixels in the image correspond to a single voxel in the volume.
+
+\hxlabel{CCPiXtekNoShiftReconstruction_beam harden}
+\hxport{Beam Hardening}\\
+\hximage{CCPiXtekNoShiftReconstruction_beam harden}\\
+Whether beam hardening should be applied to the data.
+
+\end{hxports}
+
+\end{hxmodule2}
