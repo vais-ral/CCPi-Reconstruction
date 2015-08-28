@@ -10,6 +10,7 @@ namespace CCPi {
 
     bool reconstruct(class instrument *device, voxel_data &voxels,
 		     const real origin[3], const real voxel_size[3]);
+    void convergence_data(real_1d &data) const;
 
   protected:
     virtual int size_of_voxel_norm(const int nz) const = 0;
@@ -26,9 +27,11 @@ namespace CCPi {
 			      const sl_int nx, const sl_int ny, const sl_int nz,
 			      voxel_1d &norm) const = 0;
     int get_iterations() const;
+    void set_norm(const real norm, const int iter);
 
   private:
     int iterations;
+    real_1d norm_r;
   };
 
   class cgls_3d : public cgls_base {
@@ -130,13 +133,18 @@ namespace CCPi {
 }
 
 inline CCPi::cgls_base::cgls_base(const int niterations)
-  : iterations(niterations)
+  : iterations(niterations), norm_r(iterations)
 {
 }
 
 inline int CCPi::cgls_base::get_iterations() const
 {
   return iterations;
+}
+
+inline void CCPi::cgls_base::set_norm(const real norm, const int iter)
+{
+  norm_r[iter] = norm;
 }
 
 inline CCPi::cgls_3d::cgls_3d(const int niterations)

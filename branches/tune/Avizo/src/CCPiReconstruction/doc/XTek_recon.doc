@@ -1,0 +1,43 @@
+\begin{hxmodule2}{Reconstruction-XTek}{This is Generic Reconstruction for Xtek Instrument Data}
+
+\hxlabel{XTek_recon}
+\hxpackname{amira}
+
+\begin{hxdescription}
+This is a implementation of reconstruction for Xtek Instrument data which has shifts in data. If the data doesn't have shifts the please use Reconstruction(XtekNoShifts) module.
+\end{hxdescription}
+
+\begin{hxconnections}
+\hxlabel{XTek_recon_data}
+\hxport{Data}{\tt [required]}\\
+This is normalised input projection data. it should be in ( X x Y x N ) dimensions where N is number of projections and X, Y are image dimensions
+\end{hxconnections}
+
+\begin{hxports}
+
+\hxlabel{XTek_recon_algorithm}
+\hxport{Reconstruction Algorithm}\\
+\hximage{XTek_recon_algorithm}\\
+Select one of the reconstruction algorithms. 
+\\CGLS - Conjugate Gradient Least Squares.
+\\SIRT - Statistical Image Reconstruction Techniques.
+\\MLEM - Maximum Likelihood Expectation Maximization.
+
+\hxlabel{XTek_recon_number of iterations}
+\hxport{Iterations}\\
+\hximage{XTek_recon_number of iterations}\\
+The maximum number of iterations to use.
+
+\hxlabel{XTek_recon_resolution}
+\hxport{Pixels per Voxel}\\
+\hximage{XTek_recon_resolution}\\
+The number of pixels in the image correspond to a single voxel in the volume.
+
+\hxlabel{XTek_recon_beam harden}
+\hxport{Beam Hardening}\\
+\hximage{XTek_recon_beam harden}\\
+Whether beam hardening should be applied to the data.
+
+\end{hxports}
+
+\end{hxmodule2}
