@@ -1,0 +1,55 @@
+\begin{hxmodule2}{Reconstruction-ConeBeam}{This is generic cone beam reconstruction module}
+
+\hxlabel{Cone_Beam_recon}
+\hxpackname{amira}
+
+\begin{hxdescription}
+This module does a 3D volume reconstruction of data collected from a cone beam source.
+\end{hxdescription}
+
+\begin{hxconnections}
+\hxlabel{Cone_Beam_recon_data}
+\hxport{Data}{\tt [required]}\\
+This is a projection data. The third dimension of the data should match the number of angles.
+
+\hxlabel{Cone_Beam_recon_rotation angle}
+\hxport{Rotation Angle}{\tt [optional]}\\
+This rotation angles data should be in format N x 1 x 1 (Where N is the number of angles).
+
+\hxlabel{Cone_Beam_recon_pixel size}
+\hxport{Pixel Size(x,y)}{\tt [optional]}\\
+This is the size of pixel in x direction and y direction. It should be in format 2 x 1 x 1.
+
+\hxlabel{Cone_Beam_recon_geometry}
+\hxport{Cone Geometry(SrcObj/SrcDetector)}{\tt [optional]}\\
+This is the Cone geometry. It should be in the format 2 x 1 x 1 and the first value defines the distance from source to object and next value source to detector.
+
+\end{hxconnections}
+
+\begin{hxports}
+\hxlabel{Cone_Beam_recon_algorithm}
+\hxport{Reconstruction Algorithm}\\
+\hximage{Cone_Beam_recon_algorithm}\\
+Select one of the reconstruction algorithms. 
+\\CGLS - Conjugate Gradient Least Squares.
+\\SIRT - Statistical Image Reconstruction Techniques.
+\\MLEM - Maximum Likelihood Expectation Maximization.
+
+\hxlabel{Cone_Beam_recon_number of iterations}
+\hxport{Iterations}\\
+\hximage{Cone_Beam_recon_number of iterations}\\
+The maximum number of iterations to use.
+
+\hxlabel{Cone_Beam_recon_resolution}
+\hxport{Pixels per Voxel}\\
+\hximage{Cone_Beam_recon_resolution}\\
+The number of pixels in the image correspond to a single voxel in the volume.
+
+\hxlabel{Cone_Beam_recon_beam harden}
+\hxport{Beam Hardening}\\
+\hximage{Cone_Beam_recon_beam harden}\\
+Whether beam hardening should be applied to the data.
+
+\end{hxports}
+
+\end{hxmodule2}
