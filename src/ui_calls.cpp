@@ -75,7 +75,7 @@ void add_output(const int i, const int w, const bool fill)
 void add_output(const real r)
 {
   char buff[32];
-  snprintf(buff, 32, "%f", r);
+  snprintf(buff, 32, "%g", r);
   buffer += buff;
 }
 
