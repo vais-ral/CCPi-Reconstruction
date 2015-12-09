@@ -11,6 +11,15 @@
 #ifdef WIN32
 #  include <ciso646>
 #  define snprintf _snprintf
+#  define _USE_MATH_DEFINES 
+#  include <math.h>
+#  ifndef M_PI
+#  define M_PI boost::math::constants::pi<double>()
+#  endif
+#ifndef asinh
+#include <boost/math/special_functions/asinh.hpp>
+#define asinh boost::math::asinh<double>
+#endif
 #endif // WIN32
 
 #if LONG_MAX == 2147483647L

@@ -35,7 +35,11 @@ public:
 
   aligned_allocator() { }
 
+  #ifdef WIN32
+  template<typename V> aligned_allocator(const aligned_allocator<V>&) { }
+  #else
   aligned_allocator(const aligned_allocator&) { }
+  #endif
 
   ~aligned_allocator() { }
 
