@@ -466,10 +466,10 @@ void CCPi::parallel_beam::fproject_xy(const real p2_x, const real p2_y,
 }
 
 void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
-			      const real_1d &angles, const int n_angles,
-			      const int nh_pixels, const int nv_pixels,
+			      const real_1d &angles, int n_angles,
+			      int nh_pixels, int nv_pixels,
 			      const real vox_origin[3], const real vox_size[3],
-			      const int nx, const int ny, const int nz,
+			      int nx, int ny, int nz,
 			      pixel_data &pixels, voxel_data &voxels)
 {
   // set detector z to 2* the yz limits of the voxels, so it misses
@@ -490,8 +490,8 @@ void CCPi::parallel_beam::f2D(const real_1d &h_pixels, const real_1d &v_pixels,
   gen_mapping(mapping, map_type, v_pixels, vox_origin[2], vox_size[2],
 	      nv_pixels);
   
-  const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
-  const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+  real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+  real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
   sl_int nyz = sl_int(ny) * sl_int(nz);
 
   const int a_block = n_angles;
@@ -949,10 +949,10 @@ void CCPi::parallel_beam::bproject_ah(pixel_data &pixels, voxel_data &voxels,
 
 void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
 			      const real_1d &angles, pixel_data &pixels,
-			      voxel_data &voxels, const int n_angles,
-			      const int nh_pixels, const int nv_pixels,
+			      voxel_data &voxels, int n_angles,
+			      int nh_pixels, int nv_pixels,
 			      const real vox_origin[3], const real vox_size[3],
-			      const int nx, const int ny, const int nz)
+			      int nx, int ny, int nz)
 {
   // Todo - 1d arrays of x,y,p1x.p1y positions and 2d p2x/p2y?
 
@@ -1047,8 +1047,8 @@ void CCPi::parallel_beam::b2D(const real_1d &h_pixels, const real_1d &v_pixels,
     else
       length[a] = vox_size[1] / std::abs(sphi);
   }
-  const real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
-  const real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
+  real ihp_step = 1.0 / (h_pixels[1] - h_pixels[0]);
+  real h_pix0 = h_pixels[0] / (h_pixels[1] - h_pixels[0]);
 
   const int x_block = 32;
   const int y_block = 32;

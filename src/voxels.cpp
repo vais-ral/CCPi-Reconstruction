@@ -60,6 +60,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
   std::string path;
   std::string filename;
   CCPi::split_path_and_name(data_file, path, filename);
+  report_error(std::string("Loading file: ")+data_file);
   if (device->setup_experimental_geometry(path, filename, rotation_centre,
 					  pixels_per_voxel, phantom)) {
     int nx_voxels = 0;

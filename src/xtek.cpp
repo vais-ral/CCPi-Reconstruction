@@ -181,6 +181,7 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
   std::string data_file;
   char sep = '\0';
   combine_path_and_name(path, file, data_file);
+  add_output(std::string("Loading file: ")+data_file);
   std::ifstream input(data_file.c_str());
   if (input.good()) {
     char line[256];
@@ -203,94 +204,96 @@ bool CCPi::Nikon_XTek::read_config_file(const std::string path,
     if (strncmp(line, "[XTekCT]", 8) == 0) {
       ok = true;
       int ndata = 0;
-      while (!input.eof()) {
-	input.getline(line, 256);
-	if (strncmp(line, "SrcToObject", 11) == 0) {
-	  set_source(- std::atof(&line[12]), 0.0, 0.0);
-	  ndata++;
-	} else if (strncmp(line, "SrcToDetector", 13) == 0) {
-	  det_x = std::atof(&line[14]);
-	  ndata++;
-	} else if (strncmp(line, "MaskRadius", 10) == 0) {
-	  mask_radius = std::atof(&line[11]);
-	  ndata++;
-	} else if (strncmp(line, "DetectorPixelsX", 15) == 0) {
-	  n_h_pixels = std::atoi(&line[16]);
-	  ndata++;
-	} else if (strncmp(line, "DetectorPixelsY", 15) == 0) {
-	  n_v_pixels = std::atoi(&line[16]);
-	  ndata++;
-	} else if (strncmp(line, "DetectorPixelSizeX", 18) == 0) {
-	  xpixel_size = std::atof(&line[19]);
-	  ndata++;
-	} else if (strncmp(line, "DetectorPixelSizeY", 18) == 0) {
-	  ypixel_size = std::atof(&line[19]);
-	  ndata++;
-	} else if (strncmp(line, "Projections", 11) == 0) {
-	  n_phi = std::atoi(&line[12]);
-	  ndata++;
-	} else if (strncmp(line, "InitialAngle", 12) == 0) {
-	  init_angle = std::atof(&line[13]);
-	  ndata++;
-	} else if (strncmp(line, "WhiteLevel", 10) == 0) {
-	  white_level = std::atof(&line[11]);
-	  ndata++;
-	} else if (strncmp(line, "InputSeparator", 14) == 0) {
-	  if (int(line[15]) != 13)
-	    sep = line[15];
-	} else if (strncmp(line, "Scattering", 10) == 0) {
-	  scattering = std::atof(&line[11]);
-	} else if (strncmp(line, "CoefX4", 6) == 0) {
-	  coeff_x4 = std::atof(&line[7]);
-	} else if (strncmp(line, "CoefX3", 6) == 0) {
-	  coeff_x3 = std::atof(&line[7]);
-	} else if (strncmp(line, "CoefX2", 6) == 0) {
-	  coeff_x2 = std::atof(&line[7]);
-	} else if (strncmp(line, "CoefX1", 6) == 0) {
-	  coeff_x1 = std::atof(&line[7]);
-	} else if (strncmp(line, "CoefX0", 6) == 0) {
-	  coeff_x0 = std::atof(&line[7]);
-	} else if (strncmp(line, "Scale", 5) == 0) {
-	  scale = std::atof(&line[6]);
-	} else if (strncmp(line, "Name", 4) == 0) {
-	  while (isspace(line[strlen(line) - 1]))
-	    line[strlen(line) - 1] = '\0';
-	  basename = &line[5];
-	  ndata++;
-	}
+	  while (!input.eof()) {
+		  input.getline(line, 256);
+		  if (strncmp(line, "SrcToObject", 11) == 0) {
+			  set_source(- std::atof(&line[12]), 0.0, 0.0);
+			  ndata++;
+		  } else if (strncmp(line, "SrcToDetector", 13) == 0) {
+			  det_x = std::atof(&line[14]);
+			  ndata++;
+		  } else if (strncmp(line, "MaskRadius", 10) == 0) {
+			  mask_radius = std::atof(&line[11]);
+			  ndata++;
+		  } else if (strncmp(line, "DetectorPixelsX", 15) == 0) {
+			  n_h_pixels = std::atoi(&line[16]);
+			  ndata++;
+		  } else if (strncmp(line, "DetectorPixelsY", 15) == 0) {
+			  n_v_pixels = std::atoi(&line[16]);
+			  ndata++;
+		  } else if (strncmp(line, "DetectorPixelSizeX", 18) == 0) {
+			  xpixel_size = std::atof(&line[19]);
+			  ndata++;
+		  } else if (strncmp(line, "DetectorPixelSizeY", 18) == 0) {
+			  ypixel_size = std::atof(&line[19]);
+			  ndata++;
+		  } else if (strncmp(line, "Projections", 11) == 0) {
+			  n_phi = std::atoi(&line[12]);
+			  ndata++;
+		  } else if (strncmp(line, "InitialAngle", 12) == 0) {
+			  init_angle = std::atof(&line[13]);
+			  ndata++;
+		  } else if (strncmp(line, "WhiteLevel", 10) == 0) {
+			  white_level = std::atof(&line[11]);
+			  ndata++;
+		  } else if (strncmp(line, "InputSeparator", 14) == 0) {
+			  if (int(line[15]) != 13)
+				  sep = line[15];
+		  } else if (strncmp(line, "Scattering", 10) == 0) {
+			  scattering = std::atof(&line[11]);
+		  } else if (strncmp(line, "CoefX4", 6) == 0) {
+			  coeff_x4 = std::atof(&line[7]);
+		  } else if (strncmp(line, "CoefX3", 6) == 0) {
+			  coeff_x3 = std::atof(&line[7]);
+		  } else if (strncmp(line, "CoefX2", 6) == 0) {
+			  coeff_x2 = std::atof(&line[7]);
+		  } else if (strncmp(line, "CoefX1", 6) == 0) {
+			  coeff_x1 = std::atof(&line[7]);
+		  } else if (strncmp(line, "CoefX0", 6) == 0) {
+			  coeff_x0 = std::atof(&line[7]);
+		  } else if (strncmp(line, "Scale", 5) == 0) {
+			  scale = std::atof(&line[6]);
+		  } else if (strncmp(line, "Name", 4) == 0) {
+			  while (isspace(line[strlen(line) - 1]))
+				  line[strlen(line) - 1] = '\0';
+			  basename = &line[5];
+			  ndata++;
+		  }
       }
-      if (ndata == 11) {
-	set_detector(det_x + get_source_x());
-	if (basename == "") {
-	  ok = false;
-	  std::cerr << "No name found for tiff files\n";
-	} else if (n_h_pixels > 0 and n_v_pixels > 0 and n_phi > 0) {
-	  n_v_pixels = calc_v_alignment(n_v_pixels, pixels_per_voxel, true);
-	  real_1d &h_pixels = set_h_pixels(n_h_pixels);
-	  real_1d &v_pixels = set_v_pixels(n_v_pixels);
-	  real pixel_base = -((n_h_pixels - 1) * xpixel_size / real(2.0));
-	  for (int i = 0; i < n_h_pixels; i++)
-	    h_pixels[i] = pixel_base + real(i) * xpixel_size;
-	  pixel_base = -((n_v_pixels - 1) * ypixel_size / real(2.0));
-	  for (int i = 0; i < n_v_pixels; i++)
-	    v_pixels[i] = pixel_base + real(i) * ypixel_size;
-	  ok = read_angles(path, init_angle, n_phi);
-	} else {
-	  ok = false;
-	  report_error("Negative pixel values");
-	}
-      } else {
-	ok = false;
-	report_error("Failed to locate all geometry data in xtekct file");
-      }
-    } else
-      report_error("Incorrect header on xtekct file");
-    input.close();
+	  add_output("Completed reading .xtekct file");
+	  if (ndata == 11) {
+		  set_detector(det_x + get_source_x());
+		  if (basename == "") {
+			  ok = false;
+			  std::cerr << "No name found for tiff files\n";
+		  } else if (n_h_pixels > 0 and n_v_pixels > 0 and n_phi > 0) {
+			  n_v_pixels = calc_v_alignment(n_v_pixels, pixels_per_voxel, true);
+			  real_1d &h_pixels = set_h_pixels(n_h_pixels);
+			  real_1d &v_pixels = set_v_pixels(n_v_pixels);
+			  real pixel_base = -((n_h_pixels - 1) * xpixel_size / real(2.0));
+			  for (int i = 0; i < n_h_pixels; i++)
+				  h_pixels[i] = pixel_base + real(i) * xpixel_size;
+			  pixel_base = -((n_v_pixels - 1) * ypixel_size / real(2.0));
+			  for (int i = 0; i < n_v_pixels; i++)
+				  v_pixels[i] = pixel_base + real(i) * ypixel_size;
+			  ok = read_angles(path, init_angle, n_phi);
+			  add_output("Completed reading angles");
+		  } else {
+			  ok = false;
+			  report_error("Negative pixel values");
+		  }
+	  } else {
+		  ok = false;
+		  report_error("Failed to locate all geometry data in xtekct file");
+	  }
+	} else
+		report_error("Incorrect header on xtekct file");
+	input.close();
   } else
-    report_error("Open ", file, " failed");
+	  report_error("Open ", file, " failed");
   if (ok) {
-    if (sep != '\0')
-      basename += sep;
+	  if (sep != '\0')
+		  basename += sep;
   }
   return ok;
 }

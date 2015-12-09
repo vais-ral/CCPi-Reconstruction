@@ -67,6 +67,8 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
     report_error("Width not supported for tiff writing");
   else {
     const voxel_data::size_type *s = voxels.shape();
+	//Set the progress
+	initialise_progress(s[2], "Saving data...");
     std::size_t n = s[0] * s[1];
     // copy buffer for tiff image slice
     unsigned short *sdata = new unsigned short[n];
@@ -127,7 +129,9 @@ void CCPi::write_as_tiff(const std::string basename, const voxel_data &voxels,
 	}
       }
       ok = write_tiff(name, cdata, (int)s[0], (int)s[1], width);
+	  update_progress(k);
     }
+	update_progress(s[2]);
     delete [] sdata;
   }
 }
@@ -164,6 +168,8 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
   std::string name = basename + ".dat";
   const voxel_data::size_type *s = voxels.shape();
   std::size_t n = s[0] * s[1] * s[2];
+  //Set the progress
+  initialise_progress(s[2], "Saving data...");
   char mode[4];
   mode[3] = '\0';
   if (offset == 0) {
@@ -203,12 +209,15 @@ void CCPi::write_bgs(const std::string basename, const voxel_data &voxels,
 	  l++;
 	}
       }
+	  update_progress(k);
+	  fwrite(x+k*s[1]*s[0], sizeof(float), s[1] * s[0], file);
     }
+	update_progress(s[2]);
     // would need use to store an offset for end of header block to work
     //std::size_t o = s[0] * s[1] * std::size_t(offset);
     //fseek(file, o, SEEK_CUR);
     //fseek(file, 0, SEEK_END); achieved by fopen("a")
-    fwrite(x, sizeof(float), n, file);
+    //fwrite(x, sizeof(float), n, file);
     delete [] x;
     fclose(file);
   }

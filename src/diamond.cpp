@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <string>
 #include <cmath>
 #include "base_types.hpp"
 #include "instruments.hpp"
@@ -11,11 +12,12 @@
 
 #ifdef WIN32
 #  ifdef AMIRA64
-#    include <boost/math/tr1.hpp>
-using boost::math::tr1::asinh;
+#include <boost/math/special_functions/asinh.hpp>
+//#    include <boost/math/tr1.hpp>
+//using boost::math::tr1::asinh;
 #  endif // AVIZO/AMIRA
 #endif // WINDOWS
-
+#include<boost/lexical_cast.hpp>
 bool CCPi::Diamond::setup_experimental_geometry(const std::string path,
 						const std::string file,
 						const real rotation_centre,
@@ -47,6 +49,8 @@ bool CCPi::Diamond::setup_experimental_geometry(const numpy_3d &pix_array,
     int nh_pixels = (int)s[2];
     if (na != nangles) {
       report_error("Number of projections doesn't match angle array");
+	  report_error(boost::lexical_cast<std::string>(na));
+	  report_error(boost::lexical_cast<std::string>(nangles));
       ok = false;
     } else if (nh_pixels < 1 or nv_pixels < 1) {
       report_error("Bad array index for pixels");

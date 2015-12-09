@@ -10,7 +10,7 @@
 
 template <class real_type>
 inline void init_data(boost::multi_array_ref<real_type, 3> &x,
-		      const sl_int nx, const sl_int ny, const sl_int nz,
+		      sl_int nx, sl_int ny, sl_int nz,
 		      const real_type v = 0.0)
 {
   //sl_int n = nx * ny * nz;
@@ -24,7 +24,7 @@ inline void init_data(boost::multi_array_ref<real_type, 3> &x,
 
 template <class real_type>
 inline void clamp_min(boost::multi_array_ref<real_type, 3> &y, const real m,
-		      const sl_int nx, const sl_int ny, const sl_int nz)
+		      sl_int nx, sl_int ny, sl_int nz)
 {
   // clamp min value of y, y = max(y, m)
   real_type minv = real_type(m);
@@ -39,7 +39,7 @@ inline void clamp_min(boost::multi_array_ref<real_type, 3> &y, const real m,
 template <class real_type>
 inline void clamp_min_max(boost::multi_array_ref<real_type, 3> &y,
 			  const real mn, const real mx,
-			  const sl_int nx, const sl_int ny, const sl_int nz)
+			  sl_int nx, sl_int ny, sl_int nz)
 {
   // clamp min value of y, y = min(max(y, mn), mx)
   real_type minv = real_type(mn);
@@ -54,7 +54,7 @@ inline void clamp_min_max(boost::multi_array_ref<real_type, 3> &y,
 
 inline void clamp_min_max(pixel_data &y, const pixel_type mn,
 			  const pixel_1d &mx,
-			  const sl_int nx, const sl_int ny, const sl_int nz)
+			  sl_int nx, sl_int ny, sl_int nz)
 {
   // clamp min value of y, y = min(max(y, mn), mx)
   pixel_type minv = mn;
@@ -69,7 +69,7 @@ inline void clamp_min_max(pixel_data &y, const pixel_type mn,
 
 inline void clampv_min_max(pixel_data &y, const pixel_type mn,
 			   const pixel_1d &mx,
-			   const sl_int nx, const sl_int ny, const sl_int nz)
+			   sl_int nx, sl_int ny, sl_int nz)
 {
   // clamp min value of y, y = min(max(y, mn), mx)
   pixel_type minv = mn;
@@ -85,7 +85,7 @@ inline void clampv_min_max(pixel_data &y, const pixel_type mn,
 
 template <class real_type>
 inline void invert_x(boost::multi_array_ref<real_type, 3> &x,
-		     const sl_int nx, const sl_int ny, const sl_int nz)
+		     sl_int nx, sl_int ny, sl_int nz)
 {
   // x = 1 / x
 #pragma omp parallel for shared(x) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -99,8 +99,8 @@ inline void invert_x(boost::multi_array_ref<real_type, 3> &x,
 
 template <class real_type>
 inline void invert_min_x(boost::multi_array_ref<real_type, 3> &x,
-			 const real_type m, const sl_int nx, const sl_int ny,
-			 const sl_int nz)
+			 real_type m, sl_int nx, sl_int ny,
+			 sl_int nz)
 {
   // x = 1 / x
 #pragma omp parallel for shared(x) firstprivate(nx, ny, nz, m) schedule(dynamic)
@@ -118,7 +118,7 @@ inline void invert_min_x(boost::multi_array_ref<real_type, 3> &x,
 template <class real_type>
 inline void mult_xy(boost::multi_array_ref<real_type, 3> &x,
 		    const boost::multi_array_ref<real_type, 3> &y,
-		    const sl_int nx, const sl_int ny, const sl_int nz)
+		    sl_int nx, sl_int ny, sl_int nz)
 {
   // x = x * y
 #pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -133,7 +133,7 @@ inline void mult_xy(boost::multi_array_ref<real_type, 3> &x,
 template <class real_type>
 inline void div_xy(boost::multi_array_ref<real_type, 3> &x,
 		   const boost::multi_array_ref<real_type, 3> &y,
-		   const sl_int nx, const sl_int ny, const sl_int nz)
+		   sl_int nx, sl_int ny, sl_int nz)
 {
   // x = x / y
 #pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -153,7 +153,7 @@ template <class real_type>
 inline void div_xyz(boost::multi_array_ref<real_type, 3> &x,
 		    const boost::multi_array_ref<real_type, 3> &y,
 		    const boost::multi_array_ref<real_type, 3> &z,
-		    const sl_int nx, const sl_int ny, const sl_int nz)
+		    sl_int nx, sl_int ny, sl_int nz)
 {
   // x = y / z
 #pragma omp parallel for shared(x, y, z) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -174,7 +174,7 @@ template <class real_type>
 inline void multsum_xyz(boost::multi_array_ref<real_type, 3> &x,
 			const boost::multi_array_ref<real_type, 3> &y,
 			const boost::multi_array_ref<real_type, 3> &z,
-			const sl_int nx, const sl_int ny, const sl_int nz)
+			sl_int nx, sl_int ny, sl_int nz)
 {
   // x = x * y * z
 #pragma omp parallel for shared(x, y, z) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -189,7 +189,7 @@ inline void multsum_xyz(boost::multi_array_ref<real_type, 3> &x,
 
 template <class real_type>
 inline void scal_y(const real beta, boost::multi_array_ref<real_type, 3> &y,
-		   const sl_int nx, const sl_int ny, const sl_int nz)
+		   sl_int nx, sl_int ny, sl_int nz)
 {
   // y = beta * y
   real_type b = real_type(beta);
@@ -201,8 +201,8 @@ inline void scal_y(const real beta, boost::multi_array_ref<real_type, 3> &y,
   }
 }
 
-inline voxel_type norm_voxels(const voxel_data &v, const sl_int nx,
-			      const sl_int ny, const sl_int nz)
+inline voxel_type norm_voxels(const voxel_data &v, sl_int nx,
+			      sl_int ny, sl_int nz)
 {
   voxel_type norm = 0.0;
 #pragma omp parallel for shared(v, norm) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -221,8 +221,8 @@ inline voxel_type norm_voxels(const voxel_data &v, const sl_int nx,
   return norm;
 }
 
-inline void norm_voxels(const voxel_data &v, const sl_int nx, const sl_int ny,
-			const sl_int nz, voxel_1d &norm)
+inline void norm_voxels(const voxel_data &v, sl_int nx, sl_int ny,
+			sl_int nz, voxel_1d &norm)
 {
   for (int k = 0; k < nz; k++)
     norm[k] = 0.0;
@@ -243,7 +243,7 @@ inline void norm_voxels(const voxel_data &v, const sl_int nx, const sl_int ny,
 }
 
 inline voxel_type norm_voxels(const voxel_data &v1, const voxel_data &v2,
-			      const sl_int nx, const sl_int ny, const sl_int nz)
+			      sl_int nx, sl_int ny, sl_int nz)
 {
   voxel_type norm = 0.0;
 #pragma omp parallel for shared(v1, v2, norm) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -263,8 +263,8 @@ inline voxel_type norm_voxels(const voxel_data &v1, const voxel_data &v2,
   return norm;
 }
 
-inline pixel_type norm_pixels(const pixel_data &p, const sl_int na,
-			      const sl_int nv, const sl_int nh)
+inline pixel_type norm_pixels(const pixel_data &p, sl_int na,
+			      sl_int nv, sl_int nh)
 {
   pixel_type norm = 0.0;
 #pragma omp parallel for shared(p, norm) firstprivate(na, nv, nh) schedule(dynamic)
@@ -283,8 +283,8 @@ inline pixel_type norm_pixels(const pixel_data &p, const sl_int na,
   return norm;
 }
 
-inline void norm_pixels(const pixel_data &p, const sl_int na, const sl_int nv,
-			const sl_int nh, pixel_1d &norm)
+inline void norm_pixels(const pixel_data &p, sl_int na, sl_int nv,
+			sl_int nh, pixel_1d &norm)
 {
   for (int k = 0; k < nv; k++)
     norm[k] = 0.0;
@@ -307,8 +307,8 @@ inline void norm_pixels(const pixel_data &p, const sl_int na, const sl_int nv,
 template <class real_type>
 inline void sum_axpy(const real alpha,
 		     const boost::multi_array_ref<real_type, 3> &x,
-		     boost::multi_array_ref<real_type, 3> &y, const sl_int nx,
-		     const sl_int ny, const sl_int nz)
+		     boost::multi_array_ref<real_type, 3> &y, sl_int nx,
+		     sl_int ny, sl_int nz)
 {
   // y += alpha * x
   real_type a = real_type(alpha);
@@ -324,8 +324,8 @@ inline void sum_axpy(const real alpha,
 template <class real_type>
 inline void sum_axpy(const pixel_1d &alpha,
 		     const boost::multi_array_ref<real_type, 3> &x,
-		     boost::multi_array_ref<real_type, 3> &y, const sl_int nx,
-		     const sl_int ny, const sl_int nz)
+		     boost::multi_array_ref<real_type, 3> &y, sl_int nx,
+		     sl_int ny, sl_int nz)
 {
   // y += alpha * x
 #pragma omp parallel for shared(x, y, alpha) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -343,8 +343,8 @@ inline void sum_axpy(const pixel_1d &alpha,
 template <class real_type>
 inline void sub_axpy(const pixel_1d &alpha,
 		     const boost::multi_array_ref<real_type, 3> &x,
-		     boost::multi_array_ref<real_type, 3> &y, const sl_int na,
-		     const sl_int nv, const sl_int nh, const int ppv)
+		     boost::multi_array_ref<real_type, 3> &y, sl_int na,
+		     sl_int nv, sl_int nh, int ppv)
 {
   // y -= alpha * x
 #pragma omp parallel for shared(x, y, alpha) firstprivate(na, nv, nh, ppv) schedule(dynamic)
@@ -362,7 +362,7 @@ inline void sub_axpy(const pixel_1d &alpha,
 template <class real_type>
 inline void scal_xby(const boost::multi_array_ref<real_type, 3> &x,
 		     const real beta, boost::multi_array_ref<real_type, 3> &y,
-		     const sl_int nx, const sl_int ny, const sl_int nz)
+		     sl_int nx, sl_int ny, sl_int nz)
 {
   // y = x + beta * y
   real_type b = real_type(beta);
@@ -379,7 +379,7 @@ template <class real_type>
 inline void scal_xby(const boost::multi_array_ref<real_type, 3> &x,
 		     const voxel_1d &beta,
 		     boost::multi_array_ref<real_type, 3> &y,
-		     const sl_int nx, const sl_int ny, const sl_int nz)
+		     sl_int nx, sl_int ny, sl_int nz)
 {
   // y = x + beta * y
 #pragma omp parallel for shared(x, y, beta) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -399,7 +399,7 @@ inline void sum_xbyz(const boost::multi_array_ref<real_type, 3> &x,
 		     const real beta,
 		     const boost::multi_array_ref<real_type, 3> &y,
 		     boost::multi_array_ref<real_type, 3> &z,
-		     const sl_int nx, const sl_int ny, const sl_int nz)
+		     sl_int nx, sl_int ny, sl_int nz)
 {
   // z = x + b * y
   real_type b = real_type(beta);
@@ -430,7 +430,7 @@ inline void diff_xyz(const boost::multi_array_ref<real_type, 3> &x,
 }
 
 inline voxel_type dot_prod(const voxel_data &x, const voxel_data &y,
-			   const sl_int nx, const sl_int ny, const sl_int nz)
+			   sl_int nx, sl_int ny, sl_int nz)
 {
   voxel_type norm = 0.0;
 #pragma omp parallel for shared(x, y, norm) firstprivate(nx, ny, nz) schedule(dynamic)
@@ -453,7 +453,7 @@ inline voxel_type dot_prod(const voxel_data &x, const voxel_data &y,
 template <class real_type>
 inline void copy(const boost::multi_array_ref<real_type, 3> &x,
 		 boost::multi_array_ref<real_type, 3> &y,
-		 const sl_int nx, const sl_int ny, const sl_int nz)
+		 sl_int nx, sl_int ny, sl_int nz)
 {
   // y = x
 #pragma omp parallel for shared(x, y) firstprivate(nx, ny, nz) schedule(dynamic)
