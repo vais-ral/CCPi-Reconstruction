@@ -3,7 +3,7 @@
 #include "regularize.hpp"
 
 void CCPi::tikhonov_regularize(voxel_data &b, const voxel_data &a,
-			       const int nx, const int ny, const int nz)
+			       int nx, int ny, int nz)
 {
 #pragma omp parallel for shared(a, b) firstprivate(nx, ny, nz) schedule(dynamic)
   for (int i = 0; i < nx; i++) {

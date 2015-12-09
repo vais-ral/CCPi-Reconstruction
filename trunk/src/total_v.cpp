@@ -25,8 +25,8 @@ void CCPi::tv_regularize(voxel_data &b, const voxel_data &a,
 }
 
 // calculate differences 1
-void D1_func(const voxel_data &A, voxel_2d &D1, const int i,
-	     const int nx, const int ny, const int nz)
+void D1_func(const voxel_data &A, voxel_2d &D1, int i,
+	     int nx, int ny, int nz)
 {
   int i1 = i + 1;
   if (i1 >= nx)
@@ -75,7 +75,7 @@ void D1_func(const voxel_data &A, voxel_2d &D1, const int i,
 
 // calculate differences 1,2,3
 void D_func(const voxel_data &A, voxel_2d &D1, voxel_2d &D2,
-	    voxel_2d &D3, const int i, const int nx, const int ny, const int nz)
+	    voxel_2d &D3, int i, int nx, int ny, int nz)
 {
   int i1 = i + 1;
   if (i1 >= nx)
@@ -147,7 +147,7 @@ void D_func(const voxel_data &A, voxel_2d &D1, voxel_2d &D2,
 
 // calculate divergence
 void TV_main(const voxel_data &A, voxel_data &B,
-	     const int nx, const int ny, const int nz)
+	     int nx, int ny, int nz)
 {
   voxel_2d d1(boost::extents[ny][nz]);
   voxel_2d d2(boost::extents[ny][nz]);

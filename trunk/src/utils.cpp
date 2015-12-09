@@ -13,7 +13,7 @@ void CCPi::split_path_and_name(const std::string fullname, std::string &path,
 {
   int i;
   for (i = fullname.length() - 1; i >= 0; i--) {
-    if (fullname[i] == DIR_SEPARATOR)
+    if (fullname[i] == DIR_SEPARATOR || fullname[i] == '/')
       break;
   }
   if (i < 0) {

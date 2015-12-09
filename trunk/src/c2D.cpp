@@ -18,7 +18,7 @@ void CCPi::cone_beam::calc_xy_z(pixel_type *const pixels,
 				const voxel_ptr_1d &voxels,
 				const recon_1d &alpha_xy, const int n,
 				const recon_type pzbz, const recon_type inv_dz,
-				const int nv, const int nz, const int midp,
+				int nv, int nz, int midp,
 				const recon_1d &delta_z,
 				const recon_1d &inv_delz, const recon_1d &vox_z)
 {
@@ -194,9 +194,9 @@ void CCPi::cone_beam::fproject_xy(const real p1_x, const real p1_y,
 				  const real p2_x, const real p2_y,
 				  pixel_data &pixels, voxel_data &voxels,
 				  const real b_x, const real b_y,
-				  const real d_x, const real d_y, const int nx,
-				  const int ny, const int nz, const int a,
-				  const int h, const int nv, const int midp,
+				  const real d_x, const real d_y, int nx,
+				  const int ny, int nz, const int a,
+				  const int h, int nv, const int midp,
 				  const recon_1d &delta_z,
 				  const recon_1d &inv_delz,
 				  const recon_1d &vox_z, const recon_type pzbz,
@@ -470,11 +470,11 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
 			  const real source_z, const real detector_x,
 			  const real_1d &h_pixels, const real_1d &v_pixels,
 			  const real_1d &angles, pixel_data &pixels,
-			  voxel_data &voxels, const int n_angles,
-			  const int n_h, const int n_v,
+			  voxel_data &voxels, int n_angles,
+			  int n_h, int n_v,
 			  const real grid_offset[3], const real voxel_size[3],
-			  const int nx_voxels, const int ny_voxels,
-			  const int nz_voxels)
+			  int nx_voxels, int ny_voxels,
+			  int nz_voxels)
 {
   // Todo - check that source_z to det_z max z angle < 45 for safe usage.
   int mid = -1;
@@ -502,8 +502,8 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
     }
   }
 
-  const recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
-  const recon_type pzbz = recon_type((source_z
+  recon_type inv_dz = recon_type(real(1.0) / voxel_size[2]);
+  recon_type pzbz = recon_type((source_z
 				      - grid_offset[2]) / voxel_size[2]);
   recon_1d delta_z(n_v);
   for (int i = 0; i < n_v; i++)
@@ -516,9 +516,9 @@ void CCPi::cone_beam::f2D(const real source_x, const real source_y,
     vox_z[i] = grid_offset[2] + real(i) * voxel_size[2] - source_z;
 
   const real pixel_step = (h_pixels[1] - h_pixels[0]);
-  const real ipix_step = 1.0 / pixel_step;
-  const real hpix0 = (source_y - h_pixels[0]) / pixel_step;
-  const real l = detector_x - source_x;
+  real ipix_step = 1.0 / pixel_step;
+  real hpix0 = (source_y - h_pixels[0]) / pixel_step;
+  real l = detector_x - source_x;
   sl_int nyz = sl_int(ny_voxels) * sl_int(nz_voxels);
 
   const int a_block = n_angles;
@@ -945,14 +945,14 @@ void CCPi::cone_beam::bproject_ah(const real source_x, const real source_y,
   }
 }
 
-void CCPi::cone_beam::b2D(const real source_x, const real source_y,
-			  const real source_z, const real detector_x,
+void CCPi::cone_beam::b2D(real source_x, real source_y,
+			  real source_z, real detector_x,
 			  const real_1d &h_pixels, const real_1d &v_pixels,
 			  const real_1d &angles, pixel_data &pixels,
-			  voxel_data &voxels, const int n_angles,
-			  const int n_h, const int n_v,
+			  voxel_data &voxels, int n_angles,
+			  int n_h, int n_v,
 			  const real vox_origin[3], const real vox_size[3],
-			  const int nx, const int ny, const int nz,
+			  int nx, int ny, int nz,
 			  const recon_2d &d_conv)
 {
   // Todo - check that source_z to det_z max z angle < 45 for safe usage.
@@ -990,13 +990,13 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
     ilsphi[a] = l / sin_phi;
   }
 
-  const recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
-  const recon_type pzbz = recon_type((source_z - vox_origin[2]) / vox_size[2]);
+  recon_type inv_dz = recon_type(real(1.0) / vox_size[2]);
+  recon_type pzbz = recon_type((source_z - vox_origin[2]) / vox_size[2]);
   const real v_step = v_pixels[1] - v_pixels[0];
-  const recon_type pzdv = recon_type((source_z - v_pixels[0]) / v_step);
-  const recon_type z_1 = recon_type((vox_origin[2] + vox_size[2]
+  recon_type pzdv = recon_type((source_z - v_pixels[0]) / v_step);
+  recon_type z_1 = recon_type((vox_origin[2] + vox_size[2]
 				     - source_z) / v_step);
-  const recon_type z_nm = recon_type((vox_origin[2] + real(nz - 1) * vox_size[2]
+  recon_type z_nm = recon_type((vox_origin[2] + real(nz - 1) * vox_size[2]
 				      - source_z) / v_step);
 
   recon_1d delta_z(n_v);
@@ -1049,12 +1049,12 @@ void CCPi::cone_beam::b2D(const real source_x, const real source_y,
   }      
 }
 
-void CCPi::cone_beam::b2D(const real source_x, const real source_y,
-			  const real source_z, const real detector_x,
+void CCPi::cone_beam::b2D(real source_x, real source_y,
+			  real source_z, const real detector_x,
 			  const real_1d &h_pixels, const real_1d &v_pixels,
 			  const real_1d &angles, pixel_data &pixels,
-			  voxel_data &voxels, const int n_angles,
-			  const int n_h, const int n_v,
+			  voxel_data &voxels, int n_angles,
+			  int n_h, int n_v,
 			  const real vox_origin[3], const real vox_size[3],
 			  const int nx, const int ny, const int nz,
 			  const bool limited_memory)
