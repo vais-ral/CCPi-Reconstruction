@@ -32,7 +32,8 @@ namespace CCPi
 		std::vector<float> getYShifts();//Return the yShift values
 		boost::shared_ptr< short_pixel > getImageDataInShort(); //Return the projection data in short datatype
 		boost::shared_ptr< float_pixel > getImageDataInFloat(); //Returns the projection data in float
-
+		float getDetectorToObject(){return detToObject;}
+		float getSourceToObject(){return srcToObject;}
  	private:
 		std::string filename; // file name to use to read the data
 		int imageWidth; //Image Width
@@ -47,6 +48,8 @@ namespace CCPi
 		DataType type;
 		boost::shared_ptr< float_pixel > floatImageData;
 		boost::shared_ptr< short_pixel > shortImageData;
+		float srcToObject;
+		float detToObject;
 		bool localUAI;
 		CCPiUserApplicationInterface *uai;
 		//Private methods
