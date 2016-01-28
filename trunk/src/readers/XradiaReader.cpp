@@ -92,6 +92,8 @@ namespace CCPi{
 		xSamplePosition = extractMetaDataFloatArray("ImageInfo/XPosition", numberOfImages);
 		ySamplePosition = extractMetaDataFloatArray("ImageInfo/YPosition", numberOfImages);
 		zSamplePosition = extractMetaDataFloatArray("ImageInfo/ZPosition", numberOfImages);
+		srcToObject = extractMetaDataFloatArray("ImageInfo/StoRADistance", numberOfImages)[0]; //Just use the first value
+		detToObject = extractMetaDataFloatArray("ImageInfo/DtoRADistance", numberOfImages)[0]; //Just use the first value
 		angles = extractMetaDataFloatArray("ImageInfo/Angles", numberOfImages);
 		if(type==UINT_16){
 			shortImageData = boost::make_shared< short_pixel >(boost::extents[numberOfImages][imageWidth][imageHeight]);
