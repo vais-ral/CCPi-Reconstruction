@@ -14,9 +14,9 @@ void setParameters(HxUniformScalarField3 *field, CCPi::XradiaReader reader);
 CCPIRECONSTRUCTION_API
 int CCPiXradiaAvizoReader(const char* filename)
 {
-//    theWorkArea->startWorking(
-//     QApplication::translate("CCPiXTekAvizoReader", "Reading xtekct data"));   
-	 CCPiAvizoUserInterface *msg = new CCPiAvizoUserInterface();
+    theWorkArea->startWorking(
+     QApplication::translate("CCPiXradiaAvizoReader", "Reading xradia data"));   
+    CCPiAvizoUserInterface *msg = new CCPiAvizoUserInterface();
 	CCPi::XradiaReader reader(filename,msg);
 	int newDims[3];
 	newDims[0] = reader.getImageWidth();
@@ -53,7 +53,7 @@ int CCPiXradiaAvizoReader(const char* filename)
 
 	HxData::registerData(field, "ImageData");
 	setParameters(field, reader);
-//	theWorkArea->stopWorking();
+	theWorkArea->stopWorking();
 	return 1;
 }
 
@@ -61,8 +61,8 @@ void setParameters(HxUniformScalarField3 *field, CCPi::XradiaReader reader)
 {
 	//field->parameters.set("VoxelSize", 3, reader.getVoxelSize());
 	//field->parameters.set("Offset", 3, reader.getOffset());
-	//field->parameters.set("SourceToObject", reader.getSourceToObject());
-	//field->parameters.set("SourceToDetector", reader.getSourceToDetector());
+	field->parameters.set("SourceToObject", -1*reader.getSourceToObject());
+	field->parameters.set("SourceToDetector", reader.getDetectorToObject()-reader.getSourceToObject());
 	//Copy angles
 	double *angles = new double[reader.getNumberOfImages()];
 	std::vector<float> rangles = reader.getAngles();

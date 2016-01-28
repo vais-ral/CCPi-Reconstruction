@@ -42,9 +42,22 @@ dataFile -name	"XTek Format(CCPi)" \
 	   -load	"CCPiXTekAvizoReader"\
 	   -package "CCPiReconstruction"
 
+dataFile -name	"Xradia Format(CCPi)" \
+	   -option "ccpi_xradia" \
+	   -ext		"txrm" \
+	   -load	"CCPiXradiaAvizoReader"\
+	   -package "CCPiReconstruction"
+
 module -name     "XTekPrepareFilter" \
        -primary  "HxUniformScalarField3" \
        -class    "CCPiXtekAvizoPrepareFilter" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+module -name     "XradiaPrepareFilter" \
+       -primary  "HxUniformScalarField3" \
+       -class    "CCPiXradiaAvizoPrepareFilter" \
        -category "CCPi" \
        -package  "CCPiReconstruction" \
        -icon     "TVDefCompute"
