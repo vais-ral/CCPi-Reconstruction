@@ -25,7 +25,7 @@ QT4_WRAP_UI(CCPiReconstructionQt_FORMS_HEADERS ${CCPiReconstruction_FORMS})
 
 INCLUDE(${QT_USE_FILE})
 ADD_DEFINITIONS(${QT_DEFINITIONS})
-include_directories( ${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ../../src ${CMAKE_CURRENT_BINARY_DIR} ${TIFF_INCLUDE_DIR})
+include_directories( ${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ../../src ../../src/Algorithms ../../src/Instruments ../../src/Readers ${CMAKE_CURRENT_BINARY_DIR} ${TIFF_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 if(UNIX AND NOT APPLE)
 	string(TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWERCASE)
@@ -35,26 +35,26 @@ else()
 	set(BIN_INSTALL_DIR ".")
 	set(DOC_INSTALL_DIR ".")
 endif()
-SET(CCPiReconstruction_SOURCES 	../../src/cgls.cpp
+SET(CCPiReconstruction_SOURCES 	../../src/Algorithms/cgls.cpp
+								../../src/Algorithms/mlem.cpp
+								../../src/Algorithms/sirt.cpp
+								../../src/Algorithms/tv_reg.cpp								
+								../../src/Readers/tiff.cpp
+								../../src/Readers/xtek.cpp																
 								../../src/c2D.cpp
 								../../src/cone.cpp
 								../../src/diamond.cpp
-								../../src/instruments.cpp
-								../../src/mlem.cpp
+								../../src/instruments.cpp							
 								../../src/p2D.cpp
 								../../src/parallel.cpp
 								../../src/mpi.cpp
 								../../src/tikhonov.cpp
-								../../src/sirt.cpp
 								../../src/tv_core.cpp
-								../../src/tv_reg.cpp
 								../../src/voxels.cpp
-								../../src/xtek.cpp
 								../../src/timer.cpp
 								../../src/utils.cpp
 								../../src/total_v.cpp
-								../../src/tiff.cpp
-								../../src/results.cpp
+								../../src/results.cpp							
 								)
 								
 ADD_EXECUTABLE(CCPiReconstructionQt ${CCPiReconstructionQt_SOURCES} 
