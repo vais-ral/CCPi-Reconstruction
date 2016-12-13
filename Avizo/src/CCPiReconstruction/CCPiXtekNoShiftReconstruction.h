@@ -20,9 +20,6 @@ class CCPIRECONSTRUCTION_API CCPiXtekNoShiftReconstruction : public HxCompModule
 
   public:
 
-    CCPiXtekNoShiftReconstruction();
-    ~CCPiXtekNoShiftReconstruction();
-
     HxPortDoIt portAction;
     HxPortRadioBox algorithm;
     HxPortIntSlider iterations;

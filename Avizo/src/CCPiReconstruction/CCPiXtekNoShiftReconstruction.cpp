@@ -5,7 +5,7 @@
 #include <QApplication>
 
 #include <hxcore/HxMessage.h>
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
 
 #include "CCPiXtekNoShiftReconstruction.h"
@@ -75,15 +75,15 @@ void CCPiXtekNoShiftReconstruction::compute()
 	ccpi_recon::do_progress = false;
 	ccpi_recon::messages = theMsg;
 	ccpi_recon::progress = theWorkArea;
-	HxUniformScalarField3* field = (HxUniformScalarField3*) portData.source();
+	HxUniformScalarField3* field = (HxUniformScalarField3*) portData.getSource();
 	// Check whether the input port is connected
 	if (field == 0)
 	{
 		theMsg->stream()<<"Is not connected to uniform scalar field source"<<std::endl;
 		return;
 	}
-	float *angles = new float[field->lattice.dims()[2]];
-	int result = field->parameters.findReal("Angles", field->lattice.dims()[2], angles);
+	float *angles = new float[field->lattice().getDims()[2]];
+	int result = field->parameters.findReal("Angles", field->lattice().getDims()[2], angles);
 	//Check the Rotation Angle
 	if (result!=1)
 	{
@@ -124,14 +124,14 @@ void CCPiXtekNoShiftReconstruction::compute()
 
 void CCPiXtekNoShiftReconstruction::run_reconstruction()
 {
-	HxUniformScalarField3 *field = (HxUniformScalarField3 *) portData.source();
-	const int *fdims = field->lattice.dims();
+	HxUniformScalarField3 *field = (HxUniformScalarField3 *) portData.getSource();
+	McDim3l fdims = field->lattice().getDims();
 	boost::multi_array_ref<float, 3>
-		pixels((float *)field->lattice.dataPtr(),
+		pixels((float *)field->lattice().dataPtr(),
 		boost::extents[fdims[0]][fdims[1]][fdims[2]],
 		boost::fortran_storage_order());
-	float *angles_float = new float[field->lattice.dims()[2]];
-	field->parameters.findReal("Angles", field->lattice.dims()[2], angles_float);
+	float *angles_float = new float[field->lattice().getDims()[2]];
+	field->parameters.findReal("Angles", field->lattice().getDims()[2], angles_float);
 	float *pixel_size = new float[2];
 	field->parameters.findReal("DetectorPixelSize", 2,pixel_size);
 	double srcToObject;
@@ -199,14 +199,14 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 		dims[1] = voxels->shape()[1];
 		dims[2] = voxels->shape()[2];
 		HxUniformScalarField3* output =
-			new HxUniformScalarField3(dims, McPrimType::mc_float);
+			new HxUniformScalarField3(dims, McPrimType::MC_FLOAT);
 		for (int i = 0; i < dims[0]; i++)
 			for (int j = 0; j < dims[1]; j++)
 				for (int k = 0; k < dims[2]; k++)
 					output->set(i, j, k, (*voxels)[i][j][k]);
 		delete voxels;
-		HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice.coords();
-		float *bx = coords->bbox();
+		HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice().coords();
+		McBox3f bx = coords->getBoundingBox();
 		bx[0] = vox_origin[0];
 		bx[1] = vox_origin[0] + float(dims[0]) * vox_size[0];
 		bx[2] = vox_origin[1];

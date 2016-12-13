@@ -1,6 +1,6 @@
 #include <QApplication>
 #include <hxcore/HxMessage.h>
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
 #include "CCPiXtekAvizoPrepareFilter.h"
 
@@ -24,17 +24,17 @@ void CCPiXtekAvizoPrepareFilter::compute()
 
 	// Access the input data object. The member portData, which is of type
     // HxConnection, is inherited from HxModule.
-    HxUniformScalarField3 *field = (HxUniformScalarField3*) portData.source();
+    HxUniformScalarField3 *field = (HxUniformScalarField3*) portData.getSource();
     // Check input data
-	if (field->primType() != McPrimType::mc_uint16 || field->parameters.find("VoxelSize",3) == NULL) {
+	if (field->primType() != McPrimType::MC_UINT16 || field->parameters.find("VoxelSize",3) == NULL) {
         theMsg->stream() << "This module only works on a Xtek data" <<std::endl;
         return;
     }
     theWorkArea->startWorking(
      QApplication::translate("CCPiXtekAvizoPrepareFilter", "Preparing data"));   
-	numberOfVerticalPixels = field->lattice.dims()[1];
-	numberOfHorizontalPixels = field->lattice.dims()[0];
-	numberOfProjections = field->lattice.dims()[2];
+	numberOfVerticalPixels = field->lattice().getDims()[1];
+	numberOfHorizontalPixels = field->lattice().getDims()[0];
+	numberOfProjections = field->lattice().getDims()[2];
 	angles = new float[numberOfProjections];
 	field->parameters.findReal("Angles", numberOfProjections, angles);
 	  
@@ -55,7 +55,7 @@ void CCPiXtekAvizoPrepareFilter::compute()
 	theWorkArea->setProgressInfo("Copying data");
 	theWorkArea->setProgressValue(0.4);
     // Output shall have same bounding box as input
-    output->coords()->setBoundingBox(field->bbox());
+    output->coords()->setBoundingBox(field->getBoundingBox());
 	//Set the output parameters
 	setParameters(output);
 	//Copy the data
@@ -67,7 +67,7 @@ void CCPiXtekAvizoPrepareFilter::compute()
 	double scattering;
 	field->parameters.findReal("WhiteLevel",whiteLevel);
 	field->parameters.findReal("Scattering",scattering);
-	normalize((float*)output->lattice.dataPtr(), numberOfProjections, numberOfHorizontalPixels,numberOfVerticalPixels, whiteLevel, scattering);
+	normalize((float*)output->lattice().dataPtr(), numberOfProjections, numberOfHorizontalPixels,numberOfVerticalPixels, whiteLevel, scattering);
 	theWorkArea->setProgressValue(1.0);
 	// Add to the workspace
 	setResult(output);
@@ -94,18 +94,18 @@ HxUniformScalarField3* CCPiXtekAvizoPrepareFilter::createOutput(HxUniformScalarF
         output = NULL;
     
     // Check if size and primitive type still match current input
-    const int *dims = field->lattice.dims();
+    McDim3l dims = field->lattice().getDims();
     if (output) {
-        const int *outdims = output->lattice.dims();
+        McDim3l outdims = output->lattice().getDims();
         if ( dims[0] != outdims[0] || dims[1] != outdims[1] ||
-			dims[2] != outdims[2] || output->primType() != McPrimType::mc_float )
+			dims[2] != outdims[2] || output->primType() != McPrimType::MC_FLOAT )
             
             output = NULL;
     }
     
     // If necessary create a new result data set
     if (!output) {
-        output = new HxUniformScalarField3(dims, McPrimType::mc_float);
+        output = new HxUniformScalarField3(dims, McPrimType::MC_FLOAT);
         output->composeLabel(field->getName(), "result");
     }
 
@@ -119,8 +119,8 @@ HxUniformScalarField3* CCPiXtekAvizoPrepareFilter::createOutput(HxUniformScalarF
  */
 void CCPiXtekAvizoPrepareFilter::copyData(HxUniformScalarField3* src, HxUniformScalarField3* dst)
 {
-	float *dstPixels = (float *)dst->lattice.dataPtr();
-	uint16_t *srcPixels = (uint16_t *)src->lattice.dataPtr();
+	float *dstPixels = (float *)dst->lattice().dataPtr();
+	uint16_t *srcPixels = (uint16_t *)src->lattice().dataPtr();
 	//Change the data image order
 	unsigned long long angval = 1;
 	unsigned long long vval = 1;

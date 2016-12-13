@@ -47,10 +47,17 @@ dataFile -name	"Xradia Format(CCPi)" \
 	   -ext		"txrm" \
 	   -load	"CCPiXradiaAvizoReader"\
 	   -package "CCPiReconstruction"
-	   
+
 module -name     "XTekPrepareFilter" \
        -primary  "HxUniformScalarField3" \
        -class    "CCPiXtekAvizoPrepareFilter" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+module -name     "XradiaPrepareFilter" \
+       -primary  "HxUniformScalarField3" \
+       -class    "CCPiXradiaAvizoPrepareFilter" \
        -category "CCPi" \
        -package  "CCPiReconstruction" \
        -icon     "TVDefCompute"

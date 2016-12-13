@@ -1,7 +1,7 @@
 
 #include <QApplication>
 #include <hxcore/HxMessage.h>
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 
 #include "base_types.hpp"
 #include "ui_messages.hpp"

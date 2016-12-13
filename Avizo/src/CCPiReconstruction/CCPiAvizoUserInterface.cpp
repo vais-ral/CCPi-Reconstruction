@@ -1,7 +1,7 @@
 #include "CCPiAvizoUserInterface.h"
 
 #include <hxcore/HxMessage.h>
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 
 
 void CCPiAvizoUserInterface::LogMessage(std::string message)

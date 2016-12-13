@@ -5,7 +5,7 @@
 #include <QApplication>
 
 #include <hxcore/HxMessage.h>
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
 #include <hxcore/HxFileDialog.h>
 
@@ -57,7 +57,7 @@ XTek_recon::~XTek_recon()
 void XTek_recon::compute()
 {
 	if (portAction.wasHit()) {
-		HxFileDialog *dialog = HxFileDialog::_getTheFileDialog();
+		HxFileDialog *dialog = HxFileDialog::getTheFileDialog();
 		QString filter = dialog->getFileNameFilter(QString::fromAscii("XTek"),
 			QString::fromAscii("xtekct"));
 		QString filename = dialog->getOpenFileName(QString("Select XTek File"),QString(""), filter).first;
@@ -120,14 +120,14 @@ void XTek_recon::run_reconstruction(const std::string filename)
     dims[1] = voxels->shape()[1];
     dims[2] = voxels->shape()[2];
     HxUniformScalarField3* output =
-      new HxUniformScalarField3(dims, McPrimType::mc_float);
+      new HxUniformScalarField3(dims, McPrimType::MC_FLOAT);
     for (int i = 0; i < dims[0]; i++)
       for (int j = 0; j < dims[1]; j++)
 	for (int k = 0; k < dims[2]; k++)
 	  output->set(i, j, k, (*voxels)[i][j][k]);
     delete voxels;
-    HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice.coords();
-    float *bx = coords->bbox();
+    HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice().coords();
+    McBox3f bx = coords->getBoundingBox();
     bx[0] = vox_origin[0];
     bx[1] = vox_origin[0] + float(dims[0]) * vox_size[0];
     bx[2] = vox_origin[1];

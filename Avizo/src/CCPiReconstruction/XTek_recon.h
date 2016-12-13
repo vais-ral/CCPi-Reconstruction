@@ -20,9 +20,6 @@ class CCPIRECONSTRUCTION_API XTek_recon : public HxCompModule
 
   public:
 
-    XTek_recon();
-    ~XTek_recon();
-
     HxPortDoIt portAction;
     HxPortRadioBox algorithm;
     HxPortIntSlider iterations;

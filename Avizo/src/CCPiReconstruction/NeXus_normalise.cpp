@@ -8,10 +8,10 @@
 #include <QApplication>
 
 #include <hxcore/HxMessage.h>
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 #include <hxcore/HxObjectPool.h>
 #include <hxfield/HxUniformScalarField3.h>
-#include <hxfield/HxMultiChannelField3.h>
+#include <hxfield/internal/HxMultiChannelField3.h>
 
 #include "NeXus_normalise.h"
 #include "base_types.hpp"
@@ -38,7 +38,7 @@ NeXus_normalise::~NeXus_normalise()
 void NeXus_normalise::compute()
 {
   if (portAction.wasHit()) {
-	  HxMultiChannelField3 *mcf = new HxMultiChannelField3();
+	  HxMultiChannelField3 *mcf = HxMultiChannelField3::createInstance();
 	  mcf->setLabel("TomoProjection");
 	  theObjectPool->addObject(mcf);
 	  if (validateAndPopulateData(mcf))
@@ -53,46 +53,46 @@ void NeXus_normalise::compute()
 
 bool NeXus_normalise::validateAndPopulateData(HxMultiChannelField3 *mcf)
 {
-	HxUniformScalarField3* field = (HxUniformScalarField3*) portData.source();
+	HxUniformScalarField3* field = (HxUniformScalarField3*) portData.getSource();
 	// Check whether the input port is connected
 	if (field == 0)
 		return false;
 	HxUniformScalarField3* rot_angle =
-		(HxUniformScalarField3*) rotationAngle.source();
+		(HxUniformScalarField3*) rotationAngle.getSource();
 	//Check the Rotation Angle 
 	//if angle is not assigned then check whether the field has the parameter 'Angles'
-	if (rot_angle == 0 or rot_angle->lattice.dims()[0] == 1)
+	if (rot_angle == 0 or rot_angle->lattice().getDims()[0] == 1)
 	{	
 		HxParameter* param = field->parameters.find("Angles");
 		if(param==NULL)
 			return false;
 		else
 		{
-			angles = new double[param->dim()];
+			angles = new double[param->getDimension()];
 			param->getReal(angles);
 		}
 	} else {
-		angles = (double*)rot_angle->lattice.dataPtr();
+		angles = (double*)rot_angle->lattice().dataPtr();
 	}
 	//Check the Pixels
 	HxUniformScalarField3* pixel_size =
-		(HxUniformScalarField3*) pixelSize.source();
-	if (pixel_size == 0 or pixel_size->lattice.dims()[0] != 2)
+		(HxUniformScalarField3*) pixelSize.getSource();
+	if (pixel_size == 0 or pixel_size->lattice().getDims()[0] != 2)
 	{
 		HxParameter* param = field->parameters.find("PixelSize");
 		if(param==NULL)
 			return false;
 		else
 		{
-			pixelSizeXY = new double[param->dim()];
+			pixelSizeXY = new double[param->getDimension()];
 			param->getReal(pixelSizeXY);
 			//Register new dataset since pixel size dataset is not available
 			int adims[3];
 			adims[0]=2;
 			adims[1]=1;
 			adims[2]=1;
-			HxUniformScalarField3* pixelData = new HxUniformScalarField3(adims, McPrimType::mc_float);
-			float *pixelDataPtr = (float*)pixelData->lattice.dataPtr();
+			HxUniformScalarField3* pixelData = new HxUniformScalarField3(adims, McPrimType::MC_FLOAT);
+			float *pixelDataPtr = (float*)pixelData->lattice().dataPtr();
 			pixelDataPtr[0] = pixelSizeXY[0];
 			pixelDataPtr[1] = pixelSizeXY[1];
 			HxData::registerData(pixelData, "pixels (x,y)");
@@ -101,43 +101,43 @@ bool NeXus_normalise::validateAndPopulateData(HxMultiChannelField3 *mcf)
 	}
 	//Check the image key
 	HxUniformScalarField3* image_key =
-		(HxUniformScalarField3*) imageKey.source();
-	if (image_key == 0 or image_key->lattice.dims()[0] == 1)
+		(HxUniformScalarField3*) imageKey.getSource();
+	if (image_key == 0 or image_key->lattice().getDims()[0] == 1)
 	{
 		HxParameter* param = field->parameters.find("ImageKey");
 		if(param==NULL)
 			return false;
 		else
 		{
-			numberOfKeys = param->dim();
+			numberOfKeys = param->getDimension();
 			imageKeyIds = new int[numberOfKeys];
 			param->getNum(imageKeyIds);
 		}
 	} else {
-		numberOfKeys = image_key->lattice.dims()[0];
+		numberOfKeys = image_key->lattice().getDims()[0];
 		// Is this the right order?
-		if (numberOfKeys != field->lattice.dims()[2]) {
+		if (numberOfKeys != field->lattice().getDims()[2]) {
 			theMsg->error(QApplication::translate("NeXus_normalise",
 				"Image key/data dim mismatch"));
 			return false;
 		}
 		// check types - are these right?
-		if (image_key->lattice.primType() != McPrimType::mc_int32) {
+		if (image_key->lattice().primType() != McPrimType::MC_INT32) {
 			theMsg->error(QApplication::translate("NeXus_normalise",
 				"Incorrect type for image keys"));
 			return false;
 		}
-		imageKeyIds = (int *)image_key->lattice.dataPtr();
+		imageKeyIds = (int *)image_key->lattice().dataPtr();
 	}
 	return true;
 }
 
 void NeXus_normalise::normalise(HxMultiChannelField3 *mcf)
 {
-  HxUniformScalarField3* field = (HxUniformScalarField3*) portData.source();
-  const int *fdims = field->lattice.dims();
+  HxUniformScalarField3* field = (HxUniformScalarField3*) portData.getSource();
+  McDim3l fdims = field->lattice().getDims();
   boost::multi_array_ref<short, 3>
-    data((short *)field->lattice.dataPtr(),
+    data((short *)field->lattice().dataPtr(),
 	 boost::extents[fdims[2]][fdims[1]][fdims[0]]);
 
   // find number of projections
@@ -151,9 +151,9 @@ void NeXus_normalise::normalise(HxMultiChannelField3 *mcf)
   dims[1] = fdims[1];
   dims[2] = nprojections;
   HxUniformScalarField3* output =
-    new HxUniformScalarField3(dims, McPrimType::mc_float);
+    new HxUniformScalarField3(dims, McPrimType::MC_FLOAT);
   boost::multi_array_ref<float, 3>
-    pixels((float *)output->lattice.dataPtr(),
+    pixels((float *)output->lattice().dataPtr(),
 	   boost::extents[dims[2]][dims[1]][dims[0]]);
   // update angles
   int adims[3];
@@ -161,8 +161,8 @@ void NeXus_normalise::normalise(HxMultiChannelField3 *mcf)
   adims[1] = 1;
   adims[2] = 1;
   HxUniformScalarField3* new_angles =
-    new HxUniformScalarField3(adims, McPrimType::mc_float);
-  float *aptr = (float *)new_angles->lattice.dataPtr();
+    new HxUniformScalarField3(adims, McPrimType::MC_FLOAT);
+  float *aptr = (float *)new_angles->lattice().dataPtr();
   int projectionIndex=0;
   int n_ibright=0;
   int n_fbright=0;

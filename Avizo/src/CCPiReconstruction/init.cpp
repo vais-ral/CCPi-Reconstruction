@@ -11,6 +11,8 @@ void mcExitClass_CCPiXtekNoShiftReconstruction();
 void mcInitClass_CCPiXtekNoShiftReconstruction();
 void mcExitClass_CCPiXtekAvizoPrepareFilter();
 void mcInitClass_CCPiXtekAvizoPrepareFilter();
+void mcExitClass_CCPiXradiaAvizoPrepareFilter();
+void mcInitClass_CCPiXradiaAvizoPrepareFilter();
 
 
 extern "C"
@@ -31,6 +33,7 @@ void amirapackage_CCPiReconstruction_init()
     mcInitClass_Cone_Beam_recon();
     mcInitClass_CCPiXtekNoShiftReconstruction();
     mcInitClass_CCPiXtekAvizoPrepareFilter();
+    mcInitClass_CCPiXradiaAvizoPrepareFilter();
 
 }
 
@@ -48,6 +51,7 @@ void amirapackage_CCPiReconstruction_finish()
     isFinished = true;
 
 
+    mcExitClass_CCPiXradiaAvizoPrepareFilter();
     mcExitClass_CCPiXtekAvizoPrepareFilter();
     mcExitClass_CCPiXtekNoShiftReconstruction();
     mcExitClass_Cone_Beam_recon();
@@ -58,6 +62,8 @@ void amirapackage_CCPiReconstruction_finish()
 
 #if defined(_WIN32)
 #  include <windows.h>
+
+
 BOOL WINAPI DllMain(
     __in  HINSTANCE hinstDLL,
     __in  DWORD fdwReason,

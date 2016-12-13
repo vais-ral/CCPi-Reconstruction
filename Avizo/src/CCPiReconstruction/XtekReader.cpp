@@ -6,8 +6,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
-#include "exlibtiff.h"
-#include "tiffio.h"
+#include "exlibtiff/internal/exlibtiff.h"
+#include "exlibtiff/internal/tiffio.h"
 
 //Constructor
 
