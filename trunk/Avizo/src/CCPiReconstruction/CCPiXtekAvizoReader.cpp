@@ -4,9 +4,9 @@
 #include <hxfield/HxUniformScalarField3.h>
 #include <amiramesh/HxParamBundle.h>
 #include "CCPiAvizoUserInterface.h"
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 #include <QApplication.h>
-#include <hxcore/HxThread.h>
+#include <hxcore/internal/HxThread.h>
 #include <boost/filesystem.hpp>
 
 void setParameters(HxUniformScalarField3 *field, XtekReader reader);
@@ -22,9 +22,9 @@ int CCPiXTekAvizoReader(const char* filename)
 	newDims[0] = reader.getImageWidth();
 	newDims[1] = reader.getImageHeight();
 	newDims[2] = reader.getNumberOfProjections();
-	HxUniformScalarField3 *field = new HxUniformScalarField3(newDims, McPrimType::mc_uint16);
+	HxUniformScalarField3 *field = new HxUniformScalarField3(newDims, McPrimType::MC_UINT16);
 	uint16_t *data = reader.getImageData();
-	uint16_t *rawout=(uint16_t *)field->lattice.dataPtr();
+	uint16_t *rawout=(uint16_t *)field->lattice().dataPtr();
 	unsigned long long totalsize = 1;
 	for(int i=0;i<3;i++)
 		totalsize *= newDims[i];
@@ -32,9 +32,9 @@ int CCPiXTekAvizoReader(const char* filename)
 	for(unsigned long long idx=0;idx<totalsize;idx++)
 		rawout[idx]=data[idx];
 
-	HxUniformCoord3 * coords =(HxUniformCoord3 *) field->lattice.coords();
-	float * bx;
-	bx=coords->bbox();
+	HxUniformCoord3 * coords =(HxUniformCoord3 *) field->lattice().coords();
+	McBox3f bx;
+	bx=coords->getBoundingBox();
 	bx[0]=0;
 	if(newDims[0]!=1)
 		bx[1]=(float)newDims[0]-1;

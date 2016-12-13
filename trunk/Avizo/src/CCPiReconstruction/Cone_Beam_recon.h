@@ -19,9 +19,6 @@ class CCPIRECONSTRUCTION_API Cone_Beam_recon : public HxCompModule
 
   public:
 
-    Cone_Beam_recon();
-    ~Cone_Beam_recon();
-
     HxPortDoIt portAction;
     HxConnection rotationAngle;
     // Todo - optional detector shift for some instruments

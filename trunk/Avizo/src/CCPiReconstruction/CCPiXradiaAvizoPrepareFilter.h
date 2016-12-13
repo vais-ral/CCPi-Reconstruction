@@ -17,8 +17,6 @@ class CCPIRECONSTRUCTION_API CCPiXradiaAvizoPrepareFilter : public HxCompModule
 	HX_HEADER(CCPiXradiaAvizoPrepareFilter);	
 
   public:
-    CCPiXradiaAvizoPrepareFilter();
-    ~CCPiXradiaAvizoPrepareFilter();
 
     /** Port providing a button to click to run the module */
     HxPortDoIt portAction;

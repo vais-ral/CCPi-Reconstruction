@@ -20,9 +20,6 @@ class CCPIRECONSTRUCTION_API Parallel_Beam_recon : public HxCompModule
 
  public:
 
-  Parallel_Beam_recon();
-  ~Parallel_Beam_recon();
-
   HxPortDoIt portAction;
   HxConnection rotationAngle;
   HxConnection pixelSize;

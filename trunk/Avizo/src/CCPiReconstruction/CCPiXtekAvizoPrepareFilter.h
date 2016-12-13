@@ -17,8 +17,6 @@ class CCPIRECONSTRUCTION_API CCPiXtekAvizoPrepareFilter : public HxCompModule
 	HX_HEADER(CCPiXtekAvizoPrepareFilter);	
 
   public:
-    CCPiXtekAvizoPrepareFilter();
-    ~CCPiXtekAvizoPrepareFilter();
 
     /** Port providing a button to click to run the module */
     HxPortDoIt portAction;

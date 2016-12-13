@@ -5,7 +5,7 @@
 #include <QApplication>
 
 #include <hxcore/HxMessage.h>
-#include <hxcore/HxWorkArea.h>
+#include <hxcore/internal/HxWorkArea.h>
 #include <hxfield/HxUniformScalarField3.h>
 
 #include "Parallel_Beam_recon.h"
@@ -75,19 +75,19 @@ void Parallel_Beam_recon::compute()
     ccpi_recon::do_progress = false;
     ccpi_recon::messages = theMsg;
     ccpi_recon::progress = theWorkArea;
-    HxUniformScalarField3* field = (HxUniformScalarField3*) portData.source();
+    HxUniformScalarField3* field = (HxUniformScalarField3*) portData.getSource();
     // Check whether the input port is connected
     if (field == 0)
       return;
     HxUniformScalarField3* rot_angle =
-      (HxUniformScalarField3*) rotationAngle.source();
+      (HxUniformScalarField3*) rotationAngle.getSource();
     //Check the Rotation Angle
-    if (rot_angle == 0 or rot_angle->lattice.dims()[0] == 1)
+    if (rot_angle == 0 or rot_angle->lattice().getDims()[0] == 1)
       return;
     //Check the Pixels
     HxUniformScalarField3* pixel_size =
-      (HxUniformScalarField3*) pixelSize.source();
-    if (pixel_size == 0 or pixel_size->lattice.dims()[0] != 2)
+      (HxUniformScalarField3*) pixelSize.getSource();
+    if (pixel_size == 0 or pixel_size->lattice().getDims()[0] != 2)
       return;
 	
     // Todo - check that its a float field?
@@ -102,20 +102,20 @@ void Parallel_Beam_recon::compute()
 
 void Parallel_Beam_recon::run_reconstruction()
 {
-  HxUniformScalarField3* field = (HxUniformScalarField3*) portData.source();
-  const int *fdims = field->lattice.dims();
+  HxUniformScalarField3* field = (HxUniformScalarField3*) portData.getSource();
+  McDim3l fdims = field->lattice().getDims();
   boost::multi_array_ref<float, 3>
-    pixels((float *)field->lattice.dataPtr(),
+    pixels((float *)field->lattice().dataPtr(),
 	   boost::extents[fdims[2]][fdims[1]][fdims[0]]);//,
 	   //boost::fortran_storage_order());
   //messages->error(QApplication::translate("Parallel_Beam",std::to_string((long double)fdims[2]).c_str()));// std::to_string((long double)fdims[2])));
   HxUniformScalarField3* rot_angle =
-    (HxUniformScalarField3*) rotationAngle.source();
-  boost::multi_array_ref<float, 1> angles((float *)rot_angle->lattice.dataPtr(),
+    (HxUniformScalarField3*) rotationAngle.getSource();
+  boost::multi_array_ref<float, 1> angles((float *)rot_angle->lattice().dataPtr(),
 					  boost::extents[fdims[2]]);
 
-  HxUniformScalarField3* pix = (HxUniformScalarField3*) pixelSize.source();
-  float *pixel_ptr = (float *)pix->lattice.dataPtr();
+  HxUniformScalarField3* pix = (HxUniformScalarField3*) pixelSize.getSource();
+  float *pixel_ptr = (float *)pix->lattice().dataPtr();
   real h_size = pixel_ptr[0];
   real v_size = pixel_ptr[1];
 
@@ -155,15 +155,15 @@ void Parallel_Beam_recon::run_reconstruction()
     dims[1] = voxels->shape()[1];
     dims[2] = voxels->shape()[0];
     HxUniformScalarField3* output =
-      new HxUniformScalarField3(dims, McPrimType::mc_float);
+      new HxUniformScalarField3(dims, McPrimType::MC_FLOAT);
     for (int i = 0; i < dims[0]; i++)
       for (int j = 0; j < dims[1]; j++)
 	for (int k = 0; k < dims[2]; k++)
 	  output->set(i, j, k, (*voxels)[k][j][i]);
     delete voxels;
     // set bounding box for coords based on pixel sizes - is this right?
-    HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice.coords();
-    float *bx = coords->bbox();
+    HxUniformCoord3 *coords =(HxUniformCoord3 *) output->lattice().coords();
+    McBox3f bx = coords->getBoundingBox();
     // z extent - (dims[0] / 2) * (pixels_per_voxel * v_size)
     bx[1] = float(dims[0] / 2) * pixels_per_voxel * v_size;
     bx[0] = - bx[1];

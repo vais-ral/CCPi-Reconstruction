@@ -16,9 +16,6 @@ class CCPIRECONSTRUCTION_API NeXus_normalise : public HxCompModule
 
  public:
 
-  NeXus_normalise();
-  ~NeXus_normalise();
-
   HxPortDoIt portAction;
   HxConnection rotationAngle;
   HxConnection imageKey;
