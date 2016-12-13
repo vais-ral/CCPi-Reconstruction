@@ -1,0 +1,70 @@
+################################################################################
+#
+# Resource file of custom package CCPi
+#
+################################################################################
+
+
+module -name     "Reconstruction(ParallelBeam)" \
+       -primary  "HxUniformScalarField3" \
+       -class    "Parallel_Beam_recon" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "Reconstruction(ConeBeam)" \
+       -primary  "HxUniformScalarField3" \
+       -class    "Cone_Beam_recon" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "Normalisation(DLS)" \
+       -primary  "HxUniformScalarField3" \
+       -class    "NeXus_normalise" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+
+module -name     "Reconstruction(XTek)" \
+       -primary  "HxUniformScalarField3" \
+       -class    "XTek_recon" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+dataFile -name	"XTek Format(CCPi)" \
+	   -option "ccpi_xtekct" \
+	   -ext		"xtekct" \
+	   -load	"CCPiXTekAvizoReader"\
+	   -package "CCPiReconstruction"
+
+dataFile -name	"Xradia Format(CCPi)" \
+	   -option "ccpi_xradia" \
+	   -ext		"txrm" \
+	   -load	"CCPiXradiaAvizoReader"\
+	   -package "CCPiReconstruction"
+
+module -name     "XTekPrepareFilter" \
+       -primary  "HxUniformScalarField3" \
+       -class    "CCPiXtekAvizoPrepareFilter" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+module -name     "XradiaPrepareFilter" \
+       -primary  "HxUniformScalarField3" \
+       -class    "CCPiXradiaAvizoPrepareFilter" \
+       -category "CCPi" \
+       -package  "CCPiReconstruction" \
+       -icon     "TVDefCompute"
+
+module -name "Reconstruction(XTekNoShifts)"\
+	   -primary "HxUniformScalarField3"\
+	   -class "CCPiXtekNoShiftReconstruction"\
+	   -category "CCPi"\
+	   -package "CCPiReconstruction"\
+	   -icon "TVDefCompute"

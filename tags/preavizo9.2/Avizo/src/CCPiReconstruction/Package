@@ -1,0 +1,51 @@
+set PACKAGE {CCPiReconstruction}
+
+set LIBS {
+    hxplot hxtime hxsurface hxcolor hxfield
+    hxcore amiramesh mclib oiv tcl exlibtiff boost_system qt
+}
+
+set LIBS-Win {
+    boost_math_tr1 vcomp
+}
+
+set SHARE {
+    share/resources/CCPiReconstruction.rc
+}
+
+set INCLUDES {
+    ../../../src
+    $(MAINROOT)/include/exlibtiff
+}
+
+set SRC {
+    Parallel_Beam_recon.cpp
+    Cone_Beam_recon.cpp
+    NeXus_normalise.cpp
+    XTek_recon.cpp
+    CCPiXtekAvizoPrepareFilter.cpp
+    CCPiXtekNoShiftReconstruction.cpp
+    CCPiXtekAvizoReader.cpp
+    XtekReader.cpp
+    ui_messages.cpp
+    ../../../src/results.cpp
+    ../../../src/instruments.cpp
+    ../../../src/parallel.cpp
+    ../../../src/cone.cpp
+    ../../../src/diamond.cpp
+    ../../../src/xtek.cpp
+    ../../../src/cgls.cpp
+    ../../../src/sirt.cpp
+    ../../../src/mlem.cpp
+    ../../../src/tikhonov.cpp
+    ../../../src/total_v.cpp
+    ../../../src/p2D.cpp
+    ../../../src/tv_reg.cpp
+    ../../../src/tv_core.cpp
+    ../../../src/tiff.cpp
+    ../../../src/timer.cpp
+    ../../../src/utils.cpp
+    ../../../src/mpi.cpp
+    ../../../src/c2D.cpp
+    ../../../src/voxels.cpp
+}
