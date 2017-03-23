@@ -9,7 +9,7 @@ import os
 import numpy
 import platform	
 
-extra_compile_args = ['-O2', '-funsigned-char', '-Wall', '-Werror']
+extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall', '-Werror']
 if platform.system() == 'Windows':
    extra_compile_args[0:] = ['/DWIN32','/EHsc']
 setup(
@@ -37,11 +37,10 @@ setup(
 										"p2D.cpp",
 										"c2D.cpp",
 										"tiff.cpp",
-										"utils.cpp",
 										"timer.cpp",
 										"tikhonov.cpp",
 										"ui_calls.cpp"],
-                             include_dirs=[numpy.get_include(), os.environ['BOOST_INCLUDE'],], extra_compile_args=extra_compile_args), 
+                             include_dirs=[numpy.get_include(), ], extra_compile_args=extra_compile_args), 
 				  Extension("ccpi.filters",
                              sources=["ccpi_filters.cpp", 
 										"mpi.cpp", 
@@ -62,10 +61,9 @@ setup(
 										"p2D.cpp",
 										"c2D.cpp",
 										"tiff.cpp",
-										"utils.cpp",
 										"timer.cpp",
 										"tikhonov.cpp",
 										"ui_calls.cpp"],
-                             include_dirs=[numpy.get_include(), os.environ['BOOST_INCLUDE'],], extra_compile_args=extra_compile_args)							 ],
+                             include_dirs=[numpy.get_include(), ], extra_compile_args=extra_compile_args)							 ],
 	packages = {'ccpi'}
 )
