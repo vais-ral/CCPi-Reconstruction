@@ -19,7 +19,7 @@ using namespace boost::python;
 #include "reconstruct.hpp"
 #include "reconstruct.cpp"
 
-BOOST_PYTHON_MODULE(reconstruction)
+BOOST_PYTHON_MODULE(filters)
 {
   import_array();
   numpy_boost_python_register_type<float, 1>();
@@ -28,11 +28,4 @@ BOOST_PYTHON_MODULE(reconstruction)
   numpy_boost_python_register_type<double, 3>();
   //def("test", test);
   def("aml_ring_artefacts", ring_artefacts_aml);
-  def("cgls", reconstruct_cgls);
-  def("cgls_conv", reconstruct_cgls2);
-  def("sirt", reconstruct_sirt);
-  def("mlem", reconstruct_mlem);
-  def("cgls_tikhonov", reconstruct_cgls_tikhonov);
-  def("cgls_TVreg", reconstruct_cgls_tvreg);
-  //def("tvreg", reconstruct_tvreg);
 }

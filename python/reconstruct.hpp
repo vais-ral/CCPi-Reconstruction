@@ -1,4 +1,6 @@
-
+#include "include/numpy_boost.hpp"
+#include "include/numpy_boost_python.hpp"
+#include "base_types.hpp"
 extern numpy_boost<double, 3>
 ring_artefacts_aml(const numpy_boost<double, 3> &pixels,
 		   const float param_n, const float param_r,
