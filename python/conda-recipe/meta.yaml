@@ -12,14 +12,14 @@ requirements:
     - python
     - numpy
     - setuptools
-    - boost	
-    - boost-cpp
+    - boost ==1.63	
+    - boost-cpp ==1.63
     - cython
 
   run:
     - python
     - numpy
-    - boost
+    - boost ==1.63
 
 	
 about:
