@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QtCore>
+#include <QtConcurrent/QtConcurrent>
 #include "UserInterfaceQT.h"
 extern UserInterfaceQT ui_calls;
 ReconstructionWizardImpl::ReconstructionWizardImpl(void)

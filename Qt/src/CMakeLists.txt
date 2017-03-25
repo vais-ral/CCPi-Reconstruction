@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 
 PROJECT(CCPiReconstructionQt)
 
-FIND_PACKAGE(Qt4 REQUIRED)
+find_package(Qt5 COMPONENTS Core Widgets Concurrent REQUIRED)
 FIND_PACKAGE( Boost 1.55 COMPONENTS system filesystem REQUIRED )
 FIND_PACKAGE(OpenMP)
 FIND_PACKAGE(TIFF REQUIRED)
@@ -20,10 +20,12 @@ SET(CCPiReconstructionQt_SOURCES ReconstructionWizardImpl.cpp UserInterfaceQT.cp
 SET(CCPiReconstructionQt_HEADERS ReconstructionWizardImpl.h UserInterfaceQT.h ProgressWizardPage.h SavingWizardPage.h)
 SET(CCPiReconstruction_FORMS ReconstructionWizard.ui)
 
-QT4_WRAP_CPP(CCPiReconstructionQt_HEADERS_MOC ${CCPiReconstructionQt_HEADERS})
-QT4_WRAP_UI(CCPiReconstructionQt_FORMS_HEADERS ${CCPiReconstruction_FORMS})
+QT5_WRAP_CPP(CCPiReconstructionQt_HEADERS_MOC ${CCPiReconstructionQt_HEADERS})
+QT5_WRAP_UI(CCPiReconstructionQt_FORMS_HEADERS ${CCPiReconstruction_FORMS})
 
-INCLUDE(${QT_USE_FILE})
+#INCLUDE(${QT_USE_FILE})
+include_directories(${Qt5Widgets_INCLUDE_DIRS} ${Qt5Core_INCLUDE_DIRS} ${Qt5Concurrent} )
+SET(QT_LIBRARIES Qt5::Widgets Qt5::Core Qt5::Concurrent)
 ADD_DEFINITIONS(${QT_DEFINITIONS})
 include_directories( ${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ../../src ../../src/Algorithms ../../src/Instruments ../../src/Readers ${CMAKE_CURRENT_BINARY_DIR} ${TIFF_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
