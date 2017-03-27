@@ -14,7 +14,7 @@
 numpy_boost<double, 3> ring_artefacts_aml(const numpy_boost<double, 3> &pixels,
 					  const float param_n,
 					  const float param_r,
-					  const int num_series,bool is_pixels_in_log)
+					  const int num_series)
 {
   // Todo - worry about float/double precision loss
   sl_int nangles = (sl_int)pixels.shape()[0];
@@ -22,23 +22,13 @@ numpy_boost<double, 3> ring_artefacts_aml(const numpy_boost<double, 3> &pixels,
   sl_int nv = (sl_int)pixels.shape()[1];
   // issue with change of precision?
   pixel_3d p(boost::extents[nangles][nh][nv]);
-  if(is_pixels_in_log){
-	for (int i = 0; i < nangles; i++) {
-		for (sl_int j = 0; j < nh; j++) {
-			for (sl_int k = 0; k < nv; k++) {
-				p[i][j][k] = pixels[i][k][j];
-			}
+  for (int i = 0; i < nangles; i++) {
+	for (sl_int j = 0; j < nh; j++) {
+		for (sl_int k = 0; k < nv; k++) {
+			p[i][j][k] = - std::log(pixels[i][k][j]);
 		}
 	}
-  }else{
-	for (int i = 0; i < nangles; i++) {
-		for (sl_int j = 0; j < nh; j++) {
-			for (sl_int k = 0; k < nv; k++) {
-				p[i][j][k] = - std::log(pixels[i][k][j]);
-			}
-		}
-	}	  
-  }
+  }	  
   CCPi::remove_aml_ring_artefacts(p, nangles, nh, nv, param_n,
 				  param_r, num_series);
   int dims[3];
