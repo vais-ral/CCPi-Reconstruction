@@ -392,7 +392,7 @@ bool CCPi::Diamond::read_data(const std::string path, const int offset,
 }
 
 bool CCPi::Diamond::read_scans(const numpy_3d &pixel_array,
-			       const int offset, const int block_size)
+			       const int offset, const int block_size, bool is_pixel_in_log)
 {
   // bits from read_data
   int nv = get_num_v_pixels();
@@ -413,18 +413,39 @@ bool CCPi::Diamond::read_scans(const numpy_3d &pixel_array,
   set_v_offset(offset);
   // Copy pixels
   pixel_data &pixels = create_pixel_data();
-  for (int i = 0; i < nangles; i++) {
-    for (sl_int j = 0; j < nh; j++) {
-      // initialise aligned bits that don't contain data
-      for (sl_int k = 0; k < v_offset; k++) {
-	pixels[i][j][k] = 0.0;
-      }
-      for (sl_int k = v_offset; k < v_end; k++)
-	pixels[i][j][k] = - std::log(pixel_array[i][k - v_offset][j]);
-      for (sl_int k = v_end; k < nv; k++) {
-	pixels[i][j][k] = 0.0;
-      }
-    }
+
+  if (is_pixel_in_log) {
+	  for (int i = 0; i < nangles; i++) {
+		  for (sl_int j = 0; j < nh; j++) {
+			  // initialise aligned bits that don't contain data
+			  for (sl_int k = 0; k < v_offset; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+			  for (sl_int k = v_offset; k < v_end; k++) {
+				  pixels[i][j][k] = pixel_array[i][k - v_offset][j];
+			  }
+			  for (sl_int k = v_end; k < nv; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+		  }
+	  }
+  }
+  else 
+  {
+	  for (int i = 0; i < nangles; i++) {
+		  for (sl_int j = 0; j < nh; j++) {
+			  // initialise aligned bits that don't contain data
+			  for (sl_int k = 0; k < v_offset; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+			  for (sl_int k = v_offset; k < v_end; k++) {
+				  pixels[i][j][k] = -std::log(pixel_array[i][k - v_offset][j]);
+			  }
+			  for (sl_int k = v_end; k < nv; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+		  }
+	  }
   }
   return true;
 }

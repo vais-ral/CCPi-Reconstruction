@@ -516,7 +516,7 @@ bool CCPi::Nikon_XTek::read_images(const std::string path)
 }
 
 bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
-				  const int offset, const int block_size)
+				  const int offset, const int block_size, bool is_pixels_in_log)
 {
   // bits from read_data
   int nv = get_num_v_pixels();
@@ -528,18 +528,36 @@ bool CCPi::Nikon_XTek::read_scans(const numpy_3d &pixel_array,
   set_v_offset(offset);
   // Copy pixels
   pixel_data &pixels = create_pixel_data();
-  for (int i = 0; i < nangles; i++) {
-    for (sl_int j = 0; j < nh; j++) {
-      // initialise aligned bits that don't contain data
-      for (sl_int k = 0; k < v_offset; k++) {
-	pixels[i][j][k] = 0.0;
-      }
-      for (sl_int k = v_offset; k < v_end; k++)
-	pixels[i][j][k] = - std::log(pixel_array[j][k - v_offset][i]);
-      for (sl_int k = v_end; k < nv; k++) {
-	pixels[i][j][k] = 0.0;
-      }
-    }
+  if (is_pixels_in_log) {
+	  for (int i = 0; i < nangles; i++) {
+		  for (sl_int j = 0; j < nh; j++) {
+			  // initialise aligned bits that don't contain data
+			  for (sl_int k = 0; k < v_offset; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+			  for (sl_int k = v_offset; k < v_end; k++)
+				  pixels[i][j][k] = pixel_array[j][k - v_offset][i];
+			  for (sl_int k = v_end; k < nv; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+		  }
+	  }
+  }
+  else
+  {
+	  for (int i = 0; i < nangles; i++) {
+		  for (sl_int j = 0; j < nh; j++) {
+			  // initialise aligned bits that don't contain data
+			  for (sl_int k = 0; k < v_offset; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+			  for (sl_int k = v_offset; k < v_end; k++)
+				  pixels[i][j][k] = -std::log(pixel_array[j][k - v_offset][i]);
+			  for (sl_int k = v_end; k < nv; k++) {
+				  pixels[i][j][k] = 0.0;
+			  }
+		  }
+	  }
   }
   return find_centre(get_num_v_pixels() / 2);
 }

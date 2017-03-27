@@ -47,7 +47,7 @@ namespace CCPi {
 			    const int block_size, const bool first,
 			    const bool phantom = false) = 0;
     virtual bool read_scans(const numpy_3d &pixel_array, const int offset,
-			    const int block_size) = 0;
+			    const int block_size, bool is_pixel_in_log) = 0;
     int get_num_h_pixels() const;
     int get_num_v_pixels() const;
     int total_num_v_pixels() const;
@@ -342,7 +342,7 @@ namespace CCPi {
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
     bool read_scans(const numpy_3d &pixel_array, const int offset,
-		    const int block_size);
+		    const int block_size,bool is_pixel_in_log);
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 			       const int nx, const int ny, const int nz) const;
     void get_xy_size(int &nx, int &ny, const int pixels_per_voxel);
@@ -396,7 +396,7 @@ namespace CCPi {
     bool read_scans(const std::string path, const int offset,
 		    const int block_size, const bool first, const bool phantom);
     bool read_scans(const numpy_3d &pixel_array, const int offset,
-		    const int block_size);
+		    const int block_size,bool is_pixel_in_log);
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 			       const int nx, const int ny, const int nz) const;
     void get_xy_size(int &nx, int &ny, const int pixels_per_voxel);

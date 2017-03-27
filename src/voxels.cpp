@@ -132,7 +132,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
 			CCPi::reconstruction_alg *algorithm,
 			const numpy_3d &pixels, const numpy_1d &angles,
 			const real rotation_centre, const int pixels_per_voxel,
-			const int blocking_factor, const bool beam_harden)
+			const int blocking_factor, const bool beam_harden,const bool is_pixel_in_log)
 {
   int num_processors = machine::get_number_of_processors();
   voxel_data *voxels = 0;
@@ -175,7 +175,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	voxel_origin[1] = full_vox_origin[1];
 	voxel_origin[2] = full_vox_origin[2]
 	  + block_offset * voxel_size[2];
-	if (device->read_scans(pixels, z_data_offset, z_data_size)) {
+	if (device->read_scans(pixels, z_data_offset, z_data_size, is_pixel_in_log)) {
 	  voxels =
 	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
 	  if (beam_harden)
@@ -213,7 +213,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
 			const real detector_x, const real pixel_h_size,
 			const real pixel_v_size, const real mask_radius,
 			const bool beam_harden, real full_vox_origin[3],
-			real voxel_size[3], const bool has_offsets)
+			real voxel_size[3], const bool has_offsets,bool is_pixels_in_log)
 {
   int num_processors = machine::get_number_of_processors();
   const int blocking_factor = 0;
@@ -260,7 +260,7 @@ voxel_data *reconstruct(CCPi::instrument *device,
 	voxel_origin[1] = full_vox_origin[1];
 	voxel_origin[2] = full_vox_origin[2]
 	  + block_offset * voxel_size[2];
-	if (device->read_scans(pixels, z_data_offset, z_data_size)) {
+	if (device->read_scans(pixels, z_data_offset, z_data_size, is_pixels_in_log)) {
 	  voxels =
 	    new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
 	  if (beam_harden)
