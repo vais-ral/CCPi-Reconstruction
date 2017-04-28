@@ -1,4 +1,4 @@
-#include "reconstruct.hpp"
+#include "diamond_wrapper.hpp"
 #include "algorithms.hpp"
 #include "instruments.hpp"
 #include "cgls.hpp"
