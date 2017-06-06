@@ -1,40 +1,44 @@
-#include "include/numpy_boost.hpp"
-#include "include/numpy_boost_python.hpp"
+#include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
+
 #include "base_types.hpp"
-extern numpy_boost<double, 3>
-ring_artefacts_aml(const numpy_boost<double, 3> &pixels,
+
+namespace bp = boost::python;
+namespace np = boost::python::numpy;
+extern np::ndarray
+ring_artefacts_aml(np::ndarray pixels,
 		   const float param_n, const float param_r,
 		   const int num_series);
-extern numpy_boost<float, 3>
-reconstruct_cgls(const numpy_boost<float, 3> &pixels,
-		 const numpy_boost<float, 1> &angles,
+extern np::ndarray
+reconstruct_cgls(np::ndarray pixels,
+		 np::ndarray angles,
 		 double rotation_centre, int resolution,
 		 int niterations, int nthreads,bool is_pixels_in_log);
-extern numpy_boost<float, 3>
-reconstruct_sirt(const numpy_boost<float, 3> &pixels,
-		 const numpy_boost<float, 1> &angles,
+extern np::ndarray
+reconstruct_sirt(np::ndarray pixels,
+		 np::ndarray angles,
 		 double rotation_centre, int resolution,
 		 int niterations, int nthreads,bool is_pixels_in_log);
-extern numpy_boost<float, 3>
-reconstruct_mlem(const numpy_boost<float, 3> &pixels,
-		 const numpy_boost<float, 1> &angles,
+extern np::ndarray
+reconstruct_mlem(np::ndarray pixels,
+		 np::ndarray angles,
 		 double rotation_centre, int resolution,
 		 int niterations, int nthreads,bool is_pixels_in_log);
-extern numpy_boost<float, 3>
-reconstruct_cgls2(const numpy_boost<float, 3> &pixels,
-		  const numpy_boost<float, 1> &angles,
+extern np::ndarray
+reconstruct_cgls2(np::ndarray pixels,
+		  np::ndarray angles,
 		  double rotation_centre, int resolution,
-		  int niterations, int nthreads, numpy_boost<float, 1> norm_r,bool is_pixels_in_log);
-extern numpy_boost<float, 3>
-reconstruct_cgls_tikhonov(const numpy_boost<float, 3> &pixels,
-			  const numpy_boost<float, 1> &angles,
+		  int niterations, int nthreads, np::ndarray norm_r,bool is_pixels_in_log);
+extern np::ndarray
+reconstruct_cgls_tikhonov(np::ndarray pixels,
+			  np::ndarray angles,
 			  double rotation_centre, int resolution,
 			  int niterations, int nthreads, double regularize,
-			  numpy_boost<float, 1> norm_r,bool is_pixels_in_log);
-extern numpy_boost<float, 3>
-reconstruct_cgls_tvreg(const numpy_boost<float, 3> &pixels,
-		       const numpy_boost<float, 1> &angles,
+			  np::ndarray norm_r,bool is_pixels_in_log);
+extern np::ndarray
+reconstruct_cgls_tvreg(np::ndarray pixels,
+		       np::ndarray angles,
 		       double rotation_centre, int resolution,
 		       int niterations, int nthreads, double regularize,
-		       numpy_boost<float, 1> norm_r,bool is_pixels_in_log);
+		       np::ndarray norm_r,bool is_pixels_in_log);
 extern void reconstruct_tvreg();

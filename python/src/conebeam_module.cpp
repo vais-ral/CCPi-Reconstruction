@@ -16,21 +16,16 @@ BOOST_PYTHON_MODULE(conebeam)
 	//To specify that this module is a package
 	bp::object package = bp::scope();
 	package.attr("__path__") = "conebeam";
-		
-	import_array();
-	numpy_boost_python_register_type<float, 1>();
-	numpy_boost_python_register_type<float, 3>();
-	numpy_boost_python_register_type<double, 3>();
-	
+			
 	export_conebeam_reconstruction();
 }
 
 void export_conebeam_reconstruction()
 {
 	namespace bp = boost::python;
-	bp::object reconstructionModule(bp::handle<>(bp::borrowed(PyImport_AddModule("conebeam.reconstruction"))));
+	bp::object reconstructionModule(bp::handle<>(bp::borrowed(PyImport_AddModule("conebeam.alg"))));
 	// make "from diamond import filters" work
-	bp::scope().attr("reconstruction") = reconstructionModule;	
+	bp::scope().attr("alg") = reconstructionModule;	
 	// set the current scope to the new sub-module
     bp::scope reconstruction_scope = reconstructionModule;
 
