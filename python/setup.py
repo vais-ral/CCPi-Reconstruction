@@ -16,11 +16,14 @@ except:
     if platform.system() == 'Windows':
         pass
     else:
-        library_include_path = os.environ['PREFIX']+'/include'
+        try:
+           library_include_path = os.environ['PREFIX']+'/include'
+        except:
+           pass
     pass
 extra_include_dirs = [numpy.get_include()]
 extra_library_dirs = []
-extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall', '-Werror']
+extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined']
 extra_libraries = []
 if platform.system() == 'Windows':
    extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB']   
@@ -32,10 +35,17 @@ if platform.system() == 'Windows':
    else:
        extra_libraries += ['boost_python-vc140-mt-1_64', 'boost_numpy-vc140-mt-1_64']   
 else:
-   extra_libraries = ['boost_python','gomp']
+   extra_include_dirs += ['/apps/anaconda/2.4/envs/ccpi-py2/include/','/apps/anaconda/2.4/envs/ccpi-py2/include/python2.7']
+   extra_include_dirs += ["../src/","../src/Algorithms","../src/Readers", "."]
+   extra_include_dirs += [library_include_path]
+   if sys.version_info.major == 3 :
+       extra_libraries += ['boost_python3', 'boost_numpy3','gomp']
+   else:
+       extra_libraries += ['boost_python', 'boost_numpy','gomp']
+
 
 setup(
-    name='ccpi',
+    name='ccpi-reconstruction',
 	description='This is a CCPi Core Imaging Library package for Reconstruction codes',
 	version='0.1',
     cmdclass = {'build_ext': build_ext},
@@ -63,10 +73,9 @@ setup(
 										"../src/timer.cpp",
 										"../src/tikhonov.cpp",
 										"../src/ui_calls.cpp"],
-                             include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries ),
+                             include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries, extra_link_args=['-Wl','--no-undefined'] ),
                              Extension("ccpi.reconstruction.conebeam",
                              sources=[  "src/conebeam_module.cpp",
-                                        "src/conebeam_wrapper.cpp",
 										"../src/mpi.cpp", 
 										"../src/utils.cpp",
 										"../src/instruments.cpp",
@@ -89,5 +98,5 @@ setup(
 										"../src/tikhonov.cpp",
 										"../src/ui_calls.cpp"],
                              include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries )                             ],
-	packages = {'ccpi'}
+	packages = {'ccpi','ccpi.reconstruction'}
 )

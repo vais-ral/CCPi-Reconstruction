@@ -5,7 +5,7 @@
 #define BOOST_PYTHON_MAX_ARITY 19  
 #include "include/numpy_boost_python.hpp"
 
-#include "conebeam_wrapper.hpp"
+#include "conebeam_wrapper.cpp"
 using namespace boost::python;
 
 void export_conebeam_reconstruction();
