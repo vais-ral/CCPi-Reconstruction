@@ -47,7 +47,7 @@ else:
 setup(
     name='ccpi-reconstruction',
 	description='This is a CCPi Core Imaging Library package for Reconstruction codes',
-	version='0.1',
+	version='0.9',
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("ccpi.reconstruction.parallelbeam",
                              sources=[  "src/diamond_module.cpp",
