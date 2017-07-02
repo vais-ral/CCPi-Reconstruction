@@ -98,5 +98,6 @@ setup(
 										"../src/tikhonov.cpp",
 										"../src/ui_calls.cpp"],
                              include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries )                             ],
+	zip_safe = True,
 	packages = {'ccpi.reconstruction'}
 )
