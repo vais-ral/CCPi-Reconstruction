@@ -4,7 +4,7 @@ package:
 
 
 build:
-  preserve_egg_dir: no
+  preserve_egg_dir: False
 #  number: 0
   
 requirements:
