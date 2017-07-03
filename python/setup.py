@@ -35,7 +35,6 @@ if platform.system() == 'Windows':
    else:
        extra_libraries += ['boost_python-vc90-mt-1_64', 'boost_numpy-vc90-mt-1_64']   
 else:
-   extra_include_dirs += ['/apps/anaconda/2.4/envs/ccpi-py2/include/','/apps/anaconda/2.4/envs/ccpi-py2/include/python2.7']
    extra_include_dirs += ["../src/","../src/Algorithms","../src/Readers", "."]
    extra_include_dirs += [library_include_path]
    if sys.version_info.major == 3 :
