@@ -9,6 +9,12 @@ import os
 import numpy
 import platform	
 import sys
+
+cil_version=os.environ['CIL_VERSION']
+if  cil_version == '':
+    print("Please set the environmental variable CIL_VERSION")
+    sys.exit(1)
+
 library_include_path = ""
 try:
     library_include_path = os.environ['LIBRARY_INC']
@@ -46,7 +52,7 @@ else:
 setup(
     name='ccpi-reconstruction',
 	description='This is a CCPi Core Imaging Library package for Reconstruction codes',
-	version='0.9',
+	version=cil_version,
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("ccpi.reconstruction.parallelbeam",
                              sources=[  "src/diamond_module.cpp",
