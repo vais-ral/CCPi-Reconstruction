@@ -9,6 +9,11 @@ import os
 import numpy
 import platform	
 
+cil_version=os.environ['CIL_VERSION']
+if  cil_version == '':
+    print("Please set the environmental variable CIL_VERSION")
+    sys.exit(1)
+
 extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall', '-Werror']
 extra_libraries = []
 if platform.system() == 'Windows':
@@ -19,7 +24,7 @@ else:
 setup(
     name='ccpi',
 	description='This is a CCPi package for Tomography',
-	version='0.1',
+	version=cil_version,
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("ccpi.reconstruction",
                              sources=["ccpi_reconstruction.cpp", 
