@@ -1,6 +1,6 @@
 package:
   name: ccpi-reconstruction
-  version: "0.9"
+  version: {{ environ['CIL_VERSION'] }}
 
 
 build:
