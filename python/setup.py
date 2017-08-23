@@ -26,10 +26,10 @@ extra_library_dirs = []
 extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined']
 extra_libraries = []
 if platform.system() == 'Windows':
-   extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB']   
+   extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB' , '/openmp']   
    extra_include_dirs += ["..\\src\\","..\\src\\Algorithms","..\\src\\Readers", "."]
    extra_include_dirs += [library_include_path]
-   extra_library_dirs += ['C:\Apps\Anaconda3\envs\python3.5\Library\lib']
+   extra_library_dirs += [r'C:\Apps\Miniconda2\envs\cil\Library\lib']
    if sys.version_info.major == 3 :   
        extra_libraries += ['boost_python3-vc140-mt-1_64', 'boost_numpy3-vc140-mt-1_64']
    else:
