@@ -20,6 +20,8 @@ void initialise_progress(const int length, const char label[])
 
 void update_progress(const int value)
 {
+	add_output(value);
+	send_output();
 }
 
 void report_error(const std::string message)
