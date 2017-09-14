@@ -32,15 +32,14 @@ def load_data(filename):
     data = nx.get('entry1/tomo_entry/data/rotation_angle')
     angles = numpy.zeros(data.shape)
     data.read_direct(angles)
-    print (angles)
+    #print (angles)
     # angles should be in degrees
     
     data = nx.get('entry1/tomo_entry/data/data')
     stack = numpy.zeros(data.shape)
     data.read_direct(stack)
-    print (data.shape)
+    #print (data.shape)
     
-    print ("Data Loaded")
     
     ## Data should be in the range 0-1
     ## in this case we will perform a simple normalization between full field (flat)
@@ -88,6 +87,7 @@ def load_data(filename):
     norm = [normalize(projection, dark, flat) for projection in proj]
     norm = numpy.asarray (norm)
     norm = norm.astype(numpy.float32)
+    print ("Data Loaded")
     
     return norm, angle_proj
 
@@ -109,62 +109,62 @@ norm, angle_proj = load_data(filename)
 ## CGLS, MLEM, SIRT, CGLS_CONV, CGLS_TIKHONOV, CGLS_TVregularization
 
 # number of iterations
-niterations = 15
+niterations = 35
 # number of threads
 threads = 3
 
 # CGLS
 img_cgls = alg.cgls(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
-# MLEM
-img_mlem = alg.mlem(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
-# SIRT
-img_sirt = alg.sirt(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
-
-# CGLS CONV
-iteration_values = numpy.zeros((niterations,))
-img_cgls_conv = alg.cgls_conv(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads,
-                              iteration_values, False)
-
-# CGLS TIKHONOV
-iteration_values = numpy.zeros((niterations,))
-img_cgls_tikhonov = alg.cgls_tikhonov(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads,
-                                      numpy.double(1e-5), iteration_values , False)
-
-# CGLS Total Variation Regularization 
-iteration_values = numpy.zeros((niterations,))
-img_cgls_TVreg = alg.cgls_TVreg(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads,
-                                      numpy.double(1e-5), iteration_values , False)
-
-
-
-###############################################################################
-## 3) Visualize a slice of the reconstructed images 
-
-import matplotlib.pyplot as plt
-fs = 10
-fig, ax = plt.subplots(1,6,sharey=True)
-ax[0].imshow(img_cgls[80])
-ax[0].axis('off')  # clear x- and y-axes
-ax[0].set_title("CGLS" , fontsize = fs)
-
-ax[1].imshow(img_sirt[80])
-ax[1].axis('off')  # clear x- and y-axes
-ax[1].set_title("SIRT" , fontsize = fs)
-
-ax[2].imshow(img_mlem[80])
-ax[2].axis('off')  # clear x- and y-axesplt.show()
-ax[2].set_title("MLEM" , fontsize = fs)
-
-ax[3].imshow(img_cgls_conv[80])
-ax[3].axis('off')  # clear x- and y-axesplt.show()
-ax[3].set_title("CGLS CONV" , fontsize = fs)
-
-ax[4].imshow(img_cgls_tikhonov[80])
-ax[4].axis('off')  # clear x- and y-axesplt.show()
-ax[4].set_title("Tikhonov" , fontsize = fs)
-
-ax[5].imshow(img_cgls_TVreg[80])
-ax[5].axis('off')  # clear x- and y-axesplt.show()
-ax[5].set_title("TV Reg" , fontsize = fs)
-plt.show()
-
+## MLEM
+#img_mlem = alg.mlem(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
+## SIRT
+#img_sirt = alg.sirt(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
+#
+## CGLS CONV
+#iteration_values = numpy.zeros((niterations,))
+#img_cgls_conv = alg.cgls_conv(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads,
+#                              iteration_values, False)
+#
+## CGLS TIKHONOV
+#iteration_values = numpy.zeros((niterations,))
+#img_cgls_tikhonov = alg.cgls_tikhonov(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads,
+#                                      numpy.double(1e-5), iteration_values , False)
+#
+## CGLS Total Variation Regularization 
+#iteration_values = numpy.zeros((niterations,))
+#img_cgls_TVreg = alg.cgls_TVreg(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads,
+#                                      numpy.double(1e-5), iteration_values , False)
+#
+#
+#
+################################################################################
+### 3) Visualize a slice of the reconstructed images 
+#
+#import matplotlib.pyplot as plt
+#fs = 10
+#fig, ax = plt.subplots(1,6,sharey=True)
+#ax[0].imshow(img_cgls[80])
+#ax[0].axis('off')  # clear x- and y-axes
+#ax[0].set_title("CGLS" , fontsize = fs)
+#
+#ax[1].imshow(img_sirt[80])
+#ax[1].axis('off')  # clear x- and y-axes
+#ax[1].set_title("SIRT" , fontsize = fs)
+#
+#ax[2].imshow(img_mlem[80])
+#ax[2].axis('off')  # clear x- and y-axesplt.show()
+#ax[2].set_title("MLEM" , fontsize = fs)
+#
+#ax[3].imshow(img_cgls_conv[80])
+#ax[3].axis('off')  # clear x- and y-axesplt.show()
+#ax[3].set_title("CGLS CONV" , fontsize = fs)
+#
+#ax[4].imshow(img_cgls_tikhonov[80])
+#ax[4].axis('off')  # clear x- and y-axesplt.show()
+#ax[4].set_title("Tikhonov" , fontsize = fs)
+#
+#ax[5].imshow(img_cgls_TVreg[80])
+#ax[5].axis('off')  # clear x- and y-axesplt.show()
+#ax[5].set_title("TV Reg" , fontsize = fs)
+#plt.show()
+#
