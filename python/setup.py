@@ -8,22 +8,12 @@ from Cython.Distutils import build_ext
 import os
 import numpy
 import platform	
-import sys
-library_include_path = ""
-try:
-    library_include_path = os.environ['LIBRARY_INC']
-except:
-    if platform.system() == 'Windows':
-        pass
-    else:
-        try:
-           library_include_path = os.environ['PREFIX']+'/include'
-        except:
-           pass
-    pass
-extra_include_dirs = [numpy.get_include()]
-extra_library_dirs = []
-extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined']
+cil_version=os.environ['CIL_VERSION']
+if  cil_version == '':
+    print("Please set the environmental variable CIL_VERSION")
+    sys.exit(1)
+
+extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall', '-Werror']
 extra_libraries = []
 if platform.system() == 'Windows':
    extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB' , '/openmp']   
@@ -45,9 +35,9 @@ else:
 
 
 setup(
-    name='ccpi-reconstruction',
-	description='This is a CCPi Core Imaging Library package for Reconstruction codes',
-	version='0.9',
+   name='ccpi',
+	description='This is a CCPi package for Tomography',
+	version=cil_version,
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("ccpi.reconstruction.parallelbeam",
                              sources=[  "src/diamond_module.cpp",
