@@ -10,7 +10,7 @@ import numpy
 from ccpi.reconstruction.parallelbeam import alg
 
 from enum import Enum
-from ccpi.viewer.CILViewer2D import Converter
+from ccpi.viewer.CILViewer2D import Converter, CILViewer2D
 #from FindCenterOfRotation import *
 import vtk
 
@@ -276,7 +276,7 @@ class ProjectionPreprocessor():
     def getNormalizedProjections(self):
         gg = numpy.frompyfunc(ProjectionPreprocessor.greater,2,1)
         ss = numpy.frompyfunc(ProjectionPreprocessor.smaller,2,1)
-        #eq = numpy.frompyfunc(ProjectionPreprocessor.equal,2,1)
+        eq = numpy.frompyfunc(ProjectionPreprocessor.equal,2,1)
         
         # set value > 1 to 1
         gt = ss(self.normalizedProjections, 1)
@@ -284,10 +284,14 @@ class ProjectionPreprocessor():
         
         # set values < 0 to 0
         lt = gg(self.normalizedProjections, 0)
-        self.normalizedProjections = numpy.where(lt, self.normalizedProjections, 0)
+        self.normalizedProjections = numpy.where(lt, self.normalizedProjections, 0.1)
+        
+        # remove 0 values
+        et = eq(self.normalizedProjections,0)
+        self.normalizedProjections = numpy.where(et , self.normalizedProjections, 0.1)
         
         
-        return self.normalizedProjections
+        return self.normalizedProjections.astype(numpy.float32)
     
     @staticmethod    
     def greater(x,y):
@@ -347,7 +351,7 @@ nreduced = 360
 directory = r'D:\Documents\Dataset\Chadwick_Flange_Tomo'
 
 indices = [int(float(num) / float(nreduced) * float(tot_images)) for num in range(nreduced)]
-angle_proj = numpy.asarray(indices) / 180. * numpy.pi
+angle_proj = numpy.asarray(indices) * 180 / tot_images
 
 #load data file
 reader = vtk.vtkMetaImageReader()
@@ -376,6 +380,12 @@ norm = data
 
 print ("Launching CGLS")
 img_cgls = alg.cgls(norm, angle_proj, numpy.double(cor), 1 , niterations, threads, False)
+numpy.save("chadwick_chamber.npy", img_cgls)
+print ("CGLS finished")
+
+v = CILViewer2D()
+v.setInputAsNumpy(img_cgls)
+v.startRenderLoop()
 ##img_mlem = alg.mlem(norm, angle_proj, numpy.double(cor), 1 , niterations, threads, False)
 ##img_sirt = alg.sirt(norm, angle_proj, numpy.double(cor), 1 , niterations, threads, False)
 ##
