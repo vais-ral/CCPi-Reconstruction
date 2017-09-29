@@ -30,6 +30,7 @@ except:
 extra_include_dirs = [numpy.get_include()]
 extra_library_dirs = []
 extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined']
+
 extra_libraries = []
 if platform.system() == 'Windows':
    extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB']   
@@ -50,7 +51,7 @@ else:
 
 
 setup(
-    name='ccpi-reconstruction',
+  name='ccpi-reconstruction',
 	description='This is a CCPi Core Imaging Library package for Reconstruction codes',
 	version=cil_version,
     cmdclass = {'build_ext': build_ext},
