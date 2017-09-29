@@ -108,11 +108,11 @@ namespace CCPi {
 
     // Todo - protect these? CGLS uses them
     pixel_3d &get_pixel_data();
-
+    const real_1d &get_phi() const; //expose this to read angles
+	
   protected:
     pixel_3d &create_pixel_data();
 
-    const real_1d &get_phi() const;
     const real_1d &get_h_pixels() const;
     const real_1d &get_v_pixels() const;
     const real_1d &get_all_v_pixels() const;
@@ -177,12 +177,12 @@ namespace CCPi {
 		    const real vox_size[3], const int nx, const int ny,
 		    const int nz, const bool limited_memory = false);
 
-  protected:
     real get_source_x() const;
     real get_source_y() const;
     real get_source_z() const;
     real get_detector_x() const;
 
+  protected:
     void set_source(const real x, const real y, const real z);
     void set_detector(const real x);
 
@@ -400,8 +400,9 @@ namespace CCPi {
     bool finish_voxel_geometry(real voxel_origin[3], real voxel_size[3],
 			       const int nx, const int ny, const int nz) const;
     void get_xy_size(int &nx, int &ny, const int pixels_per_voxel);
+	real get_mask_radius(){return mask_radius;}
     void apply_beam_hardening();
-
+	void initialise_phantom();
   private:
     real mask_radius;
     real white_level;

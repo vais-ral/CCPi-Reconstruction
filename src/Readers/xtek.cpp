@@ -413,9 +413,9 @@ bool CCPi::Nikon_XTek::build_phantom()
   image_offset[0] = -image_vol[0] / 2;
   image_offset[1] = -image_vol[1] / 2;
   image_offset[2] = -image_vol[2] / 2;
-
   // set up phantom volume
   voxel_data x(boost::extents[nx][ny][nz], boost::c_storage_order());
+
   //sl_int n_vox = nx * ny * nz;
   for (sl_int k = 0; k < nx; k++)
     for (sl_int j = 0; j < ny; j++)
@@ -430,6 +430,7 @@ bool CCPi::Nikon_XTek::build_phantom()
       }
     }
   }
+
   for (int i = 190-1; i < 271; i++) {
     for (int j = 190-1; j < 271; j++) {
       for (int k = 140-1; k < 221; k++) {
@@ -437,6 +438,7 @@ bool CCPi::Nikon_XTek::build_phantom()
       }
     }
   }
+
   for (int i = 272-1; i < 353; i++) {
     for (int j = 272-1; j < 353; j++) {
       for (int k = 222-1; k < 303; k++) {
@@ -444,7 +446,6 @@ bool CCPi::Nikon_XTek::build_phantom()
       }
     }
   }
-
   pixel_data &pixels = create_pixel_data();
   // perform projection step
   safe_forward_project(pixels, x, image_offset, voxel_size, nx, ny, nz);
@@ -813,4 +814,10 @@ void CCPi::Nikon_XTek::apply_beam_hardening()
       }
     }
   }
+}
+
+void CCPi::Nikon_XTek::initialise_phantom()
+{
+	create_phantom();
+	build_phantom();
 }
