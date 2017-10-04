@@ -31,7 +31,7 @@ extra_libraries = []
 extra_include_dirs = []
 extra_library_dirs = []
 if platform.system() == 'Windows':
-   extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB' , '/openmp']   
+   extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB' , '/openmp' , '-Zi', '/Od']   
    extra_include_dirs += ["..\\src\\","..\\src\\Algorithms","..\\src\\Readers", ".", numpy.get_include()]
    extra_include_dirs += [library_include_path]
    extra_library_dirs += [r'C:\Apps\Miniconda2\envs\cil\Library\lib']
@@ -78,7 +78,7 @@ setup(
 										"../src/timer.cpp",
 										"../src/tikhonov.cpp",
 										"../src/ui_calls.cpp"],
-                             include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries, extra_link_args=['-Wl','--no-undefined'] ),
+                             include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries, extra_link_args=['-Wl','--no-undefined', '-debug'] ),
                              Extension("ccpi.reconstruction.conebeam",
                              sources=[  "src/conebeam_module.cpp",
 										"../src/mpi.cpp", 
