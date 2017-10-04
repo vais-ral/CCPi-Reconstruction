@@ -288,3 +288,85 @@ voxel_data *reconstruct(CCPi::instrument *device,
   */
   return voxels;
 }
+
+// Todo - alot of this is copied from the above one, which isn't ideal
+// but simplify since we will reconstruct all the pixel data provided as
+// a single block probably. At least with DLS SAVU
+voxel_data *reconstruct(CCPi::instrument *device,
+	CCPi::reconstruction_alg *algorithm,
+	const numpy_3d &pixels, const numpy_1d &angles,
+	const real rotation_centre, const int pixels_per_voxel,
+	const int blocking_factor, const bool beam_harden, const bool is_pixel_in_log, 
+	voxel_data * last_iteration_voxels)
+{
+	int num_processors = machine::get_number_of_processors();
+	voxel_data *voxels = 0;
+	if (device->setup_experimental_geometry(pixels, angles, rotation_centre,
+		pixels_per_voxel)) {
+		int nx_voxels = 0;
+		int ny_voxels = 0;
+		int maxz_voxels = 0;
+		int nz_voxels = 0;
+		int block_size = 0;
+		int block_step = 0;
+		calculate_block_sizes(nx_voxels, ny_voxels, nz_voxels, maxz_voxels,
+			block_size, block_step, num_processors,
+			blocking_factor, pixels_per_voxel,
+			device, algorithm->supports_blocks());
+		int z_data_size = block_size * pixels_per_voxel;
+		int z_data_step = block_step * pixels_per_voxel;
+		device->set_v_block(z_data_size);
+		int block_offset = machine::get_processor_id() * block_size;
+		int z_data_offset = block_offset * pixels_per_voxel;
+		real full_vox_origin[3];
+		real voxel_size[3];
+		if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
+			nx_voxels, ny_voxels, maxz_voxels)) {
+			// can modify offsets and end if parallel beam to solve subregion
+			int end_value = device->total_num_v_pixels();
+			bool ok = false;
+			//bool first = true;
+			do {
+				ok = false;
+				if (block_offset + block_size > maxz_voxels)
+					block_size = maxz_voxels - block_offset;
+				if (z_data_offset + z_data_size > end_value) {
+					z_data_size = end_value - z_data_offset;
+					device->set_v_block(z_data_size);
+				}
+				nz_voxels = block_size;
+				real voxel_origin[3];
+				voxel_origin[0] = full_vox_origin[0];
+				voxel_origin[1] = full_vox_origin[1];
+				voxel_origin[2] = full_vox_origin[2]
+					+ block_offset * voxel_size[2];
+				if (device->read_scans(pixels, z_data_offset, z_data_size, is_pixel_in_log)) {
+					voxels = last_iteration_voxels; // use the last iteration voxels rather than creating a new one
+				    //voxels = new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
+					if (beam_harden)
+						device->apply_beam_hardening();
+					ok = algorithm->reconstruct(device, *voxels,
+						voxel_origin, voxel_size);
+					if (ok) {
+						// truncate negative values
+						clamp_min(*voxels, 0.0, nx_voxels, ny_voxels, nz_voxels);
+					}
+				}
+				else
+					ok = false;
+				//first = false;
+				block_offset += block_step;
+				z_data_offset += z_data_step;
+			} while (ok and z_data_offset < end_value);
+		}
+	}
+	/*
+	voxel_data *voxels = new voxel_data(boost::extents[2][2][2]);
+	for (int i = 0; i < 2; i++)
+	for (int j = 0; j < 2; j++)
+	for (int k = 0; k < 2; k++)
+	(*voxels)[i][j][k] = i + j + k;
+	*/
+	return voxels;
+}
+

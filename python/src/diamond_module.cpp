@@ -30,6 +30,7 @@ void export_reconstruction()
     bp::scope reconstruction_scope = reconstructionModule;
 
   def("cgls", reconstruct_cgls);
+  def("cgls_step", reconstruct_cgls_step);
   def("cgls_conv", reconstruct_cgls2);
   def("sirt", reconstruct_sirt);
   def("mlem", reconstruct_mlem);

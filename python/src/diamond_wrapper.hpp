@@ -14,6 +14,13 @@ reconstruct_cgls(np::ndarray pixels,
 		 np::ndarray angles,
 		 double rotation_centre, int resolution,
 		 int niterations, int nthreads,bool is_pixels_in_log);
+
+extern np::ndarray
+reconstruct_cgls_step(np::ndarray pixels,
+	np::ndarray angles,
+	double rotation_centre, int resolution,
+	int niterations, int nthreads, bool is_pixels_in_log, np::ndarray last_iteration_volume);
+
 extern np::ndarray
 reconstruct_sirt(np::ndarray pixels,
 		 np::ndarray angles,
