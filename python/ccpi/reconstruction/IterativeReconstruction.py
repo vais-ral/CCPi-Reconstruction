@@ -23,7 +23,7 @@ class Reconstructor:
         CGLS_CONV = alg.cgls_conv
         SIRT = alg.sirt
         MLEM = alg.mlem
-        CGLS_TICHONOV = alg.cgls_tikhonov
+        CGLS_TIKHONOV = alg.cgls_tikhonov
         CGLS_TVREG = alg.cgls_TVreg
         
     def __init__(self, algorithm = None, projection_data = None,
@@ -31,7 +31,8 @@ class Reconstructor:
                  flat_field = None, dark_field = None, 
                  iterations = None, resolution = None, isLogScale = False, threads = None, 
                  normalized_projection_data = None):
-    
+
+        self.reconstructedVolume = numpy.asarray([])
         self.pars = dict()
         self.pars['algorithm'] = algorithm
         self.pars['projection_data'] = projection_data
@@ -44,6 +45,7 @@ class Reconstructor:
         self.pars['resolution'] = resolution
         self.pars['isLogScale'] = isLogScale
         self.pars['threads'] = threads
+        self.pars['input_volume'] = None
         if (iterations != None):
             self.pars['iterationValues'] = numpy.zeros((iterations))
 
@@ -60,7 +62,8 @@ class Reconstructor:
         keys = ['algorithm','projection_data' ,'normalized_projection_data', \
                 'angles' , 'center_of_rotation' , 'flat_field', \
                 'iterations','dark_field' , 'resolution', 'isLogScale' , \
-                'threads' , 'iterationValues', 'regularize']
+                'threads' , 'iterationValues', 'regularize',
+                'input_volume']
         
         for k in keys:
             if k not in parameters.keys():
@@ -85,9 +88,9 @@ class Reconstructor:
         acceptedkeys = ['algorithm','projection_data' ,'normalized_projection_data', \
                 'angles' , 'center_of_rotation' , 'flat_field', \
                 'iterations','dark_field' , 'resolution', 'isLogScale' , \
-                'threads' , 'iterationValues', 'regularize']
+                'threads' , 'iterationValues', 'regularize', 'input_volume']
         for key , value in kwargs.items():
-            if key in acceptedkeys.keys():
+            if key in acceptedkeys:
                 self.pars[key] = value
             else:
                 raise Exception('Wrong parameter {0} for Reconstruction algorithm'.format(key))
@@ -142,7 +145,7 @@ class Reconstructor:
             
     def reconstruct(self, parameters = None , **kwargs):
         if kwargs is not None:
-            self.setParameter(kwargs)
+            self.setParameter(**kwargs)
             
         go , reason = self.sanityCheck()
         if go:
@@ -169,8 +172,34 @@ class Reconstructor:
            if parameters['algorithm'] in (Reconstructor.Algorithm.CGLS,
                         Reconstructor.Algorithm.MLEM, Reconstructor.Algorithm.SIRT):
                #store parameters
+               
                self.pars = parameters
-               result = parameters['algorithm'](
+               if parameters['input_volume'] is not None:
+                   if parameters['algorithm'] == Reconstructor.Algorithm.CGLS:
+                       stepalg = alg.cgls_step
+                   elif parameters['algorithm'] == Reconstructor.Algorithm.SIRT:
+                       stepalg = alg.sirt_step
+                   elif parameters['algorithm'] == Reconstructor.Algorithm.MLEM:
+                       stepalg = alg.mlem_step
+                   elif parameters['algorithm'] == Reconstructor.Algorithm.CGLS_CONV:
+                       stepalg = alg.cgls_conv_step
+                   elif parameters['algorithm'] == Reconstructor.Algorithm.CGLS_TIKHONOV:
+                       stepalg = alg.cgls_tikhonov_step
+                   elif parameters['algorithm'] == Reconstructor.Algorithm.CGLS_TVREG:
+                       stepalg = alg.cgls_TVreg_step
+
+                   result = stepalg(
+                           parameters['normalized_projection_data'] ,
+                           parameters['angles'],
+                           parameters['center_of_rotation'],
+                           parameters['resolution'],
+                           parameters['iterations'],
+                           parameters['threads'] ,
+                           parameters['isLogScale'],
+                           parameters['input_volume']
+                           )
+               else:
+                   result = parameters['algorithm'](
                            parameters['normalized_projection_data'] ,
                            parameters['angles'],
                            parameters['center_of_rotation'],
@@ -179,6 +208,7 @@ class Reconstructor:
                            parameters['threads'] ,
                            parameters['isLogScale']
                            )
+               self.reconstructedVolume = result
                return result
            else:
                self.pars = parameters
@@ -193,6 +223,8 @@ class Reconstructor:
                            numpy.zeros((parameters['iterations'])),
                            parameters['isLogScale']
                            )
+               self.reconstructedVolume = result
+               return result
         else:
            if parameters['projection_data'] is not None and \
                      parameters['dark_field'] is not None and \
@@ -217,9 +249,16 @@ class Reconstructor:
         norm = [self._normalize(projection, dark, flat, def_val) for projection in projections]
         return numpy.asarray (norm, dtype=numpy.float32)
         
-
+    def nextIteration(self, num_of_iterations=1):
+        self.setParameter(iterations=num_of_iterations)
+        self.setParameter(input_volume = self.reconstructedVolume)
+        return self._reconstruct()
+        
+        
+        
 
 class ProjectionPreprocessor():
+
     def __init__(self):
         self.flatsFileNames = []
         self.darksFileNames = []
