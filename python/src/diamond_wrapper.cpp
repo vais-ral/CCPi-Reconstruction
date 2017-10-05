@@ -254,7 +254,7 @@ np::ndarray reconstruct_iter(np::ndarray ndarray_pixels,
 	//delete input_voxels;
 	return varray;
 }
-
+/**************************************CGLS*********************************************************/
 np::ndarray reconstruct_cgls(np::ndarray pixels,
 				       np::ndarray angles,
 				       double rotation_centre, int resolution,
@@ -275,7 +275,9 @@ np::ndarray reconstruct_cgls_step(np::ndarray pixels,
 		0.0, np::zeros(bp::make_tuple(1), np::dtype::get_builtin<float>()), is_pixels_in_log
 		);
 }
+/***********************************************************************************************/
 
+/**************************************SIRT*********************************************************/
 np::ndarray reconstruct_sirt(np::ndarray pixels,
 				       np::ndarray angles,
 				       double rotation_centre, int resolution,
@@ -285,6 +287,20 @@ np::ndarray reconstruct_sirt(np::ndarray pixels,
 			  niterations, nthreads, CCPi::alg_SIRT, 0.0, np::zeros(bp::make_tuple(1), np::dtype::get_builtin<float>()), is_pixels_in_log);
 }
 
+np::ndarray reconstruct_sirt_step(np::ndarray pixels,
+	np::ndarray angles,
+	double rotation_centre, int resolution,
+	int niterations, int nthreads, bool is_pixels_in_log,
+	np::ndarray last_iteration_volume)
+{
+	return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+		niterations, nthreads, CCPi::alg_SIRT, 
+		last_iteration_volume,
+		0.0, np::zeros(bp::make_tuple(1), np::dtype::get_builtin<float>()), is_pixels_in_log);
+}
+/***********************************************************************************************/
+
+/**************************************MLEM*********************************************************/
 np::ndarray reconstruct_mlem(np::ndarray pixels,
 				       np::ndarray angles,
 				       double rotation_centre, int resolution,
@@ -293,6 +309,21 @@ np::ndarray reconstruct_mlem(np::ndarray pixels,
   return reconstruct_iter(pixels, angles, rotation_centre, resolution,
 			  niterations, nthreads, CCPi::alg_MLEM, 0.0, np::zeros(bp::make_tuple(1), np::dtype::get_builtin<float>()) , is_pixels_in_log);
 }
+
+np::ndarray reconstruct_mlem_step(np::ndarray pixels,
+	np::ndarray angles,
+	double rotation_centre, int resolution,
+	int niterations, int nthreads, bool is_pixels_in_log,
+	np::ndarray last_iteration_volume)
+{
+	return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+		niterations, nthreads, CCPi::alg_MLEM,
+		last_iteration_volume,
+		0.0, np::zeros(bp::make_tuple(1), np::dtype::get_builtin<float>()), is_pixels_in_log);
+}
+/***********************************************************************************************/
+
+/**********************************CGLS TIKHONOV********************************************************/
 
 np::ndarray
 reconstruct_cgls_tikhonov(np::ndarray pixels,
@@ -307,6 +338,23 @@ reconstruct_cgls_tikhonov(np::ndarray pixels,
 }
 
 np::ndarray
+reconstruct_cgls_tikhonov_step(np::ndarray pixels,
+	np::ndarray angles,
+	double rotation_centre, int resolution,
+	int niterations, int nthreads, double regularize,
+	np::ndarray norm_r, bool is_pixels_in_log,
+	np::ndarray last_iteration_volume)
+{
+	return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+		niterations, nthreads, CCPi::alg_CGLS_Tikhonov,
+		last_iteration_volume,
+		regularize, norm_r, is_pixels_in_log);
+}
+/***********************************************************************************************/
+
+/*********************************CGLS TV REG****************************************************/
+
+np::ndarray
 reconstruct_cgls_tvreg(np::ndarray pixels,
 		       np::ndarray angles,
 		       double rotation_centre, int resolution,
@@ -318,6 +366,24 @@ reconstruct_cgls_tvreg(np::ndarray pixels,
 			  regularize, norm_r, is_pixels_in_log);
 }
 
+np::ndarray
+reconstruct_cgls_tvreg_step(np::ndarray pixels,
+	np::ndarray angles,
+	double rotation_centre, int resolution,
+	int niterations, int nthreads,
+	double regularize, np::ndarray norm_r, bool is_pixels_in_log,
+	np::ndarray last_iteration_volume)
+{
+	return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+		niterations, nthreads, CCPi::alg_CGLS_TVreg,
+		last_iteration_volume, 
+		regularize, norm_r, is_pixels_in_log);
+}
+
+/***********************************************************************************************/
+
+/***********************************CGLS CONV****************************************************/
+
 np::ndarray reconstruct_cgls2(np::ndarray pixels,
 					np::ndarray angles,
 					double rotation_centre, int resolution,
@@ -328,6 +394,22 @@ np::ndarray reconstruct_cgls2(np::ndarray pixels,
 			  niterations, nthreads, CCPi::alg_CGLS, 0.0,
 			  norm_r, is_pixels_in_log);
 }
+
+np::ndarray reconstruct_cgls2_step(np::ndarray pixels,
+	np::ndarray angles,
+	double rotation_centre, int resolution,
+	int niterations, int nthreads,
+	np::ndarray norm_r, bool is_pixels_in_log,
+	np::ndarray last_iteration_volume)
+{
+	return reconstruct_iter(pixels, angles, rotation_centre, resolution,
+		niterations, nthreads, CCPi::alg_CGLS, 
+		last_iteration_volume, 
+		0.0,
+		norm_r, is_pixels_in_log);
+}
+
+/***********************************************************************************************/
 
 void reconstruct_tvreg()
 {
