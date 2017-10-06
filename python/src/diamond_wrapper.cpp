@@ -162,7 +162,6 @@ np::ndarray reconstruct_iter(np::ndarray ndarray_pixels,
 	int ny_voxels = last_iteration_volume.shape(1);
 	int nz_voxels = last_iteration_volume.shape(2);
 	
-	printf("last_iteration_volume size [%d,%d,%d]\n",nx_voxels, ny_voxels, nz_voxels );
 	voxel_type * A = reinterpret_cast<voxel_type *>(last_iteration_volume.get_data());
 
 	voxel_data * input_voxels = new voxel_data(boost::extents[nx_voxels][ny_voxels][nz_voxels]);
