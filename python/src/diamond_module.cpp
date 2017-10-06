@@ -41,7 +41,7 @@ void export_reconstruction()
   def("mlem_step",          reconstruct_mlem_step);
   def("cgls_tikhonov_step", reconstruct_cgls_tikhonov_step);
   def("cgls_TVreg_step",    reconstruct_cgls_tvreg_step);
-  def("cgls_conv",          reconstruct_cgls2_step);
+  def("cgls_conv_step",     reconstruct_cgls2_step);
 
   //def("tvreg", reconstruct_tvreg);
 }
