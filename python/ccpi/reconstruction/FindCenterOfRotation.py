@@ -257,71 +257,70 @@ def _create_mask(nrow, ncol, radius, drop):
 
 
 
-##fname = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
-##nx = h5py.File(fname, "r")
-##
-### the data are stored in a particular location in the hdf5
-##for item in nx['entry1/tomo_entry/data'].keys():
-##    print (item)
-##
-##data = nx.get('entry1/tomo_entry/data/rotation_angle')
-##angles = np.zeros(data.shape)
-##data.read_direct(angles)
-##print (angles)
-### angles should be in degrees
-##
-##data = nx.get('entry1/tomo_entry/data/data')
-##stack = np.zeros(data.shape)
-##data.read_direct(stack)
-##print (data.shape)
-##
-##print ("Data Loaded")
-##
-##
-### Normalize
-##data = nx.get('entry1/tomo_entry/instrument/detector/image_key')
-##itype = np.zeros(data.shape)
-##data.read_direct(itype)
-### 2 is dark field
-##darks = [stack[i] for i in range(len(itype)) if itype[i] == 2 ]
-##dark = darks[0]
-##for i in range(1, len(darks)):
-##    dark += darks[i]
-##dark = dark / len(darks)
-###dark[0][0] = dark[0][1]
-##
-### 1 is flat field
-##flats = [stack[i] for i in range(len(itype)) if itype[i] == 1 ]
-##flat = flats[0]
-##for i in range(1, len(flats)):
-##    flat += flats[i]
-##flat = flat / len(flats)
-###flat[0][0] = dark[0][1]
-##
-##
-### 0 is projection data
-##proj = [stack[i] for i in range(len(itype)) if itype[i] == 0 ]
-##angle_proj = [angles[i] for i in range(len(itype)) if itype[i] == 0 ]
-##angle_proj = np.asarray (angle_proj)
-##angle_proj = angle_proj.astype(np.float32)
-##
-### normalized data are
-### norm = (projection - dark)/(flat-dark)
-##
-##def normalize(projection, dark, flat, def_val=0.1):
-##    a = (projection - dark)
-##    b = (flat-dark)
-##    with np.errstate(divide='ignore', invalid='ignore'):
-##        c = np.true_divide( a, b )
-##        c[ ~ np.isfinite( c )] = def_val  # set to not zero if 0/0 
-##    return c
-##    
-##
-##norm = [normalize(projection, dark, flat) for projection in proj]
-##norm = np.asarray (norm)
-##norm = norm.astype(np.float32)
-##
-##
-##cor = find_center_vo (norm)
-##print ("Center of rotation %f" % cor)
-##
+#fname = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
+#nx = h5py.File(fname, "r")
+#
+## the data are stored in a particular location in the hdf5
+#for item in nx['entry1/tomo_entry/data'].keys():
+#    print (item)
+#
+#data = nx.get('entry1/tomo_entry/data/rotation_angle')
+#angles = np.zeros(data.shape)
+#data.read_direct(angles)
+#print (angles)
+## angles should be in degrees
+#
+#data = nx.get('entry1/tomo_entry/data/data')
+#stack = np.zeros(data.shape)
+#data.read_direct(stack)
+#print (data.shape)
+#
+#print ("Data Loaded")
+#
+#
+## Normalize
+#data = nx.get('entry1/tomo_entry/instrument/detector/image_key')
+#itype = np.zeros(data.shape)
+#data.read_direct(itype)
+## 2 is dark field
+#darks = [stack[i] for i in range(len(itype)) if itype[i] == 2 ]
+#dark = darks[0]
+#for i in range(1, len(darks)):
+#    dark += darks[i]
+#dark = dark / len(darks)
+##dark[0][0] = dark[0][1]
+#
+## 1 is flat field
+#flats = [stack[i] for i in range(len(itype)) if itype[i] == 1 ]
+#flat = flats[0]
+#for i in range(1, len(flats)):
+#    flat += flats[i]
+#flat = flat / len(flats)
+##flat[0][0] = dark[0][1]
+#
+#
+## 0 is projection data
+#proj = [stack[i] for i in range(len(itype)) if itype[i] == 0 ]
+#angle_proj = [angles[i] for i in range(len(itype)) if itype[i] == 0 ]
+#angle_proj = np.asarray (angle_proj)
+#angle_proj = angle_proj.astype(np.float32)
+#
+## normalized data are
+## norm = (projection - dark)/(flat-dark)
+#
+#def normalize(projection, dark, flat, def_val=0.1):
+#    a = (projection - dark)
+#    b = (flat-dark)
+#    with np.errstate(divide='ignore', invalid='ignore'):
+#        c = np.true_divide( a, b )
+#        c[ ~ np.isfinite( c )] = def_val  # set to not zero if 0/0 
+#    return c
+#    
+#
+#norm = [normalize(projection, dark, flat) for projection in proj]
+#norm = np.asarray (norm)
+#norm = norm.astype(np.float32)
+#
+
+#cor = find_center_vo (norm)
+#print ("Center of rotation %f" % cor)

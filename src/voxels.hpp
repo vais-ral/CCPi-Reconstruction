@@ -45,4 +45,11 @@ extern voxel_data *reconstruct(CCPi::instrument *device,
 			       real full_vox_origin[3], real voxel_size[3],
 			       const bool has_offsets, const bool is_pixel_in_log);
 
+/*Iteration with input solution at previous step*/
+extern voxel_data *reconstruct(CCPi::instrument *device,
+	CCPi::reconstruction_alg *algorithm,
+	const numpy_3d &pixels, const numpy_1d &angles,
+	const real rotation_centre, const int pixels_per_voxel,
+	const int blocking_factor, const bool beam_harden, const bool is_pixel_in_log,
+	voxel_data * last_iteration_voxels);	
 #endif // CCPI_VOXEL_SETUP

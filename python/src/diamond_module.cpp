@@ -29,12 +29,20 @@ void export_reconstruction()
 	// set the current scope to the new sub-module
     bp::scope reconstruction_scope = reconstructionModule;
 
-  def("cgls", reconstruct_cgls);
-  def("cgls_conv", reconstruct_cgls2);
-  def("sirt", reconstruct_sirt);
-  def("mlem", reconstruct_mlem);
+  def("cgls",          reconstruct_cgls);
+  def("cgls_conv",     reconstruct_cgls2);
+  def("sirt",          reconstruct_sirt);
+  def("mlem",          reconstruct_mlem);
   def("cgls_tikhonov", reconstruct_cgls_tikhonov);
-  def("cgls_TVreg", reconstruct_cgls_tvreg);
+  def("cgls_TVreg",    reconstruct_cgls_tvreg);
+  
+  def("cgls_step",          reconstruct_cgls_step);
+  def("sirt_step",          reconstruct_sirt_step);
+  def("mlem_step",          reconstruct_mlem_step);
+  def("cgls_tikhonov_step", reconstruct_cgls_tikhonov_step);
+  def("cgls_TVreg_step",    reconstruct_cgls_tvreg_step);
+  def("cgls_conv_step",     reconstruct_cgls2_step);
+
   //def("tvreg", reconstruct_tvreg);
 }
 

@@ -27,6 +27,7 @@ except:
         except:
            pass
     pass
+
 extra_include_dirs = [numpy.get_include()]
 extra_library_dirs = []
 extra_compile_args = []
@@ -37,7 +38,7 @@ if platform.system() == 'Windows':
    extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', '/openmp']   
    extra_include_dirs += ["..\\src\\","..\\src\\Algorithms","..\\src\\Readers", "."]
    extra_include_dirs += [library_include_path]
-   extra_library_dirs += ['C:\Apps\Anaconda3\envs\python3.5\Library\lib']
+   extra_library_dirs += [r'C:\Apps\Miniconda2\envs\cil\Library\lib']
    if sys.version_info.major == 3 :   
        extra_libraries += ['boost_python3-vc140-mt-1_64', 'boost_numpy3-vc140-mt-1_64']
    else:
@@ -54,7 +55,7 @@ else:
 
 setup(
   name='ccpi-reconstruction',
-	description='This is a CCPi Core Imaging Library package for Reconstruction codes',
+	description='This is a CCPi Core Imaging Library package for Iterative Reconstruction codes',
 	version=cil_version,
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("ccpi.reconstruction.parallelbeam",
