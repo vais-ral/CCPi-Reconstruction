@@ -3,9 +3,8 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 //This will enable more than 15 arguments in function
 #define BOOST_PYTHON_MAX_ARITY 19  
-#include "include/numpy_boost_python.hpp"
 
-#include "conebeam_wrapper.cpp"
+#include "conebeam_wrapper.hpp"
 using namespace boost::python;
 
 void export_conebeam_reconstruction();
@@ -13,6 +12,7 @@ void export_conebeam_reconstruction();
 BOOST_PYTHON_MODULE(conebeam)
 {
 	namespace bp = boost::python;
+	np::initialize();	
 	//To specify that this module is a package
 	bp::object package = bp::scope();
 	package.attr("__path__") = "conebeam";
@@ -35,4 +35,5 @@ void export_conebeam_reconstruction()
   def("mlem", conebeam_reconstruct_mlem);
   def("cgls_tikhonov", conebeam_reconstruct_cgls_tikhonov);
   def("cgls_TVreg", conebeam_reconstruct_cgls_tvreg);
+  def("create_phantom", conebeam_create_phantom);
 }

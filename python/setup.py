@@ -15,6 +15,7 @@ if  cil_version == '':
     print("Please set the environmental variable CIL_VERSION")
     sys.exit(1)
 
+library_include_path = ""
 try:
     library_include_path = os.environ['LIBRARY_INC']
 except:
@@ -26,23 +27,26 @@ except:
         except:
            pass
     pass
-extra_compile_args = ['-fopenmp','-O2', '-funsigned-char', '-Wall', '-Werror']
-extra_libraries = []
-extra_include_dirs = []
+
+extra_include_dirs = [numpy.get_include()]
 extra_library_dirs = []
+extra_compile_args = []
+extra_link_args = []
+extra_libraries = []
+
 if platform.system() == 'Windows':
-   extra_compile_args[0:] = ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB' , '/openmp' , '-Zi', '/Od']   
-   extra_include_dirs += ["..\\src\\","..\\src\\Algorithms","..\\src\\Readers", ".", numpy.get_include()]
+   extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', '/openmp']   
+   extra_include_dirs += ["..\\src\\","..\\src\\Algorithms","..\\src\\Readers", "."]
    extra_include_dirs += [library_include_path]
    extra_library_dirs += [r'C:\Apps\Miniconda2\envs\cil\Library\lib']
    if sys.version_info.major == 3 :   
        extra_libraries += ['boost_python3-vc140-mt-1_64', 'boost_numpy3-vc140-mt-1_64']
    else:
-       extra_libraries += ['boost_python-vc140-mt-1_64', 'boost_numpy-vc140-mt-1_64']   
+       extra_libraries += ['boost_python-vc90-mt-1_64', 'boost_numpy-vc90-mt-1_64']   
 else:
-   extra_include_dirs += ['/apps/anaconda/2.4/envs/ccpi-py2/include/','/apps/anaconda/2.4/envs/ccpi-py2/include/python2.7']
-   extra_include_dirs += ["../src/","../src/Algorithms","../src/Readers", ".", numpy.get_include()]
+   extra_include_dirs += ["../src/","../src/Algorithms","../src/Readers", "."]
    extra_include_dirs += [library_include_path]
+   extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined']   
    if sys.version_info.major == 3 :
        extra_libraries += ['boost_python3', 'boost_numpy3','gomp']
    else:
@@ -50,8 +54,8 @@ else:
 
 
 setup(
-   name='ccpi',
-	description='This is a CCPi package for Tomography',
+  name='ccpi-reconstruction',
+	description='This is a CCPi Core Imaging Library package for Iterative Reconstruction codes',
 	version=cil_version,
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("ccpi.reconstruction.parallelbeam",
@@ -78,9 +82,10 @@ setup(
 										"../src/timer.cpp",
 										"../src/tikhonov.cpp",
 										"../src/ui_calls.cpp"],
-                             include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries, extra_link_args=['-Wl','--no-undefined', '-debug'] ),
+                             include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries, extra_link_args=extra_link_args ),
                              Extension("ccpi.reconstruction.conebeam",
                              sources=[  "src/conebeam_module.cpp",
+                                        "src/conebeam_wrapper.cpp",
 										"../src/mpi.cpp", 
 										"../src/utils.cpp",
 										"../src/instruments.cpp",
@@ -103,5 +108,6 @@ setup(
 										"../src/tikhonov.cpp",
 										"../src/ui_calls.cpp"],
                              include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries )                             ],
+	zip_safe = False,
 	packages = {'ccpi','ccpi.reconstruction'}
 )
