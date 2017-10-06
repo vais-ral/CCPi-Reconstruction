@@ -93,16 +93,17 @@ class Reconstructor:
             if key in acceptedkeys:
                 self.pars[key] = value
             else:
-                raise Exception('Wrong parameter {0} for Reconstruction algorithm'.format(key))
+                raise Exception('Wrong parameter {0} for '.format(key) +
+                                'Reconstruction algorithm')
     # setParameter
 	
-    def getParameter(self, **kwargs):
+    def getParameter(self, parameter_name):
         ret = {}
-        for key , value in kwargs.items():
-            if key in self.pars.keys():
-                ret[key] = self.pars[key]
+        if parameter_name in self.pars.keys():
+            ret[parameter_name] = self.pars[parameter_name]
         else:
-            raise Exception('Wrong parameter {0} for regularizer algorithm'.format(key))
+            raise Exception('Parameter {0} not currently '.format(parameter_name) +
+                            'saved for regularizer algorithm')
     # setParameter    
     def sanityCheck(self):
         projection_data = self.pars['projection_data']
@@ -118,8 +119,8 @@ class Reconstructor:
             if angle_shape[0] != data_shape[0]:
                 #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
                 #                (angle_shape[0] , data_shape[0]) )
-                return (False , 'Projections and angles dimensions do not match: %d vs %d' % \
-                                (angle_shape[0] , data_shape[0]) )
+                return (False , 'Projections and angles dimensions do not match:'+
+                                ' %d vs %d' % (angle_shape[0] , data_shape[0]) )
             
             if data_shape[1:] != numpy.shape(flat_field):
                 #raise Exception('Projection and flat field dimensions do not match')
@@ -170,7 +171,9 @@ class Reconstructor:
                
                
            if parameters['algorithm'] in (Reconstructor.Algorithm.CGLS,
-                        Reconstructor.Algorithm.MLEM, Reconstructor.Algorithm.SIRT):
+                                          Reconstructor.Algorithm.MLEM,
+                                          Reconstructor.Algorithm.SIRT,
+                                          Reconstructor.Algorithm.CGLS_CONV):
                #store parameters
                
                self.pars = parameters
@@ -183,11 +186,7 @@ class Reconstructor:
                        stepalg = alg.mlem_step
                    elif parameters['algorithm'] == Reconstructor.Algorithm.CGLS_CONV:
                        stepalg = alg.cgls_conv_step
-                   elif parameters['algorithm'] == Reconstructor.Algorithm.CGLS_TIKHONOV:
-                       stepalg = alg.cgls_tikhonov_step
-                   elif parameters['algorithm'] == Reconstructor.Algorithm.CGLS_TVREG:
-                       stepalg = alg.cgls_TVreg_step
-
+                   
                    result = stepalg(
                            parameters['normalized_projection_data'] ,
                            parameters['angles'],
@@ -212,7 +211,13 @@ class Reconstructor:
                return result
            else:
                self.pars = parameters
-               result = parameters['algorithm'](
+               if parameters['input_volume'] is not None:
+                   if parameters['algorithm'] == Reconstructor.Algorithm.CGLS_TIKHONOV:
+                       stepalg = alg.cgls_tikhonov_step
+                   elif parameters['algorithm'] == Reconstructor.Algorithm.CGLS_TVREG:
+                       stepalg = alg.cgls_TVreg_step
+
+                   result = stepalg(
                            parameters['normalized_projection_data'] ,
                            parameters['angles'],
                            parameters['center_of_rotation'],
@@ -221,8 +226,21 @@ class Reconstructor:
                            parameters['threads'] ,
                            parameters['regularize'],
                            numpy.zeros((parameters['iterations'])),
-                           parameters['isLogScale']
+                           parameters['isLogScale'],
+                           parameters['input_volume']
                            )
+               else:
+                   result = parameters['algorithm'](
+                               parameters['normalized_projection_data'] ,
+                               parameters['angles'],
+                               parameters['center_of_rotation'],
+                               parameters['resolution'],
+                               parameters['iterations'],
+                               parameters['threads'] ,
+                               parameters['regularize'],
+                               numpy.zeros((parameters['iterations'])),
+                               parameters['isLogScale']
+                               )
                self.reconstructedVolume = result
                return result
         else:
