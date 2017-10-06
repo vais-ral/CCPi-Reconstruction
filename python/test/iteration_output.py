@@ -115,62 +115,59 @@ niterations = 1
 # number of threads
 threads = 2
 cor = 86.2
-steps = 2
+steps = 3
 
 img_cgls = []
 import matplotlib.pyplot as plt
 
-### CGLS
-##img_cgls.append(
-##    alg.cgls(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
-##    )
-##
-##
-##
-##fig, ax = plt.subplots(3,steps+1,sharey=True)
-##
-##for i in range(steps):
-##    previous = len(img_cgls) - 1
-##    img_cgls.append(
-##        alg.cgls_step(norm,
-##                      angle_proj,
-##                      numpy.double(86.2),
-##                      1 ,
-##                      niterations,
-##                      threads, False,
-##                      img_cgls[previous])
-##        )
-##    ax[i][0].imshow(img_cgls[previous][80])
-##    ax[i][1].imshow(img_cgls[-1][80])
-##    ax[i][2].imshow(img_cgls[previous][80] - img_cgls[-1][80])
-##
-###plt.show()
-
+initial_iterations = 3
 print ("Use Reconstructor")
+print ("Start iterations: {0}".format(initial_iterations))
 reconstructor = Reconstructor()
 reconstructor.setParameter(normalized_projection_data=norm,
                            angles=angle_proj,
                            center_of_rotation=cor,
                            resolution=1,
-                           iterations=1,
+                           iterations=initial_iterations,
                            threads=threads,
                            isLogScale=False,
-                           algorithm=Reconstructor.Algorithm.CGLS)
+                           algorithm=Reconstructor.Algorithm.MLEM)
+reconstructor.setParameter(algorithm=Reconstructor.Algorithm.CGLS_CONV,
+                           regularize=.001)
+
+
 imgrecon = [ reconstructor.reconstruct() ]
 
-fig2, ax2 = plt.subplots(3,steps+1,sharey=True)
+fig2, ax2 = plt.subplots(steps,3,sharey=True)
+iteration_steps = [(i*i if i > 0 else 1)
+                   if i*i < 10 else 10 for i in range(steps) ]
+current_iteration = initial_iterations
+
+R = []
 
 for i in range(steps):
-    print ("next iteration")
+    step_iterations = iteration_steps[i]
+    current_iteration = current_iteration + step_iterations
+    print ("iteration {0}".format(current_iteration))
     previous = len(imgrecon) - 1
     imgrecon.append(
-        reconstructor.nextIteration()
+        reconstructor.nextIteration(step_iterations)
         )
     ax2[i][0].imshow(imgrecon[previous][80])
+    ax2[i][0].text(0.1,0.1,
+                   "Iteration {0}".format(current_iteration))
     ax2[i][1].imshow(imgrecon[-1][80])
-    ax2[i][2].imshow(imgrecon[previous][80] - imgrecon[-1][80])
-
-plt.show()
+    ax2[i][1].text(0.1,0.1,
+                   "Iteration {0}".format(
+                       current_iteration - step_iterations))
+    diff = imgrecon[previous][80] - imgrecon[-1][80]
+    ax2[i][2].imshow(diff)
+    ax2[i][2].text(0.1,0.1,"difference")
+    R.append([current_iteration, (diff * diff).sum()])
+    fig2.canvas.draw()
+    fig2.canvas.flush_events()
+    
+plt.plot()
 
 
 
