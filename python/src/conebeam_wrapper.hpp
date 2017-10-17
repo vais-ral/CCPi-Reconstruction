@@ -96,8 +96,8 @@ extern np::ndarray conebeam_reconstruct_cgls2(np::ndarray pixels,
 					   np::ndarray h_offsets,
 					   np::ndarray v_offsets,
 					   const int pixels_per_voxel, 
-					   const double source_x,
-					   const double detector_x, 
+					   const double source_to_sample,
+					   const double source_to_detector, 
 					   const double pixel_h_size,
 					   const double pixel_v_size, 
 					   const double mask_radius,
@@ -107,4 +107,6 @@ extern np::ndarray conebeam_reconstruct_cgls2(np::ndarray pixels,
 				       int niterations, int nthreads,
 					   np::ndarray norm_r, 
 					   bool is_pixels_in_log);
+					   
 extern boost::python::tuple conebeam_create_phantom();
+extern boost::python::tuple conebeam_load_xtek(const std::string& filename);

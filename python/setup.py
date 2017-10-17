@@ -15,19 +15,21 @@ if  cil_version == '':
     print("Please set the environmental variable CIL_VERSION")
     sys.exit(1)
 
-library_include_path = ""
+library_include_path = []
+library_lib_path = []
 try:
-    library_include_path = os.environ['LIBRARY_INC']
+    library_include_path = [ os.environ['LIBRARY_INC'] ]
+    library_lib_path = [ os.environ['LIBRARY_LIB'] ]
 except:
     if platform.system() == 'Windows':
         pass
     else:
         try:
-           library_include_path = os.environ['PREFIX']+'/include'
+           library_include_path = [ os.environ['PREFIX']+'/include' ]
+           library_lib_path = [ os.environ['PREFiX']+'/lib' ]
         except:
            pass
     pass
-
 extra_include_dirs = [numpy.get_include()]
 extra_library_dirs = []
 extra_compile_args = []
@@ -35,18 +37,20 @@ extra_link_args = []
 extra_libraries = []
 
 if platform.system() == 'Windows':
-   extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', '/openmp']   
+   extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', '/openmp','/DHAS_TIFF']   
    extra_include_dirs += ["..\\src\\","..\\src\\Algorithms","..\\src\\Readers", "."]
-   extra_include_dirs += [library_include_path]
-   extra_library_dirs += [r'C:\Apps\Miniconda2\envs\cil\Library\lib']
+   extra_include_dirs += library_include_path
+   extra_library_dirs += library_lib_path
+   extra_libraries    += ['tiff']
    if sys.version_info.major == 3 :   
        extra_libraries += ['boost_python3-vc140-mt-1_64', 'boost_numpy3-vc140-mt-1_64']
    else:
        extra_libraries += ['boost_python-vc90-mt-1_64', 'boost_numpy-vc90-mt-1_64']   
 else:
    extra_include_dirs += ["../src/","../src/Algorithms","../src/Readers", "."]
-   extra_include_dirs += [library_include_path]
-   extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined']   
+   extra_include_dirs += library_include_path
+   extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined','-DHAS_TIFF']  
+   extra_libraries    += ['tiff'] 
    if sys.version_info.major == 3 :
        extra_libraries += ['boost_python3', 'boost_numpy3','gomp']
    else:

@@ -403,6 +403,8 @@ namespace CCPi {
 	real get_mask_radius(){return mask_radius;}
     void apply_beam_hardening();
 	void initialise_phantom();
+    void initialise_withconfig(const std::string& config_path);
+
   private:
     real mask_radius;
     real white_level;

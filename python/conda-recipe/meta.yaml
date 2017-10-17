@@ -17,11 +17,13 @@ requirements:
     - boost ==1.64	
     - boost-cpp ==1.64
     - cython
+    - libtiff
 
   run:
     - python
     - numpy
     - boost ==1.64
+    - libtiff
 
 	
 about:

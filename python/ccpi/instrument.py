@@ -131,7 +131,7 @@ class Xtek(Instrument):
             for line in content[1:]:
                 self.angles[index] = float(line.split(':')[1])
                 index+=1
-            self.angles = np.flipud(np.deg2rad(self.angles+initial_angle)) #angles are in the reverse order
+            self.angles = np.flipud(self.angles+initial_angle) #angles are in the reverse order
         else:
             raise RuntimeError("Can't find angles file")
         pass
@@ -140,10 +140,10 @@ class Xtek(Instrument):
         """
         """
         input_path = os.path.dirname(filename)
-        self.pixels = np.zeros((self.num_of_vertical_pixels, self.num_of_horizontal_pixels, number_of_projections), dtype='f')
-        for i in range(1, number_of_projections):
+        self.pixels = np.zeros((number_of_projections, self.num_of_horizontal_pixels, self.num_of_vertical_pixels), dtype='float32')
+        for i in range(1, number_of_projections+1):
             im = Image.open(os.path.join(input_path,self.experiment_name+"_%04d"%i+".tif"))
-            self.pixels[:,:,i] = np.array(im) ##Not sure this is the correct way to populate the image
+            self.pixels[i-1,:,:] = np.fliplr(np.transpose(np.array(im))) ##Not sure this is the correct way to populate the image
             
         max_v = np.amax(self.pixels)
         self.pixels = self.pixels - (white_level*scattering)/100.0
@@ -165,9 +165,9 @@ class Xtek(Instrument):
         content = [x.strip() for x in content]
         for line in content:
             if line.startswith("SrcToObject"):
-                self.source_x = -float(line.split('=')[1])
+                self.source_x = float(line.split('=')[1])
             elif line.startswith("SrcToDetector"):
-                self.detector_x = self.source_x + float(line.split('=')[1])
+                self.detector_x = float(line.split('=')[1])
             elif line.startswith("DetectorPixelsY"):
                 self.num_of_vertical_pixels = int(line.split('=')[1])
                 self.num_of_vertical_pixels = self.calc_v_alighment(self.num_of_vertical_pixels, self.pixels_per_voxel)
@@ -187,6 +187,8 @@ class Xtek(Instrument):
                 scattering = float(line.split('=')[1])
             elif line.startswith("WhiteLevel"):
                 white_level = float(line.split('=')[1])                
+            elif line.startswith("MaskRadius"):
+                self.mask_radius = float(line.split('=')[1])
             
             
                 
@@ -197,5 +199,7 @@ class Xtek(Instrument):
         pixel_base = -((self.num_of_vertical_pixels-1)*ypixel_size/2.0)
         self.v_pixels = self.v_pixels * ypixel_size + pixel_base         
         
+        self.xpixel_size = xpixel_size
+        self.ypixel_size = ypixel_size
         self.read_angles(filename, initial_angle, num_projections)
         self.read_images(filename, num_projections, white_level, scattering)
