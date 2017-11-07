@@ -37,7 +37,7 @@ include_directories(
 	"${PROJECT_BINARY_DIR}")
 
 # Add sub-directories
-add_subdirectory(Code/src)
+add_subdirectory(Core/src)
 
 OPTION(BUILD_AVIZO_PLUGIN "Build Avizo plugin" OFF)
 IF(BUILD_AVIZO_PLUGIN)

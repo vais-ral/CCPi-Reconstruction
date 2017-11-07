@@ -10,7 +10,7 @@
 
 #include <string>
 
-class CCPiUserApplicationInterface
+class CCPI_EXPORT CCPiUserApplicationInterface
 {
 public:
 	/* 
