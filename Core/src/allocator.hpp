@@ -85,6 +85,14 @@ public:
   {
     p->~T();
   }
+
+  // Returns true if and only if storage allocated from *this
+  // can be deallocated from other, and vice versa.
+  // Always returns true for stateless allocators.
+  bool operator==(const aligned_allocator& other) const
+  {
+	  return true;
+  }
 };
 
 // Todo - add an assert #if DEBUG to check that alignment is what it should be?

@@ -9,7 +9,7 @@
 
 #include "CCPiUserApplicationInterface.h"
 
-class CCPiConsoleUserInterface : public CCPiUserApplicationInterface
+class CCPI_EXPORT CCPiConsoleUserInterface : public CCPiUserApplicationInterface
 {
 public:
 	void LogMessage(std::string message);

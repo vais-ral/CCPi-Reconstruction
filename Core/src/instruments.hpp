@@ -2,6 +2,7 @@
 #ifndef CCPI_RECON_INSTRUMENTS
 #define CCPI_RECON_INSTRUMENTS
 
+#include "CCPiDefines.h"
 #include <map>
 
 namespace CCPi {
@@ -18,7 +19,7 @@ namespace CCPi {
 				 const real param_n, const real param_r,
 				 const int num_series);
 
-  class instrument {
+  class CCPI_EXPORT instrument {
   public:
     instrument();
     virtual ~instrument();
@@ -141,7 +142,7 @@ namespace CCPi {
     pixel_3d *pixels;
   };
 
-  class cone_beam : public instrument {
+  class CCPI_EXPORT cone_beam : public instrument {
   public:
     void forward_project(pixel_data &pixels, voxel_data &voxels,
 			 const real origin[3], const real width[3],
@@ -246,7 +247,7 @@ namespace CCPi {
 		    const int nz, const recon_2d &d_conv);
   };
 
-  class parallel_beam : public instrument {
+  class CCPI_EXPORT parallel_beam : public instrument {
   public:
     void forward_project(pixel_data &pixels, voxel_data &voxels,
 			 const real origin[3], const real width[3],
@@ -314,7 +315,7 @@ namespace CCPi {
 			    const real size_z, const int nv);
   };
 
-  class Diamond : public parallel_beam {
+  class CCPI_EXPORT Diamond : public parallel_beam {
   public:
     Diamond(const bool use_hp = false, const real hpj = 0.0,
 	    const int hp_np = 1, const bool use_ring = false,
@@ -372,7 +373,7 @@ namespace CCPi {
 			       const real param_r, const int num_series);
   };
 
-  class Nikon_XTek : public cone_beam {
+  class CCPI_EXPORT Nikon_XTek : public cone_beam {
   public:
     bool setup_experimental_geometry(const std::string path,
 				     const std::string file,
