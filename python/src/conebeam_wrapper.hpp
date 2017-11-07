@@ -109,4 +109,8 @@ extern np::ndarray conebeam_reconstruct_cgls2(np::ndarray pixels,
 					   bool is_pixels_in_log);
 					   
 extern boost::python::tuple conebeam_create_phantom();
+extern boost::python::tuple conebeam_create_phantom_volume();
 extern boost::python::tuple conebeam_load_xtek(const std::string& filename);
+
+extern np::ndarray conebeam_create_sinogram(const float source_x, const float source_y, const float source_z, const float detector_x, np::ndarray ndarray_h_pixels, np::ndarray ndarray_v_pixels, np::ndarray ndarray_angles, np::ndarray ndarray_voxels, 
+									  np::ndarray grid_offset, np::ndarray voxel_size);

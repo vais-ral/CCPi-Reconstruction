@@ -267,6 +267,49 @@ boost::python::tuple conebeam_create_phantom()
 	return boost::python::make_tuple(pixels, angles, source_x, detector_x, pixel_h_size, pixel_v_size, mask_radius);
 }
 
+boost::python::tuple conebeam_create_phantom_volume()
+{
+	CCPi::Nikon_XTek *instrument = new CCPi::Nikon_XTek();
+	real_1d h_pixels(512);
+	real_1d v_pixels(512);
+	voxel_data vol_data = instrument->initialise_phantom_volume(h_pixels, v_pixels);
+	int nx = instrument->get_num_angles();
+	int ny = instrument->get_num_h_pixels();
+	int nz = instrument->get_num_v_pixels();
+	double source_x = -1*instrument->get_source_x();
+	double detector_x = instrument->get_detector_x()+source_x;
+	double mask_radius = instrument->get_mask_radius();
+	double pixel_h_size = 0.390625;
+	double pixel_v_size = 0.390625;
+	std::cout<<" dimension "<<nx<<" "<<ny<<" "<<std::endl;
+
+	np::dtype dt = np::dtype::get_builtin<float>();
+	bp::tuple shape = bp::make_tuple(512, 512, 512);
+	np::ndarray voxels = np::zeros(shape,dt);
+	
+	for(int i=0;i<512;i++)
+		for(int j=0;j<512;j++)
+			for(int k=0;k<512;k++)
+				voxels[i][j][k] = vol_data[i][j][k];
+
+	bp::tuple ashape = bp::make_tuple(instrument->get_num_angles());
+	np::ndarray angles = np::zeros(ashape,dt);	
+	real_1d phi = instrument->get_phi();
+	for(int i=0;i<instrument->get_num_angles();i++)
+		angles[i] = phi[i]*180.0/M_PI;
+	
+	bp::tuple hv_pixels_shape = bp::make_tuple(512);
+	np::ndarray h_pixels_ndarray = np::zeros(hv_pixels_shape,dt);	
+	np::ndarray v_pixels_ndarray = np::zeros(hv_pixels_shape,dt);		
+	for(int i=0;i<512;i++)
+	{
+		h_pixels_ndarray[i] = h_pixels[i];
+		v_pixels_ndarray[i] = v_pixels[i];
+    }
+	
+	return boost::python::make_tuple(voxels, angles, h_pixels_ndarray, v_pixels_ndarray, source_x, detector_x, pixel_h_size, pixel_v_size, mask_radius);	
+}
+
 boost::python::tuple conebeam_load_xtek(const std::string& filename)
 {
         CCPi::Nikon_XTek *instrument = new CCPi::Nikon_XTek();
@@ -300,3 +343,53 @@ boost::python::tuple conebeam_load_xtek(const std::string& filename)
 }
 
 
+np::ndarray conebeam_create_sinogram(const float source_x, const float source_y, const float source_z, const float detector_x, np::ndarray ndarray_h_pixels, np::ndarray ndarray_v_pixels, np::ndarray ndarray_angles, np::ndarray ndarray_voxels, np::ndarray grid_offset, np::ndarray voxel_size)
+{
+	np::dtype dt = np::dtype::get_builtin<float>();
+	bp::tuple shape = bp::make_tuple(ndarray_angles.shape(0), ndarray_h_pixels.shape(0), ndarray_v_pixels.shape(0));
+	np::ndarray ndarray_pixels = np::zeros(shape,dt);
+
+// TODO:: Look into not duplicating the voxel data, h_pixel, v_pixels.
+	voxel_data voxels(boost::extents[ndarray_voxels.shape(0)][ndarray_voxels.shape(1)][ndarray_voxels.shape(2)]);
+
+	for(int i=0;i<ndarray_voxels.shape(0);i++)
+		for(int j=0;j<ndarray_voxels.shape(1);j++)
+			for(int k=0;k<ndarray_voxels.shape(2);k++)
+				voxels[i][j][k] = bp::extract<float>(ndarray_voxels[i][j][k]);
+
+	pixel_data pixels(boost::extents[ndarray_pixels.shape(0)][ndarray_pixels.shape(1)][ndarray_pixels.shape(2)]);
+	real_1d angles(ndarray_angles.shape(0));  			
+	real_1d h_pixels(ndarray_h_pixels.shape(0));
+	real_1d v_pixels(ndarray_v_pixels.shape(0));
+	for(int i=0;i<ndarray_angles.shape(0);i++)
+		angles[i] = bp::extract<float>(ndarray_angles[i]);
+	for(int i=0;i<ndarray_h_pixels.shape(0);i++)
+		h_pixels[i] = bp::extract<float>(ndarray_h_pixels[i]);
+	for(int i=0;i<ndarray_v_pixels.shape(0);i++)
+		v_pixels[i] = bp::extract<float>(ndarray_v_pixels[i]);
+	
+	real origin[3]={bp::extract<float>(grid_offset[0]), bp::extract<float>(grid_offset[1]), bp::extract<float>(grid_offset[2])};			
+	real width[3]={bp::extract<float>(voxel_size[0]), bp::extract<float>(voxel_size[1]), bp::extract<float>(voxel_size[2])};
+	CCPi::cone_beam::f2D(source_x, source_y, source_z, detector_x, 
+						 h_pixels,
+						 v_pixels,
+						 angles,
+						 pixels,
+						 voxels,
+						 ndarray_angles.shape(0),
+						 ndarray_h_pixels.shape(0),
+						 ndarray_v_pixels.shape(0),
+					     origin,
+						 width,
+						 ndarray_voxels.shape(0),
+						 ndarray_voxels.shape(1),
+						 ndarray_voxels.shape(2));
+
+	for(int i=0;i<ndarray_angles.shape(0);i++)
+		for(int j=0;j<ndarray_h_pixels.shape(0);j++)
+			for(int k=0;k<ndarray_v_pixels.shape(0);k++)
+				ndarray_pixels[i][j][k] = pixels[i][j][k];						 
+			
+			
+	return ndarray_pixels;
+}

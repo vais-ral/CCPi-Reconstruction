@@ -404,7 +404,8 @@ namespace CCPi {
     void apply_beam_hardening();
 	void initialise_phantom();
     void initialise_withconfig(const std::string& config_path);
-
+    voxel_data initialise_phantom_volume(real_1d &h_pixels, real_1d &v_pixels);
+	
   private:
     real mask_radius;
     real white_level;

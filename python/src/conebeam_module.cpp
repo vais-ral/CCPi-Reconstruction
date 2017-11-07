@@ -36,5 +36,7 @@ void export_conebeam_reconstruction()
   def("cgls_tikhonov", conebeam_reconstruct_cgls_tikhonov);
   def("cgls_TVreg", conebeam_reconstruct_cgls_tvreg);
   def("create_phantom", conebeam_create_phantom);
+  def("create_phantom_volume",conebeam_create_phantom_volume);
   def("load_xtek", conebeam_load_xtek);
+  def("create_sinogram", conebeam_create_sinogram);
 }

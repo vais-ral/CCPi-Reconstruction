@@ -822,6 +822,75 @@ void CCPi::Nikon_XTek::initialise_phantom()
 	build_phantom();
 }
 
+voxel_data CCPi::Nikon_XTek::initialise_phantom_volume(real_1d &h_pixels, real_1d &v_pixels)
+{
+	create_phantom();
+  // build small voxel set to project to produce initial pixels
+  int nx = 512;
+  int ny = 512;
+  int nz = 512;
+
+  //real *h_pixels = get_h_pixels();
+  //int n_h_pixels = get_num_h_pixels();
+  //mask_radius = -get_source_x()
+  //* std::sin(std::atan(h_pixels[n_h_pixels - 1] /
+  //		 (get_detector_x() - get_source_x())));
+  real voxel_size[3];
+  voxel_size[0] = (2 * mask_radius / nx);
+  voxel_size[1] = voxel_size[0];
+  voxel_size[2] = voxel_size[0];
+  real image_vol[3];
+  image_vol[0] = voxel_size[0] * nx;
+  image_vol[1] = voxel_size[1] * ny;
+  image_vol[2] = voxel_size[2] * nz;
+  real image_offset[3];
+  image_offset[0] = -image_vol[0] / 2;
+  image_offset[1] = -image_vol[1] / 2;
+  image_offset[2] = -image_vol[2] / 2;
+  // set up phantom volume
+  voxel_data x(boost::extents[nx][ny][nz], boost::c_storage_order());
+
+  //sl_int n_vox = nx * ny * nz;
+  for (sl_int k = 0; k < nx; k++)
+    for (sl_int j = 0; j < ny; j++)
+      for (sl_int i = 0; i < nz; i++)
+	x[k][j][i] = 0.0;
+
+  // add cubes - column major
+  for (int i = 108-1; i < 189; i++) {
+    for (int j = 108-1; j < 189; j++) {
+      for (int k = 58-1; k < 139; k++) {
+        x[i][j][k] = 1;
+      }
+    }
+  }
+
+  for (int i = 190-1; i < 271; i++) {
+    for (int j = 190-1; j < 271; j++) {
+      for (int k = 140-1; k < 221; k++) {
+        x[i][j][k] = 1;
+      }
+    }
+  }
+
+  for (int i = 272-1; i < 353; i++) {
+    for (int j = 272-1; j < 353; j++) {
+      for (int k = 222-1; k < 303; k++) {
+        x[i][j][k] = 1;
+      }
+    }
+  }	
+  
+  real_1d hp = get_h_pixels();
+  for(int i=0;i<h_pixels.size();i++)
+	  h_pixels[i] = hp[i];
+  real_1d vp = get_v_pixels();
+  for(int i=0;i<v_pixels.size();i++)
+	  v_pixels[i] = vp[i];
+  
+  return x;
+}
+
 void CCPi::Nikon_XTek::initialise_withconfig(const std::string& config_path)
 {
    int pixels_per_voxel = 1;
