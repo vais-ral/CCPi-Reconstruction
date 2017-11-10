@@ -42,7 +42,7 @@ ADD_LIBRARY(CCPiReconstructionIterative ${LIB_TYPE}
 #Boost Libraries
 SET(Boost_USE_STATIC_LIBS        OFF) # only find dynamic libs
 SET(Boost_USE_MULTITHREADED      ON)
-find_package(Boost 1.57.0 COMPONENTS date_time filesystem system)
+find_package(Boost REQUIRED COMPONENTS date_time filesystem system)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
   target_link_libraries(CCPiReconstructionIterative ${Boost_LIBRARIES})

@@ -5,7 +5,7 @@
 #include <amiramesh/HxParamBundle.h>
 #include "CCPiAvizoUserInterface.h"
 #include <hxcore/internal/HxWorkArea.h>
-#include <QApplication.h>
+#include <QApplication>
 #include <hxcore/internal/HxThread.h>
 #include <boost/filesystem.hpp>
 
@@ -50,7 +50,7 @@ int CCPiXTekAvizoReader(const char* filename)
 		bx[5]=(float)newDims[2]-1;
 	else
 		bx[5] = 1;
-#if QT_VERSION >= 5
+#if QT_VERSION >= 0x050000
 	HxData::registerData(field, QString::fromStdString(reader.getName()));
 #else
 	HxData::registerData(field, reader.getName().c_str());

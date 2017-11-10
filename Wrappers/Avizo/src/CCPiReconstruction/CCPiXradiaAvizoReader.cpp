@@ -11,7 +11,7 @@
 #include <hxcore/HxWorkArea.h>
 #include <hxcore/HxThread.h>
 #endif
-#include <QApplication.h>
+#include <QApplication>
 #include <boost/filesystem.hpp>
 
 void setParameters(HxUniformScalarField3 *field, CCPi::XradiaReader reader);

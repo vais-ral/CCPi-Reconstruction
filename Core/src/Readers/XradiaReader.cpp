@@ -2,7 +2,9 @@
 
 #include<iostream>
 #include <cstdint>
+#ifdef WIN32
 #include "Winsock2.h"
+#endif
 //#include <boost/endian/conversion.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/format.hpp>

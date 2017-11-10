@@ -11,6 +11,9 @@
   #endif /* CCPi_EXPORTS */
 #elif defined(linux) || defined(__linux) || defined(__APPLE__)
  #define CCPI_EXPORT
+ #ifndef __cdecl
+ 	#define __cdecl
+ #endif
 #endif
 
 #endif

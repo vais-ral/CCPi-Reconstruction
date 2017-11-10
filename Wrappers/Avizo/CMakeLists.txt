@@ -67,7 +67,7 @@ endif()
 IF (WIN32)
 
 ELSE()
-set(CMAKE_CXX_FLAGS "-shared -fPIC -Wall -Wno-unknown-pragmas -mmmx -msse -msse2 -mfpmath=sse -fmessage-length=0 -fexceptions -frounding-math")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared -fPIC -Wall -Wno-unknown-pragmas -mmmx -msse -msse2 -mfpmath=sse -fmessage-length=0 -fexceptions -frounding-math")
 ENDIF()
 
 include_directories(${CCPiReconstructionIterative_INCLUDE_DIRS})
