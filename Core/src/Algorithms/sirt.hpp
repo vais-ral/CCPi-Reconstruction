@@ -4,7 +4,7 @@
 
 namespace CCPi {
 
-  class sirt : public reconstruction_alg {
+  class CCPI_EXPORT sirt : public reconstruction_alg {
   public:
     sirt(const int niterations);
 

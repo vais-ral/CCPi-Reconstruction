@@ -6,7 +6,7 @@
 
 #ifndef CCPICONSOLEUSERINTERFACE_H
 #define CCPICONSOLEUSERINTERFACE_H
-
+#include "CCPiDefines.h"
 #include "CCPiUserApplicationInterface.h"
 
 class CCPI_EXPORT CCPiConsoleUserInterface : public CCPiUserApplicationInterface

@@ -14,7 +14,7 @@
 
 #include "api.h"
 
-class CCPIRECONSTRUCTION_API CCPiXtekNoShiftReconstruction : public HxCompModule
+class CCPI_API CCPiXtekNoShiftReconstruction : public HxCompModule
 {
     HX_HEADER(CCPiXtekNoShiftReconstruction);
 

@@ -13,7 +13,7 @@
 
 #include "api.h"
 
-class CCPIRECONSTRUCTION_API Cone_Beam_recon : public HxCompModule
+class CCPI_API Cone_Beam_recon : public HxCompModule
 {
     HX_HEADER(Cone_Beam_recon);
 

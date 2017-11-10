@@ -20,11 +20,15 @@ ADD_LIBRARY(CCPiReconstructionIterative ${LIB_TYPE}
 										"Algorithms/cgls.cpp"
 										"Algorithms/mlem.cpp"
 										"Algorithms/sirt.cpp"
+										"Algorithms/landweber.cpp"
+										"CCPiConsoleUserInterface.cpp"
 										"total_v.cpp"
 										"parallel.cpp"
 										"cone.cpp"
 										"diamond.cpp"
 										"Readers/xtek.cpp"
+										"Readers/XradiaReader.cpp"
+										"Readers/pole.cpp"
 										"Algorithms/tv_reg.cpp"
 										"tv_core.cpp"
 										"p2D.cpp"
@@ -36,19 +40,25 @@ ADD_LIBRARY(CCPiReconstructionIterative ${LIB_TYPE}
 			)
 			
 #Boost Libraries
-SET(Boost_USE_STATIC_LIBS        OFF) # only find static libs
+SET(Boost_USE_STATIC_LIBS        OFF) # only find dynamic libs
 SET(Boost_USE_MULTITHREADED      ON)
-find_package(Boost 1.63.0 COMPONENTS date_time filesystem system)
+find_package(Boost 1.57.0 COMPONENTS date_time filesystem system)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
   target_link_libraries(CCPiReconstructionIterative ${Boost_LIBRARIES})
 endif()
-message(${Boost_INCLUDE_DIRS})
 #OpenMP Settings
 find_package(OpenMP)
 if (OPENMP_FOUND)
     SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+#find Tiff library
+find_package(TIFF)
+if(TIFF_FOUND)
+	add_definitions(-DHAS_TIFF -DHX_LITTLE_ENDIAN)	
+	include_directories(${TIFF_INCLUDE_DIR})
+	target_link_libraries(CCPiReconstructionIterative ${TIFF_LIBRARY})
 endif()
 			
 #Include iterative directories
@@ -58,7 +68,7 @@ IF( CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" )
 ENDIF( CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" )
 			
 							
-SET_TARGET_PROPERTIES(CCPiReconstructionIterative  PROPERTIES PUBLIC_HEADER "base_types.hpp;CCPiUserApplicationInterface.h;")							
+SET_TARGET_PROPERTIES(CCPiReconstructionIterative  PROPERTIES PUBLIC_HEADER "base_types.hpp;CCPiUserApplicationInterface.h;Algorithms/cgls.hpp;Algorithms/mlem.hpp;Algorithms/sirt.hpp")							
 
 
 INSTALL(TARGETS CCPiReconstructionIterative EXPORT CCPiReconstructionTargets
@@ -71,7 +81,7 @@ INSTALL(TARGETS CCPiReconstructionIterative EXPORT CCPiReconstructionTargets
 
 ############Expose include files
 set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}
-                                 ${C_INCLUDE_DIRS}
+                                 ${C_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/Algorithms ${PROJECT_SOURCE_DIR}/Readers
     CACHE INTERNAL "${PROJECT_NAME}: Include Directories" FORCE)
 
 

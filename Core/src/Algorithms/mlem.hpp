@@ -4,7 +4,7 @@
 
 namespace CCPi {
 
-  class mlem : public reconstruction_alg {
+  class CCPI_EXPORT mlem : public reconstruction_alg {
   public:
     mlem(const int niterations);
 

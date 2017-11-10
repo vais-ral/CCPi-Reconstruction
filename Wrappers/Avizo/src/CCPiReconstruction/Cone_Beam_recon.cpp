@@ -171,7 +171,7 @@ void Cone_Beam_recon::run_reconstruction()
   voxel_data *voxels = reconstruct(instrument, recon_algorithm, pixels, angles,
 				   h_offsets, v_offsets, pixels_per_voxel,
 				   source_x, detector_x, h_size, v_size, 0.0,
-				   beam_hardening, vox_origin, vox_size, true);
+				   beam_hardening, vox_origin, vox_size, true, false);
   machine::exit();
   delete recon_algorithm;
   delete instrument;

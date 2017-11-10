@@ -10,7 +10,7 @@ namespace CCPi {
 		    alg_landweber, alg_MLEM, alg_SIRT, alg_CGLS_Tikhonov,
 		    alg_CGLS_TVreg };
 
-  class reconstruction_alg {
+  class CCPI_EXPORT reconstruction_alg {
   public:
     virtual ~reconstruction_alg();
     virtual bool reconstruct(class instrument *device, voxel_data &voxels,

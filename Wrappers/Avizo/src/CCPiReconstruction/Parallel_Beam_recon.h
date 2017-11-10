@@ -14,7 +14,7 @@
 
 #include "api.h"
 
-class CCPIRECONSTRUCTION_API Parallel_Beam_recon : public HxCompModule
+class CCPI_API Parallel_Beam_recon : public HxCompModule
 {
   HX_HEADER(Parallel_Beam_recon);
 

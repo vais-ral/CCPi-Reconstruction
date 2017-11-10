@@ -144,7 +144,7 @@ void Parallel_Beam_recon::run_reconstruction()
   // instrument setup from pixels/angles will probably copy
   voxel_data *voxels = reconstruct(instrument, recon_algorithm, pixels, angles,
 				   rotation_centre, pixels_per_voxel, 0,
-				   beam_hardening);
+				   beam_hardening, false);
   machine::exit();
   delete recon_algorithm;
   delete instrument;

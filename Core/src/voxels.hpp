@@ -1,8 +1,9 @@
 
 #ifndef CCPI_VOXEL_SETUP
 #define CCPI_VOXEL_SETUP
+#include "CCPiDefines.h"
 
-extern void calculate_block_sizes(int &nx_voxels, int &ny_voxels,
+CCPI_EXPORT void calculate_block_sizes(int &nx_voxels, int &ny_voxels,
 				  int &nz_voxels, int &maxz_voxels,
 				  int &block_size, int &block_step,
 				  const int num_processors,
@@ -11,7 +12,7 @@ extern void calculate_block_sizes(int &nx_voxels, int &ny_voxels,
 				  CCPi::instrument *instrument,
 				  const bool recon_blocks);
 
-extern voxel_data *reconstruct(CCPi::instrument *device,
+CCPI_EXPORT voxel_data *reconstruct(CCPi::instrument *device,
 			       CCPi::reconstruction_alg *algorithm,
 			       const std::string data_file,
 			       const std::string output_name,
@@ -23,7 +24,7 @@ extern voxel_data *reconstruct(CCPi::instrument *device,
 			       const CCPi::output_format write_format,
 			       const bool clamp_output, const bool phantom);
 
-extern voxel_data *reconstruct(CCPi::instrument *device,
+CCPI_EXPORT voxel_data *reconstruct(CCPi::instrument *device,
 			       CCPi::reconstruction_alg *algorithm,
 			       const numpy_3d &pixels,
 			       const numpy_1d &angles,
@@ -32,7 +33,7 @@ extern voxel_data *reconstruct(CCPi::instrument *device,
 			       const int blocking_factor,
 			       const bool beam_hardenconst,const bool is_pixel_in_log);
 
-extern voxel_data *reconstruct(CCPi::instrument *device,
+CCPI_EXPORT voxel_data *reconstruct(CCPi::instrument *device,
 			       CCPi::reconstruction_alg *algorithm,
 			       const numpy_3d &pixels,
 			       const numpy_1d &angles,
@@ -46,7 +47,7 @@ extern voxel_data *reconstruct(CCPi::instrument *device,
 			       const bool has_offsets, const bool is_pixel_in_log);
 
 /*Iteration with input solution at previous step*/
-extern voxel_data *reconstruct(CCPi::instrument *device,
+CCPI_EXPORT voxel_data *reconstruct(CCPi::instrument *device,
 	CCPi::reconstruction_alg *algorithm,
 	const numpy_3d &pixels, const numpy_1d &angles,
 	const real rotation_centre, const int pixels_per_voxel,

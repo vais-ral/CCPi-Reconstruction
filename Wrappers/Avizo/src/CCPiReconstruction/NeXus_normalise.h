@@ -10,7 +10,7 @@
 
 #include "api.h"
 class HxMultiChannelField3;
-class CCPIRECONSTRUCTION_API NeXus_normalise : public HxCompModule
+class CCPI_API NeXus_normalise : public HxCompModule
 {
   HX_HEADER(NeXus_normalise);
 

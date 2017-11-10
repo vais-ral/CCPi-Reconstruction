@@ -5,6 +5,7 @@
 
 #ifndef XRADIAREADER_H
 #define XRADIAREADER_H
+#include "CCPiDefines.h"
 
 #include <string>
 #include <vector>
@@ -17,7 +18,7 @@ namespace CCPi
 	typedef boost::multi_array<float,3> float_pixel;
 	typedef boost::multi_array<short,3> short_pixel;
 
-	class XradiaReader
+	class CCPI_EXPORT XradiaReader
 	{
 	public:
 		XradiaReader(std::string filename, CCPiUserApplicationInterface *uai=0);
