@@ -1,10 +1,11 @@
 
 #ifndef CCPI_RECON_CGLS
 #define CCPI_RECON_CGLS
+#include "CCPiDefines.h"
 
 namespace CCPi {
 
-  class cgls_base : public reconstruction_alg {
+  class CCPI_EXPORT cgls_base : public reconstruction_alg {
   public:
     cgls_base(const int niterations);
 
@@ -34,7 +35,7 @@ namespace CCPi {
     real_1d norm_r;
   };
 
-  class cgls_3d : public cgls_base {
+  class CCPI_EXPORT cgls_3d : public cgls_base {
   public:
     cgls_3d(const int niterations);
 
@@ -53,7 +54,7 @@ namespace CCPi {
 		      const sl_int ny, const sl_int nz, voxel_1d &norm) const;
   };
 
-  class cgls_2d : public cgls_base {
+  class CCPI_EXPORT cgls_2d : public cgls_base {
   public:
     cgls_2d(const int niterations, const int ppv);
 
@@ -75,7 +76,7 @@ namespace CCPi {
     int pixels_per_voxel;
   };
 
-  class bi_cgls_3d : public cgls_3d {
+  class CCPI_EXPORT bi_cgls_3d : public cgls_3d {
   public:
     bi_cgls_3d(const int niterations);
 
@@ -91,7 +92,7 @@ namespace CCPi {
 			    const voxel_type gamma) const;
   };
 
-  class bi_cgstabls_3d : public cgls_3d {
+  class CCPI_EXPORT bi_cgstabls_3d : public cgls_3d {
   public:
     bi_cgstabls_3d(const int niterations);
 
@@ -99,7 +100,7 @@ namespace CCPi {
 		     const real origin[3], const real voxel_size[3]);
   };
 
-  class cgls_regularize : public cgls_3d {
+  class CCPI_EXPORT cgls_regularize : public cgls_3d {
   public:
     cgls_regularize(const int niterations, const real param);
     bool reconstruct(class instrument *device, voxel_data &voxels,
@@ -112,7 +113,7 @@ namespace CCPi {
 			    const int nx, const int ny, const int nz) = 0;
   };
 
-  class cgls_tikhonov : public cgls_regularize {
+  class CCPI_EXPORT cgls_tikhonov : public cgls_regularize {
   public:
     cgls_tikhonov(const int niterations, const real param);
 
@@ -121,7 +122,7 @@ namespace CCPi {
 		    const int nx, const int ny, const int nz);
   };
 
-  class cgls_tv_reg : public cgls_regularize {
+  class CCPI_EXPORT cgls_tv_reg : public cgls_regularize {
   public:
     cgls_tv_reg(const int niterations, const real param);
 

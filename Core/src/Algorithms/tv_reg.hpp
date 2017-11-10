@@ -4,7 +4,7 @@
 
 namespace CCPi {
 
-  class tv_regularization : public reconstruction_alg {
+  class CCPI_EXPORT tv_regularization : public reconstruction_alg {
   public:
     tv_regularization(const real alph, const real t, const real L,
 		      const real mu, const int c);

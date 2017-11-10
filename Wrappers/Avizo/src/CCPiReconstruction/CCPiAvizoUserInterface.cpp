@@ -11,7 +11,11 @@ void CCPiAvizoUserInterface::LogMessage(std::string message)
 
 void CCPiAvizoUserInterface::SetStatusMessage(std::string message)
 {
-	theWorkArea->setProgressInfo(QString(message.c_str()));
+	#if QT_VERSION >= 5
+		theWorkArea->setProgressInfo(QString::fromStdString(message));
+	#else
+		theWorkArea->setProgressInfo(QString(message.c_str()));
+	#endif
 }
 
 void CCPiAvizoUserInterface::SetProgressValue(float value)

@@ -12,7 +12,7 @@
 #include <hxfield/HxUniformScalarField3.h>
 #include "api.h"
 
-class CCPIRECONSTRUCTION_API CCPiXradiaAvizoPrepareFilter : public HxCompModule
+class CCPI_API CCPiXradiaAvizoPrepareFilter : public HxCompModule
 {
 	HX_HEADER(CCPiXradiaAvizoPrepareFilter);	
 

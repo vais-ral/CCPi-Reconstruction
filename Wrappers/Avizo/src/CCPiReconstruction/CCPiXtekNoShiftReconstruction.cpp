@@ -188,7 +188,7 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 					 pixels_per_voxel, source_x, detector_x,
 					 h_size, v_size, MaskRadius,
 					 beam_hardening, vox_origin, vox_size,
-					 false);
+					 false, false);
 	machine::exit();
 	delete recon_algorithm;
 	delete instrument;

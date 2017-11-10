@@ -11,7 +11,7 @@
 
 void setParameters(HxUniformScalarField3 *field, XtekReader reader);
 
-CCPIRECONSTRUCTION_API
+CCPI_API
 int CCPiXTekAvizoReader(const char* filename)
 {
 //    theWorkArea->startWorking(
@@ -50,8 +50,11 @@ int CCPiXTekAvizoReader(const char* filename)
 		bx[5]=(float)newDims[2]-1;
 	else
 		bx[5] = 1;
-
+#if QT_VERSION >= 5
+	HxData::registerData(field, QString::fromStdString(reader.getName()));
+#else
 	HxData::registerData(field, reader.getName().c_str());
+#endif
 	setParameters(field, reader);
 //	theWorkArea->stopWorking();
 	return 1;

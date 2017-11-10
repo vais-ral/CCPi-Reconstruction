@@ -1,13 +1,13 @@
 
 #ifndef MPI_WRAPPER
 #define MPI_WRAPPER
-
+#include "CCPiDefines.h"
 namespace machine {
 
-  void initialise(const int nthreads = 0);
-  void exit();
-  int get_number_of_processors();
-  int get_processor_id();
+  CCPI_EXPORT void __cdecl initialise(const int nthreads = 0);
+  CCPI_EXPORT void __cdecl exit();
+  CCPI_EXPORT int __cdecl get_number_of_processors();
+  CCPI_EXPORT int __cdecl get_processor_id();
 
 }
 

@@ -58,8 +58,13 @@ void XTek_recon::compute()
 {
 	if (portAction.wasHit()) {
 		HxFileDialog *dialog = HxFileDialog::getTheFileDialog();
+#if QT_VERSION >= 5
+		QString filter = dialog->getFileNameFilter(QString::fromUtf8("XTek"),
+			QString::fromUtf8("xtekct"));
+#else
 		QString filter = dialog->getFileNameFilter(QString::fromAscii("XTek"),
 			QString::fromAscii("xtekct"));
+#endif
 		QString filename = dialog->getOpenFileName(QString("Select XTek File"),QString(""), filter).first;
 		std::string str_filename = filename.toUtf8().constData();
 		ccpi_recon::do_progress = false;

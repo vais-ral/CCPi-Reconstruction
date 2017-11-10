@@ -12,7 +12,7 @@
 #include <hxfield/HxUniformScalarField3.h>
 #include "api.h"
 
-class CCPIRECONSTRUCTION_API CCPiXtekAvizoPrepareFilter : public HxCompModule
+class CCPI_API CCPiXtekAvizoPrepareFilter : public HxCompModule
 {
 	HX_HEADER(CCPiXtekAvizoPrepareFilter);	
 

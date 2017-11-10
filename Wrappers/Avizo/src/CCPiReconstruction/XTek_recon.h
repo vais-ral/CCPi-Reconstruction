@@ -14,7 +14,7 @@
 
 #include "api.h"
 
-class CCPIRECONSTRUCTION_API XTek_recon : public HxCompModule
+class CCPI_API XTek_recon : public HxCompModule
 {
     HX_HEADER(XTek_recon);
 

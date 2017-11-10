@@ -98,7 +98,11 @@ HxUniformScalarField3* CCPiXradiaAvizoPrepareFilter::createOutput(HxUniformScala
     // If necessary create a new result data set
     if (!output) {
         output = new HxUniformScalarField3(dims, McPrimType::MC_FLOAT);
-        output->composeLabel(field->getName(), "result");
+		#if QT_VERSION >= 5
+			output->composeLabel(QString::fromUtf8(field->getName()), "result");
+		#else
+			output->composeLabel(field->getName(), "result");
+		#endif
     }
 
     return output;
