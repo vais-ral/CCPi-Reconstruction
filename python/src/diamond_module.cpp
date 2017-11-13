@@ -43,6 +43,10 @@ void export_reconstruction()
   def("cgls_TVreg_step",    reconstruct_cgls_tvreg_step);
   def("cgls_conv_step",     reconstruct_cgls2_step);
 
+  // parallel beam forward/backward project
+  def("pb_forward_project");
+  def("pb_backward_prject");
+
   //def("tvreg", reconstruct_tvreg);
 }
 

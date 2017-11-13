@@ -413,3 +413,160 @@ np::ndarray reconstruct_cgls2_step(np::ndarray pixels,
 void reconstruct_tvreg()
 {
 }
+
+
+/************************************************************************************************/
+extern np::ndarray
+pb_forward_project(np::ndarray ndarray_volume,
+	np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+	) {
+
+	CCPi::instrument *instrument = new CCPi::Diamond();
+	int pixels_per_voxel = resolution;
+
+	numpy_3d pixels(reinterpret_cast<float*>(ndarray_projections_stack.get_data()),
+		boost::extents[ndarray_projections_stack.shape(0)][ndarray_projections_stack.shape(1)][ndarray_projections_stack.shape(2)]);
+	
+	int n_angles = ndarray_projections_stack.shape(0);
+	int n_h = ndarray_projections_stack.shape(1);
+	int n_v = ndarray_projections_stack.shape(2);
+
+	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()), boost::extents[ndarray_angles.shape(0)]);
+	
+	int output_volume_x = ndarray_volume.shape(0); 
+	int output_volume_y = ndarray_volume.shape(1);
+	int output_volume_z = ndarray_volume.shape(2); ;
+
+	
+	instrument->setup_experimental_geometry(pixels, angles, rotation_centre,
+		pixels_per_voxel);
+
+	real full_vox_origin[3];
+	real voxel_size[3];
+	int index = 0;
+	if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
+		output_volume_x, output_volume_y, output_volume_z)) {
+
+		pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
+
+		voxel_data d(boost::extents[output_volume_x][output_volume_y][output_volume_z],
+			boost::c_storage_order());
+		// Copy the input data to d
+		float * C = reinterpret_cast<float *>(ndarray_volume.get_data());
+		
+		for (int i = 0; i < output_volume_x; i ++) {
+			for (int j = 0; j < output_volume_y; j++) {
+				for (int k = 0; k < output_volume_z; k++) {
+					index = i + (j * output_volume_x) + (k * output_volume_x * output_volume_y);
+					float val = (*(C + index));
+					d[i][j][k] = val;
+				}
+			}
+		}
+	
+
+		device->forward_project(Ad, d, origin, voxel_size,
+			output_volume_x, output_volume_y, output_volume_z);
+		
+		// get_pixel_data(); // should be pixel
+		// finally create a numpy array and copy the results
+		float * A = reinterpret_cast<float *>(ndarray_projections_stack.get_data());
+		for (int i = 0; i < n_angles; i++) {
+			for (int j = 0; j < n_h; j++) {
+				for (k = 0; k < n_v; k++) {
+					index = i + (j * n_angles) + (k * n_angles * n_h);
+					float val = (float)Ad[i][j][k];
+					std::memcpy(A + index, &val, sizeof(float));
+				}
+			}
+		}
+	}
+	else {
+	
+	}
+
+	
+	return ndarray_projections_stack;
+}
+extern np::ndarray
+pb_backward_project(np::ndarray ndarray_volume,
+	np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+	) {
+
+	CCPi::instrument *instrument = new CCPi::Diamond();
+	int pixels_per_voxel = resolution;
+
+	numpy_3d pixels(reinterpret_cast<float*>(ndarray_projections_stack.get_data()),
+		boost::extents[ndarray_projections_stack.shape(0)][ndarray_projections_stack.shape(1)][ndarray_projections_stack.shape(2)]);
+
+	int n_angles = ndarray_projections_stack.shape(0);
+	int n_h = ndarray_projections_stack.shape(1);
+	int n_v = ndarray_projections_stack.shape(2);
+
+	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()), boost::extents[ndarray_angles.shape(0)]);
+
+	int output_volume_x = ndarray_volume.shape(0);
+	int output_volume_y = ndarray_volume.shape(1);
+	int output_volume_z = ndarray_volume.shape(2); ;
+
+
+	instrument->setup_experimental_geometry(pixels, angles, rotation_centre,
+		pixels_per_voxel);
+
+	real full_vox_origin[3];
+	real voxel_size[3];
+	int index = 0;
+	if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
+		output_volume_x, output_volume_y, output_volume_z)) {
+
+		pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
+
+		voxel_data d(boost::extents[output_volume_x][output_volume_y][output_volume_z],
+			boost::c_storage_order());
+		// Copy the input data to Ad
+		float * C = reinterpret_cast<float *>(ndarray_volume.get_data());
+
+		for (int i = 0; i < n_angles; i++) {
+			for (int j = 0; j < n_h; j++) {
+				for (k = 0; k < n_v; k++) {
+					index = i + (j * n_angles) + (k * n_angles * n_h);
+					float val = (*(C + index));
+					d[i][j][k] = val;
+				}
+			}
+		}
+
+
+
+		
+		
+		device->forward_project(Ad, d, origin, voxel_size,
+			output_volume_x, output_volume_y, output_volume_z);
+		// get_pixel_data(); // should be pixel
+
+	}
+	else {
+
+	}
+
+	// finally create a numpy array and copy the results
+	bp::tuple shape;
+	shape = bp::make_tuple(n_angles, n_h, n_v);
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray output = np::zeros(shape, dtype);
+	float * A = reinterpret_cast<float *>(output.get_data());
+	for (int i = 0; i < n_angles; i++) {
+		for (int j = 0; j < n_h; j++) {
+			for (k = 0; k < n_v; k++) {
+				index = i + (j * n_angles) + (k * n_angles * n_h);
+				float val = (float)pixels[i][j][k];
+				std::memcpy(A + index, &val, sizeof(float));
+			}
+		}
+	}
+	return output;
+}

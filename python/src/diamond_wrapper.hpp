@@ -88,3 +88,12 @@ reconstruct_cgls_tvreg_step(np::ndarray pixels,
 	np::ndarray last_iteration_volume);
 
 extern void reconstruct_tvreg();
+
+extern np::ndarray
+  pb_forward_project(np::ndarray volume, 
+	                 np::ndarray angles, 
+	                 double rotation_center, int resolution,
+	  int output_volume_x, int output_volume_y, int output_volume_z
+	  );
+
+
