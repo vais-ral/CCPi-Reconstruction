@@ -1,7 +1,7 @@
 
 #ifndef CCPI_RECON_ALGORITHMS
 #define CCPI_RECON_ALGORITHMS
-
+#include "CCPiDefines.h"
 #include <list>
 
 namespace CCPi {

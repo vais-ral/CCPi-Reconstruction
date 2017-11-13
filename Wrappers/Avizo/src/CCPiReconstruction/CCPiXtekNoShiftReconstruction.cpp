@@ -20,6 +20,7 @@
 #include "results.hpp"
 #include "voxels.hpp"
 #include "ui_messages.hpp"
+#include <boost/multi_array.hpp>
 
 HX_INIT_CLASS(CCPiXtekNoShiftReconstruction, HxCompModule)
 
@@ -115,6 +116,7 @@ void CCPiXtekNoShiftReconstruction::compute()
 
 	// Todo - check that its a float field?
 	run_reconstruction();
+
 	// end progress area
 	if (ccpi_recon::do_progress) {
 		theWorkArea->stopWorking();
@@ -127,9 +129,17 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 	HxUniformScalarField3 *field = (HxUniformScalarField3 *) portData.getSource();
 	McDim3l fdims = field->lattice().getDims();
 	boost::multi_array_ref<float, 3>
-		pixels((float *)field->lattice().dataPtr(),
+		pixels_ref((float *)field->lattice().dataPtr(),
 		boost::extents[fdims[0]][fdims[1]][fdims[2]],
 		boost::fortran_storage_order());
+
+	//Convert pixels to correct order
+	pixel_3d pixels(boost::extents[fdims[2]][fdims[1]][fdims[0]]);
+	for (int i = 0; i < fdims[2]; i++)
+		for (int j = 0; j < fdims[1]; j++)
+			for (int k = 0; k < fdims[0]; k++)
+				pixels[i][j][k] = pixels_ref[k][j][i];
+
 	float *angles_float = new float[field->lattice().getDims()[2]];
 	field->parameters.findReal("Angles", field->lattice().getDims()[2], angles_float);
 	float *pixel_size = new float[2];
@@ -189,6 +199,8 @@ void CCPiXtekNoShiftReconstruction::run_reconstruction()
 					 h_size, v_size, MaskRadius,
 					 beam_hardening, vox_origin, vox_size,
 					 false, false);
+	theMsg->stream() << "completed the reconstruction: " << voxels<< std::endl;
+
 	machine::exit();
 	delete recon_algorithm;
 	delete instrument;

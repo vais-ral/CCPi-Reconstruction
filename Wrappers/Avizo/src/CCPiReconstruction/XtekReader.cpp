@@ -269,6 +269,7 @@ bool XtekReader::readCTDataFile(std::string filename)
 		angles[proj] = initialAngle + strtod(values[1].c_str(), NULL); 
 		angleTime[proj] = strtod(values[2].c_str(), NULL);
 	}
+	ctfile.close();
 	return true;
 }
 
@@ -293,6 +294,7 @@ bool XtekReader::readAngFile(std::string filename)
 		if(proj > projections) return false; // projection index cannot be greater than number projections
 		angles[projections - proj] = initialAngle + strtod(values[1].c_str(), NULL); 
 	}
+	ctfile.close();
 	return true;
 }
 
