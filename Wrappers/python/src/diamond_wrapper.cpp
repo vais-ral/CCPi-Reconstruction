@@ -440,13 +440,13 @@ pb_forward_project(np::ndarray ndarray_volume,
 	int output_volume_z = ndarray_volume.shape(2); ;
 
 
-	instrument->setup_experimental_geometry(pixels, angles, rotation_centre,
+	instrument->setup_experimental_geometry(pixels, angles, rotation_center,
 		pixels_per_voxel);
 
 	real full_vox_origin[3];
 	real voxel_size[3];
 	int index = 0;
-	if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
+	if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
 		output_volume_x, output_volume_y, output_volume_z)) {
 
 		pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
@@ -467,7 +467,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 		}
 
 
-		device->forward_project(Ad, d, origin, voxel_size,
+		instrument->forward_project(Ad, d, full_vox_origin, voxel_size,
 			output_volume_x, output_volume_y, output_volume_z);
 
 		// get_pixel_data(); // should be pixel
@@ -475,7 +475,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 		float * A = reinterpret_cast<float *>(ndarray_projections_stack.get_data());
 		for (int i = 0; i < n_angles; i++) {
 			for (int j = 0; j < n_h; j++) {
-				for (k = 0; k < n_v; k++) {
+				for (int k = 0; k < n_v; k++) {
 					index = i + (j * n_angles) + (k * n_angles * n_h);
 					float val = (float)Ad[i][j][k];
 					std::memcpy(A + index, &val, sizeof(float));
@@ -514,13 +514,13 @@ pb_backward_project(np::ndarray ndarray_volume,
 	int output_volume_z = ndarray_volume.shape(2); ;
 
 
-	instrument->setup_experimental_geometry(pixels, angles, rotation_centre,
+	instrument->setup_experimental_geometry(pixels, angles, rotation_center,
 		pixels_per_voxel);
 
 	real full_vox_origin[3];
 	real voxel_size[3];
 	int index = 0;
-	if (device->finish_voxel_geometry(full_vox_origin, voxel_size,
+	if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
 		output_volume_x, output_volume_y, output_volume_z)) {
 
 		pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
@@ -532,7 +532,7 @@ pb_backward_project(np::ndarray ndarray_volume,
 
 		for (int i = 0; i < n_angles; i++) {
 			for (int j = 0; j < n_h; j++) {
-				for (k = 0; k < n_v; k++) {
+				for (int k = 0; k < n_v; k++) {
 					index = i + (j * n_angles) + (k * n_angles * n_h);
 					float val = (*(C + index));
 					d[i][j][k] = val;
@@ -544,7 +544,7 @@ pb_backward_project(np::ndarray ndarray_volume,
 
 
 
-		device->forward_project(Ad, d, origin, voxel_size,
+		instrument->forward_project(Ad, d, full_vox_origin, voxel_size,
 			output_volume_x, output_volume_y, output_volume_z);
 		// get_pixel_data(); // should be pixel
 
@@ -561,7 +561,7 @@ pb_backward_project(np::ndarray ndarray_volume,
 	float * A = reinterpret_cast<float *>(output.get_data());
 	for (int i = 0; i < n_angles; i++) {
 		for (int j = 0; j < n_h; j++) {
-			for (k = 0; k < n_v; k++) {
+			for (int k = 0; k < n_v; k++) {
 				index = i + (j * n_angles) + (k * n_angles * n_h);
 				float val = (float)pixels[i][j][k];
 				std::memcpy(A + index, &val, sizeof(float));

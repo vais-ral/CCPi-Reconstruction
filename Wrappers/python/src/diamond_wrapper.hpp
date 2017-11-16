@@ -1,5 +1,8 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
+//#define BOOST_PYTHON_STATIC_LIB  
+//#define BOOST_LIB_NAME "boost_numpy"
+//#include <boost/config/auto_link.hpp>
 
 #include "base_types.hpp"
 
@@ -95,5 +98,12 @@ extern np::ndarray
 	                 double rotation_center, int resolution,
 	  int output_volume_x, int output_volume_y, int output_volume_z
 	  );
+
+extern np::ndarray
+pb_backward_project(np::ndarray ndarray_volume,
+	np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+);
 
 
