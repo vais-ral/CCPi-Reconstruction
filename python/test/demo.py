@@ -114,7 +114,7 @@ niterations = 35
 threads = 3
 
 # CGLS
-img_cgls = alg.cgls(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
+#img_cgls = alg.cgls(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
 ## MLEM
 #img_mlem = alg.mlem(norm, angle_proj, numpy.double(86.2), 1 , niterations, threads, False)
 ## SIRT
