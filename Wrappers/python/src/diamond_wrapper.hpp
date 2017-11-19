@@ -5,6 +5,7 @@
 //#include <boost/config/auto_link.hpp>
 
 #include "base_types.hpp"
+#include <iostream>
 
 namespace bp = boost::python;
 namespace np = boost::python::numpy;
@@ -98,6 +99,12 @@ extern void reconstruct_tvreg();
 //	                 double rotation_center, int resolution,
 //	  int output_volume_x, int output_volume_y, int output_volume_z
 //	  );
+
+extern np::ndarray
+pb_forward_project(np::ndarray ndarray_volume,
+	np::ndarray angles,
+	double rotation_center, int resolution
+);
 
 //extern np::ndarray
 //  pb_backward_project(np::ndarray ndarray_volume,
