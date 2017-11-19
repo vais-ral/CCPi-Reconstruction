@@ -89,14 +89,16 @@ void CCPi::parallel_beam::backward_project(voxel_data &voxels,
 void CCPi::parallel_beam::forward_project(pixel_data &pixels,
 					  voxel_data &voxels,
 					  const real origin[3],
-					  const real width[3], const int nx,
-					  const int ny, const int nz)
+					  const real width[3], 
+	                  const int nx, const int ny, const int nz)
 {
   timer fptime(USE_TIMER);
   /**/
+
   f2D(get_h_pixels(), get_v_pixels(), get_phi(), get_num_angles(),
       get_num_h_pixels(), get_num_v_pixels(), origin, width, nx, ny, nz,
       pixels, voxels);
+  
   /**/ /*
     instrument::forward_project(get_h_pixels(), get_v_pixels(), get_phi(),
 				pixels, voxels, get_num_angles(),
