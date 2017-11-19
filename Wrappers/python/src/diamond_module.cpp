@@ -44,6 +44,7 @@ void export_reconstruction()
   def("cgls_conv_step",     reconstruct_cgls2_step);
   // parallel beam forward/backward project
   def("pb_forward_project", pb_forward_project);
+  def("pb_backward_project", pb_backward_project);
 
   
   //def("pb_backward_prject", pb_backward_project);

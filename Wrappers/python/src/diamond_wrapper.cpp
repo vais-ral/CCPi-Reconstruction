@@ -429,9 +429,14 @@ pb_forward_project(np::ndarray ndarray_volume,
 	std::cout << "pb_forward_project input volume [ " << ndarray_volume.shape(0) << " ";
 	std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" <<std::endl;
 
+	//detector width >= sqrt(2) * volume_width
+	//int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
+	//int detector_width = (int)(1.42 * (float)msize);
+	int detector_width = ndarray_volume.shape(2);
+	std::cout << "pb_forward_project detector_width " << detector_width << std::endl;
 	// storage for the projections
 	numpy_3d pixels(reinterpret_cast<float*>(ndarray_volume.get_data()),
-		boost::extents[ndarray_angles.shape(0)][ndarray_volume.shape(1)][ndarray_volume.shape(2)]);
+		boost::extents[ndarray_angles.shape(0)][ndarray_volume.shape(1)][detector_width]);
 
 	int n_angles = ndarray_angles.shape(0);
 	std::cout << "pb_forward_project n_angles " << n_angles <<  std::endl;
@@ -488,9 +493,9 @@ pb_forward_project(np::ndarray ndarray_volume,
 			for (int i = 0; i < output_volume_x; i++) {
 				for (int j = 0; j < output_volume_y; j++) {
 					for (int k = 0; k < output_volume_z; k++) {
-						index = i + (j * output_volume_x) + (k * output_volume_x * output_volume_y);
-						float val = (*(C + index));
-						//float val = ndarray_volume[i][j][k];
+						//index = i + (j * output_volume_x) + (k * output_volume_x * output_volume_y);
+						//float val = (*(C + index));
+						float val = bp::extract<float>(ndarray_volume[i][j][k]);
 						d[i][j][k] = val;
 						//if (val > 0)
 						//std::cout << "pb_forward_project copy val " << val << " i " << i << " j " << j << " k " << k << std::endl;
@@ -498,7 +503,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 				}
 			}
 
-			std::cout << "pb_forward_project center point " << d[128][128][128] << std::endl;
+			std::cout << "pb_forward_project forward project" << std::endl;
 
 			instrument->forward_project(Ad, d, full_vox_origin, voxel_size,
 				output_volume_x, output_volume_y, output_volume_z);
@@ -511,20 +516,15 @@ pb_forward_project(np::ndarray ndarray_volume,
 			np::ndarray ndarray_projections_stack = np::zeros(shape, dtype);
 
 			//float * A = reinterpret_cast<float *>(ndarray_projections_stack.get_data());
-			int counter = 0;
+			
 			for (int i = 0; i < n_angles; i++) {
 				for (int j = 0; j < n_h; j++) {
 					for (int k = 0; k < n_v; k++) {
-						index = i + (j * n_angles) + (k * n_angles * n_h);
-						//float val = (float)Ad[i][j][k];
-						//std::memcpy(A + index, &val, sizeof(float));
 						ndarray_projections_stack[i][j][k] = Ad[i][j][k];
-						if (Ad[i][j][k] == 0)
-							counter++;
 					}
 				}
 			}
-			std::cout << "pb_forward_project zero values in projections " << counter << " / " << (n_angles*n_h*n_v) << std::endl;
+			std::cout << "pb_forward_project: end " << std::endl;
 			return ndarray_projections_stack;
 		}
 		else {
@@ -550,6 +550,131 @@ pb_forward_project(np::ndarray ndarray_volume,
 	
 }
 
+
+extern np::ndarray
+pb_backward_project(np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+) {
+
+
+	CCPi::instrument *instrument = new CCPi::Diamond();
+	int pixels_per_voxel = resolution;
+	std::cout << "pb_backward_project created Diamond instrument " << std::endl;
+	std::cout << "pb_backward_project input sinogram [ " << ndarray_projections_stack.shape(0) << " ";
+	std::cout << ndarray_projections_stack.shape(1) << " " << ndarray_projections_stack.shape(2) << " ]" << std::endl;
+
+	// storage for the projections
+	numpy_3d pixels(reinterpret_cast<float*>(ndarray_projections_stack.get_data()),
+		boost::extents[ndarray_projections_stack.shape(0)][ndarray_projections_stack.shape(1)][ndarray_projections_stack.shape(2)]);
+
+	int n_angles = ndarray_angles.shape(0);
+	std::cout << "pb_backward_project n_angles " << n_angles << std::endl;
+
+	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()),
+		boost::extents[ndarray_angles.shape(0)]);
+
+	
+	if (instrument->setup_experimental_geometry(pixels, angles, rotation_center,
+		pixels_per_voxel)) {
+		int nx_voxels = 0;
+		int ny_voxels = 0;
+		int maxz_voxels = 0;
+		int nz_voxels = 0;
+		int block_size = 0;
+		int block_step = 0;
+		int num_processors = machine::get_number_of_processors();
+		calculate_block_sizes(nx_voxels, ny_voxels, nz_voxels, maxz_voxels,
+			block_size, block_step, num_processors,
+			0, pixels_per_voxel,
+			instrument, 0);
+		int z_data_size = block_size * pixels_per_voxel;
+		int z_data_step = block_step * pixels_per_voxel;
+		instrument->set_v_block(z_data_size);
+		int block_offset = machine::get_processor_id() * block_size;
+		int z_data_offset = block_offset * pixels_per_voxel;
+
+		int n_h = instrument->get_num_h_pixels();
+		int n_v = instrument->get_num_v_pixels();
+
+		std::cout << "pb_backward_project setup experimental geometry n_x " << nx_voxels << " n_y " << ny_voxels << " n_z " << maxz_voxels << std::endl;
+
+		int output_volume_x = nx_voxels;
+		int output_volume_y = ny_voxels;
+		int output_volume_z = maxz_voxels;
+		
+		real full_vox_origin[3];
+		real voxel_size[3];
+		int index = 0;
+		if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
+			output_volume_x, output_volume_y, output_volume_z)) {
+
+			std::cout << "pb_backward_project finish_voxel_geometry ok " << std::endl;
+
+			pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
+
+			voxel_data d(boost::extents[output_volume_x][output_volume_y][output_volume_z],
+				boost::c_storage_order());
+			// Copy the input data to Ad
+			
+			std::cout << "pb_backward_project copy input data to Ad " << std::endl;
+
+			for (int i = 0; i < n_angles; i++) {
+				for (int j = 0; j < n_h; j++) {
+					for (int k = 0; k < n_v; k++) {
+						Ad[i][j][k] = bp::extract<float>(ndarray_projections_stack[i][j][k]);
+						//if (val > 0)
+						//std::cout << "pb_forward_project copy val " << val << " i " << i << " j " << j << " k " << k << std::endl;
+					}
+				}
+			}
+
+			std::cout << "pb_backward_project forward project" << std::endl;
+
+			instrument->backward_project(Ad, d, full_vox_origin, voxel_size,
+				output_volume_x, output_volume_y, output_volume_z);
+
+			// get_pixel_data(); // should be pixel
+			// finally create a numpy array and copy the results
+			bp::tuple shape = bp::make_tuple(output_volume_x , output_volume_y, output_volume_z);
+			np::dtype dtype = np::dtype::get_builtin<float>();
+
+			np::ndarray ndarray_output_volume = np::zeros(shape, dtype);
+
+			//float * A = reinterpret_cast<float *>(ndarray_projections_stack.get_data());
+
+			for (int i = 0; i < output_volume_x; i++) {
+				for (int j = 0; j < output_volume_y; j++) {
+					for (int k = 0; k < output_volume_z; k++) {
+						ndarray_output_volume[i][j][k] = d[i][j][k];
+					}
+				}
+			}
+			std::cout << "pb_backward_project: end " << std::endl;
+			return ndarray_output_volume;
+		}
+		else {
+			std::cout << "pb_backward_project returning zeros " << std::endl;
+
+			bp::tuple shape = bp::make_tuple(0, 0, 0);
+			np::dtype dtype = np::dtype::get_builtin<float>();
+
+			np::ndarray ndarray_output_volume = np::zeros(shape, dtype);
+			return ndarray_output_volume;
+		}
+	}
+	else {
+		std::cout << "pb_backward_project returning zeros " << std::endl;
+
+		bp::tuple shape = bp::make_tuple(0, 0, 0);
+		np::dtype dtype = np::dtype::get_builtin<float>();
+
+		np::ndarray ndarray_projections_stack = np::zeros(shape, dtype);
+		return ndarray_projections_stack;
+	}
+
+
+}
 //extern np::ndarray
 //pb_backward_project(np::ndarray ndarray_projections_stack,
 //	np::ndarray ndarray_angles,

@@ -106,6 +106,11 @@ pb_forward_project(np::ndarray ndarray_volume,
 	double rotation_center, int resolution
 );
 
+extern np::ndarray
+pb_backward_project(np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+);
 //extern np::ndarray
 //  pb_backward_project(np::ndarray ndarray_volume,
 //	np::ndarray ndarray_projections_stack,
