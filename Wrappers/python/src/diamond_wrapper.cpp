@@ -430,9 +430,10 @@ pb_forward_project(np::ndarray ndarray_volume,
 	std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" <<std::endl;
 
 	//detector width >= sqrt(2) * volume_width
-	//int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
-	//int detector_width = (int)(1.42 * (float)msize);
-	int detector_width = ndarray_volume.shape(2);
+	int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
+	int detector_width = (int)(1.42 * (float)msize);
+	rotation_center = (float)detector_width/2;
+	//int detector_width = ndarray_volume.shape(2);
 	std::cout << "pb_forward_project detector_width " << detector_width << std::endl;
 	// storage for the projections
 	numpy_3d pixels(reinterpret_cast<float*>(ndarray_volume.get_data()),
