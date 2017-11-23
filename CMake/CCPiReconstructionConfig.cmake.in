@@ -1,0 +1,16 @@
+# - Config file for the CCPiReconstruction package
+# It defines the following variables
+#  CCPiReconstruction_INCLUDE_DIRS - include directories for CCPiReconstruction
+#  CCPiReconstruction_LIBRARIES    - libraries to link against
+ 
+# Compute paths
+get_filename_component(CCPIRECONSTRUCTION_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(CCPIRECONSTRUCTION_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+ 
+# Our library dependencies (contains definitions for IMPORTED targets)
+if(NOT TARGET CCPiReconstruction AND NOT CCPIRECONSTRUCION_BINARY_DIR)
+  include("${CCPIRECONSTRUCTION_CMAKE_DIR}/CCPiReconstructionTargets.cmake")
+endif()
+ 
+# These are IMPORTED targets created by CCPiReconstructionTargets.cmake
+set(CCPIRECONSTRUCTION_LIBRARIES @CCPIRECONSTRUCTION_BUILD_LIBRARIES@)

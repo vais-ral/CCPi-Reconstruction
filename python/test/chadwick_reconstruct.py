@@ -8,300 +8,16 @@ Created on Fri Jun  2 15:48:00 2017
 import numpy
 #import h5py
 from ccpi.reconstruction.parallelbeam import alg
+from ccpi.reconstruction.IterativeReconstruction import Reconstructor, ProjectionPreprocessor
 
 from enum import Enum
 from ccpi.viewer.CILViewer2D import Converter, CILViewer2D
 #from FindCenterOfRotation import *
 import vtk
 
-class Reconstructor:
-    
-    class Algorithm(Enum):
-        CGLS = alg.cgls
-        CGLS_CONV = alg.cgls_conv
-        SIRT = alg.sirt
-        MLEM = alg.mlem
-        CGLS_TICHONOV = alg.cgls_tikhonov
-        CGLS_TVREG = alg.cgls_TVreg
-        
-    def __init__(self, algorithm = None, projection_data = None,
-                 angles = None, center_of_rotation = None , 
-                 flat_field = None, dark_field = None, 
-                 iterations = None, resolution = None, isLogScale = False, threads = None, 
-                 normalized_projection = None):
-    
-        self.pars = dict()
-        self.pars['algorithm'] = algorithm
-        self.pars['projection_data'] = projection_data
-        self.pars['normalized_projection'] = normalized_projection
-        self.pars['angles'] = angles
-        self.pars['center_of_rotation'] = numpy.double(center_of_rotation)
-        self.pars['flat_field'] = flat_field
-        self.pars['iterations'] = iterations
-        self.pars['dark_field'] = dark_field
-        self.pars['resolution'] = resolution
-        self.pars['isLogScale'] = isLogScale
-        self.pars['threads'] = threads
-        if (iterations != None):
-            self.pars['iterationValues'] = numpy.zeros((iterations)) 
-        
-        if projection_data != None and dark_field != None and flat_field != None:
-            norm = self.normalize(projection_data, dark_field, flat_field, 0.1)
-            self.pars['normalized_projection'] = norm
-            
-    
-    def setPars(self, parameters):
-        keys = ['algorithm','projection_data' ,'normalized_projection', \
-                'angles' , 'center_of_rotation' , 'flat_field', \
-                'iterations','dark_field' , 'resolution', 'isLogScale' , \
-                'threads' , 'iterationValues', 'regularize']
-        
-        for k in keys:
-            if k not in parameters.keys():
-                self.pars[k] = None
-            else:
-                self.pars[k] = parameters[k]
-                
-        
-    def sanityCheck(self):
-        projection_data = self.pars['projection_data']
-        dark_field = self.pars['dark_field']
-        flat_field = self.pars['flat_field']
-        angles = self.pars['angles']
-        
-        if projection_data != None and dark_field != None and \
-            angles != None and flat_field != None:
-            data_shape =  numpy.shape(projection_data)
-            angle_shape = numpy.shape(angles)
-            
-            if angle_shape[0] != data_shape[0]:
-                #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
-                #                (angle_shape[0] , data_shape[0]) )
-                return (False , 'Projections and angles dimensions do not match: %d vs %d' % \
-                                (angle_shape[0] , data_shape[0]) )
-            
-            if data_shape[1:] != numpy.shape(flat_field):
-                #raise Exception('Projection and flat field dimensions do not match')
-                return (False , 'Projection and flat field dimensions do not match')
-            if data_shape[1:] != numpy.shape(dark_field):
-                #raise Exception('Projection and dark field dimensions do not match')
-                return (False , 'Projection and dark field dimensions do not match')
-            
-            return (True , '' )
-        elif self.pars['normalized_projection'] != None:
-            data_shape =  numpy.shape(self.pars['normalized_projection'])
-            angle_shape = numpy.shape(angles)
-            
-            if angle_shape[0] != data_shape[0]:
-                #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
-                #                (angle_shape[0] , data_shape[0]) )
-                return (False , 'Projections and angles dimensions do not match: %d vs %d' % \
-                                (angle_shape[0] , data_shape[0]) )
-            else:
-                return (True , '' )
-        else:
-            return (False , 'Not enough data')
-            
-    def reconstruct(self, parameters = None):
-        if parameters != None:
-            self.setPars(parameters)
-        
-        go , reason = self.sanityCheck()
-        if go:
-            return self._reconstruct()
-        else:
-            raise Exception(reason)
-            
-            
-    def _reconstruct(self, parameters=None):
-        if parameters!=None:
-            self.setPars(parameters)
-        parameters = self.pars
-        
-        if parameters['algorithm'] != None and \
-           parameters['normalized_projection'] != None and \
-           parameters['angles'] != None and \
-           parameters['center_of_rotation'] != None and \
-           parameters['iterations'] != None and \
-           parameters['resolution'] != None and\
-           parameters['threads'] != None and\
-           parameters['isLogScale'] != None:
-               
-               
-           if parameters['algorithm'] in (Reconstructor.Algorithm.CGLS,
-                        Reconstructor.Algorithm.MLEM, Reconstructor.Algorithm.SIRT):
-               #store parameters
-               self.pars = parameters
-               result = parameters['algorithm'](
-                           parameters['normalized_projection'] ,
-                           parameters['angles'],
-                           parameters['center_of_rotation'],
-                           parameters['resolution'],
-                           parameters['iterations'],
-                           parameters['threads'] ,
-                           parameters['isLogScale']
-                           )
-               return result
-           else:
-               self.pars = parameters
-               result = parameters['algorithm'](
-                           parameters['normalized_projection'] ,
-                           parameters['angles'],
-                           parameters['center_of_rotation'],
-                           parameters['resolution'],
-                           parameters['iterations'],
-                           parameters['threads'] ,
-                           parameters['regularize'],
-                           numpy.zeros((parameters['iterations'])),
-                           parameters['isLogScale']
-                           )
-        else:
-           if parameters['projection_data'] != None and \
-                     parameters['dark_field'] != None and \
-                     parameters['flat_field'] != None:
-               norm = self.normalize(parameters['projection_data'],
-                                   parameters['dark_field'], 
-                                   parameters['flat_field'], 0.1)
-               self.pars['normalized_projection'] = norm
-               return self._reconstruct(parameters)
-              
-                
-                
-    def _normalize(self, projection, dark, flat, def_val=0):
-        a = (projection - dark)
-        b = (flat-dark)
-        with numpy.errstate(divide='ignore', invalid='ignore'):
-            c = numpy.true_divide( a, b )
-            c[ ~ numpy.isfinite( c )] = def_val  # set to not zero if 0/0 
-        return c
-    
-    def normalize(self, projections, dark, flat, def_val=0):
-        norm = [self._normalize(projection, dark, flat, def_val) for projection in projections]
-        return numpy.asarray (norm, dtype=numpy.float32)
-        
+import os
 
 
-class ProjectionPreprocessor():
-    def __init__(self):
-        self.flatsFileNames = []
-        self.darksFileNames = []
-        self.projectionsFileNames = []
-        self.normalizedProjections = None
-    
-    def setFlatsFileNames(self, filenames):
-        self.flatsFileNames = [i for i in filenames]
-        self.normalizedProjections = None
-    # setFlatsFileNames
-
-    def setDarksFileNames(self, filenames):
-        self.darksFileNames = [i for i in filenames]
-        self.normalizedProjections = None
-    # setFlatsFileNames
-
-    def setProjectionsFileNames(self, filenames):
-        self.projectionsFileNames = [i for i in filenames]
-        self.normalizedProjections = None
-    # setFlatsFileNames
-
-    def avgProjections(self, filenames):
-        '''Returns the average of the input images
-        
-        Input is passed as filenames pointing to 2D TIFF
-        Output is numpy array
-        '''
-        num = len(filenames)
-        stack = Converter.tiffStack2numpy(filenames=filenames , extent=extent,
-                                          sampleRate=(1,1,1))
-        avg = (stack.T[0] / float(num) )
-        
-        for i in range(1,num):
-        	avg += (stack.T[i] / float(num))
-        
-        return avg
-    
-    def avgProjectionsVtk(self, filenames , extent):
-        '''Returns the average of the input images
-        
-        Input is passed as filenames pointing to 2D TIFF
-        Output is a vtkImageData
-        gives the same result as avgProjections within machine precision.
-        '''
-        num = len(filenames)
-        readers = [vtk.vtkTIFFReader() for i in range(num)]
-        scalers = [vtk.vtkImageShiftScale() for i in range(num)]
-        vois = [vtk.vtkExtractVOI() for i in range(num)]
-        avger = vtk.vtkImageWeightedSum()
-        counter = 0
-        for reader, voi, scaler, filename in zip(readers, vois , scalers ,filenames):
-            reader.SetFileName(filename)
-            reader.Update()
-            print ("reading {0}".format(filename))
-            voi.SetInputData(reader.GetOutput())
-            voi.SetVOI(extent)
-            voi.Update()
-            print ("extracting VOI")
-            scaler.SetInputData(voi.GetOutput())
-            scaler.SetOutputScalarTypeToDouble()
-            scaler.SetScale(1)
-            scaler.SetShift(0)
-            scaler.Update()
-            avger.AddInputData(scaler.GetOutput())
-            avger.SetWeight(counter , 1/float(num))
-            counter = counter + 1
-            print ("adding input connection {0}".format(counter))
-            
-        
-        avger.Update()
-        return avger.GetOutput()
-    
-    def normalizeProjections(self, projectionFileNames=None, 
-                             flatFileNames=None,
-                             darkFileNames=None,
-                             extent=None, sampleRate=None):
-        if projectionFileNames is not None:
-            self.setProjectionsFileNames(projectionFileNames)
-        if flatFileNames is not None:
-            self.setFlatsFileNames(flatFileNames)
-        if darkFileNames is not None:
-            self.setDarksFileNames(darkFileNames)
-            
-        flat = self.avgProjections(self.flatsFileNames)
-        dark = self.avgProjections(self.darksFileNames)
-        
-        self.normalizedProjections = Converter.tiffStack2numpy(filenames=self.projectionsFileNames, 
-                                         darkField=dark, flatField=flat, 
-                                         extent=extent, sampleRate=sampleRate)
-        
-    
-    def getNormalizedProjections(self):
-        gg = numpy.frompyfunc(ProjectionPreprocessor.greater,2,1)
-        ss = numpy.frompyfunc(ProjectionPreprocessor.smaller,2,1)
-        eq = numpy.frompyfunc(ProjectionPreprocessor.equal,2,1)
-        
-        # set value > 1 to 1
-        gt = ss(self.normalizedProjections, 1)
-        self.normalizedProjections = numpy.where(gt, self.normalizedProjections, 1)
-        
-        # set values < 0 to 0
-        lt = gg(self.normalizedProjections, 0)
-        self.normalizedProjections = numpy.where(lt, self.normalizedProjections, 0.1)
-        
-        # remove 0 values
-        et = eq(self.normalizedProjections,0)
-        self.normalizedProjections = numpy.where(et , self.normalizedProjections, 0.1)
-        
-        
-        return self.normalizedProjections.astype(numpy.float32)
-    
-    @staticmethod    
-    def greater(x,y):
-        return x>y
-    @staticmethod
-    def smaller(x,y):
-        return x<y
-    @staticmethod
-    def equal(x,y):
-        return x == y
 
 
 def getEntry(location):
@@ -347,45 +63,119 @@ print ("Loading Data")
 tot_images = 2203
 
 ## create a reduced 3D stack
-nreduced = 360
+nreduced = 360*2
 directory = r'D:\Documents\Dataset\Chadwick_Flange_Tomo'
 
 indices = [int(float(num) / float(nreduced) * float(tot_images)) for num in range(nreduced)]
-angle_proj = numpy.asarray(indices) * 180 / tot_images
+angle_proj = numpy.asarray(indices) * 180. / tot_images
 
-#load data file
-reader = vtk.vtkMetaImageReader()
-reader.SetFileName("Chadwick_flange_norm_360.mha")
-reader.Update()
 
-norm = Converter.vtk2numpy(reader.GetOutput())
 
-pp = ProjectionPreprocessor()
-pp.normalizedProjections = norm
-norm = pp.getNormalizedProjections()
 
-cor = 175.75
+#print ("VOI Dimensions {0}".format(str(voi.GetOutput().GetDimensions())))
+
+# center of rotation 
+cor = 508.25
 ############################################################
 #recon.pars['algorithm'] = Reconstructor.Algorithm.CGLS_CONV
 #recon.pars['regularize'] = numpy.double(0.1)
 #img_cgls_conv = recon.reconstruct()
 
-niterations = 15
-threads = 4
+niterations = 10
+threads = 2
+recon = Reconstructor(algorithm = Reconstructor.Algorithm.CGLS,
+                      center_of_rotation = 508.25 , 
+                      iterations = niterations,
+                      resolution = 1,
+                      isLogScale = False,
+                      threads = threads)
 
-data = (norm.T).copy()
-del norm
-del reader
-norm = data
+##data = (norm[:6].T).copy()
+###del norm
+##del reader
+##
 
-print ("Launching CGLS")
-img_cgls = alg.cgls(norm, angle_proj, numpy.double(cor), 1 , niterations, threads, False)
-numpy.save("chadwick_chamber.npy", img_cgls)
-print ("CGLS finished")
+use_proj = [360 * i for i in range(1,5)]
 
-v = CILViewer2D()
-v.setInputAsNumpy(img_cgls)
-v.startRenderLoop()
+for nproj in [360 * 2]:
+    #load data file
+    
+    indices = [int(float(num) / float(nproj) * float(tot_images)) for num in range(nproj)]
+    angle_proj = numpy.asarray(indices) * 180. / tot_images
+
+    norm = numpy.load(r'D:\Documents\Dataset\Chadwick_Flange_Tomo\Chadwick_flange_norm_%d.npy' % nproj)
+    print ("Selecting ROI")
+    data = norm[:,0:1,:].copy()
+    del norm
+    print ("Normalizing")
+    pp = ProjectionPreprocessor()
+    pp.normalizedProjections = data
+    data = pp.clipNormalizedProjections()
+    print ("Launching CGLS 60-61 {0:02} data proj {1}".format(niterations, nproj))
+    
+    recon.setParameter(normalized_projection_data=data,
+                                 angles=angle_proj)
+    img_cgls = recon.reconstruct()
+
+    numpy.save("chadwick_chamber60-61_{1:03}_{0:02}.npy".format(
+                niterations , nproj),
+               img_cgls)
+
+#v = CILViewer2D()
+#v.setInputAsNumpy(img_cgls)
+
+
+##print ("Launching CGLS 970-990")
+##extent[2] = 970
+##extent[3] = 990
+##voi.SetVOI(extent)
+##voi.Update()
+##norm = Converter.vtk2numpy(voi.GetOutput())
+##pp.normalizedProjections = norm
+##norm = pp.getNormalizedProjections()
+##
+####data = (norm[3:6].T).copy()
+##img_cgls = alg.cgls(norm.T.copy(), angle_proj, numpy.double(cor), 1 , niterations, threads, False)
+##numpy.save("chadwick_chamber970-990.npy", img_cgls)
+##print ("Launching CGLS 990-1019")
+##extent[2] = 990
+##extent[3] = 1019
+##voi.SetVOI(extent)
+##voi.Update()
+##norm = Converter.vtk2numpy(voi.GetOutput())
+##pp.normalizedProjections = norm
+##norm = pp.getNormalizedProjections()
+##
+####data = (norm[3:6].T).copy()
+##img_cgls = alg.cgls(norm.T.copy(), angle_proj, numpy.double(cor), 1 , niterations, threads, False)
+##numpy.save("chadwick_chamber990-1019.npy", img_cgls)
+##print ("Launching CGLS 0-6")
+
+####data = (norm[:6].T).copy()
+##
+##extent[4] = 0
+##extent[5] = 5
+##voi.SetVOI(extent)
+##voi.Update()
+##norm = Converter.vtk2numpy(voi.GetOutput())
+##pp = ProjectionPreprocessor()
+##pp.normalizedProjections = norm
+##norm = pp.getNormalizedProjections()
+##
+##img_cgls = alg.cgls(norm.T.copy(), angle_proj, numpy.double(cor), 1 , niterations, threads, False)
+##numpy.save("chadwick_chamber0-6.npy", img_cgls)
+##
+##extent[4] = 3
+##extent[5] = 5
+##voi.SetVOI(extent)
+##voi.Update()
+##norm = Converter.vtk2numpy(voi.GetOutput())
+##pp = ProjectionPreprocessor()
+##pp.normalizedProjections = norm
+##norm = pp.getNormalizedProjections()
+##
+##img_cgls = alg.cgls(norm.T.copy(), angle_proj, numpy.double(cor), 1 , niterations, threads, False)
+##numpy.save("chadwick_chamber3-6.npy", img_cgls)
 ##img_mlem = alg.mlem(norm, angle_proj, numpy.double(cor), 1 , niterations, threads, False)
 ##img_sirt = alg.sirt(norm, angle_proj, numpy.double(cor), 1 , niterations, threads, False)
 ##
