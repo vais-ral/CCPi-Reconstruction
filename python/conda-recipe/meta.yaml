@@ -1,11 +1,12 @@
 package:
   name: ccpi-reconstruction
-  version: "0.1"
+  version: {{ environ['CIL_VERSION'] }}
 
 
 build:
-  preserve_egg_dir: True
-#  number: 0
+  preserve_egg_dir: False
+  script_env:
+    - CIL_VERSION   
   
 requirements:
   build:
