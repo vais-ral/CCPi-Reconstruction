@@ -419,7 +419,7 @@ void reconstruct_tvreg()
 extern np::ndarray
 pb_forward_project(np::ndarray ndarray_volume,
 	np::ndarray ndarray_angles,
-	double rotation_center, int resolution
+	int resolution
 ) {
 
 
@@ -432,8 +432,8 @@ pb_forward_project(np::ndarray ndarray_volume,
 	//detector width >= sqrt(2) * volume_width
 	int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
 	int detector_width = (int)(1.42 * (float)msize);
-	rotation_center = (float)detector_width/2;
-	//int detector_width = ndarray_volume.shape(2);
+	double rotation_center = (float)detector_width/2;
+	//int detector_width = ndarray_volume.shape(2);
 	std::cout << "pb_forward_project detector_width " << detector_width << std::endl;
 	// storage for the projections
 	numpy_3d pixels(reinterpret_cast<float*>(ndarray_volume.get_data()),
@@ -480,7 +480,10 @@ pb_forward_project(np::ndarray ndarray_volume,
 		if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
 			output_volume_x, output_volume_y, output_volume_z)) {
 
-			std::cout << "pb_forward_project finish_voxel_geometry ok " << std::endl;
+			std::cout << "pb_forward_project full_vox_origin: " << full_vox_origin[0] << " ";
+			std::cout << full_vox_origin[1] << " " << full_vox_origin[2] << std::endl;
+			std::cout << "pb_forward_project voxel_size: " << voxel_size[0] << " ";
+			std::cout << voxel_size[1] << " " << voxel_size[2] << std::endl;
 
 			pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
 
@@ -779,5 +782,39 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 //
 //	
 //}
+
+/***********************************************************************/
+extern np::ndarray
+pb_forward_project2(np::ndarray ndarray_volume,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+) {
+
+
+	CCPi::instrument *instrument = new CCPi::Diamond();
+	int pixels_per_voxel = resolution;
+	std::cout << "pb_forward_project created Diamond instrument " << std::endl;
+	std::cout << "pb_forward_project input volume [ " << ndarray_volume.shape(0) << " ";
+	std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" << std::endl;
+
+	//detector width >= sqrt(2) * volume_width
+	//int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
+	//int detector_width = (int)(1.42 * (float)msize);
+	int detector_width = ndarray_volume.shape(2);
+	std::cout << "pb_forward_project detector_width " << detector_width << std::endl;
+	// storage for the projections
+	numpy_3d pixels(reinterpret_cast<float*>(ndarray_volume.get_data()),
+		boost::extents[ndarray_angles.shape(0)][ndarray_volume.shape(1)][detector_width]);
+
+	int n_angles = ndarray_angles.shape(0);
+	std::cout << "pb_forward_project n_angles " << n_angles << std::endl;
+
+	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()),
+		boost::extents[ndarray_angles.shape(0)]);
+
+	int output_volume_x = ndarray_volume.shape(0);
+	int output_volume_y = ndarray_volume.shape(1);
+	int output_volume_z = ndarray_volume.shape(2);
+}
 
 /***********************************************************************/
