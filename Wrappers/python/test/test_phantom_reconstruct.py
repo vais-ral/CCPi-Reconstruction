@@ -8,6 +8,7 @@ Created on Fri Nov 17 09:07:26 2017
 Test forward projector
 """
 from ccpi.reconstruction.parallelbeam import alg
+from ccpi.reconstruction.FindCenterOfRotation import *
 import h5py
 import numpy
 import matplotlib.pyplot as plt
@@ -46,16 +47,15 @@ angles = numpy.linspace(0,180, nangles, dtype=numpy.float32)
 
 phantom = numpy.asarray(phantom, dtype=numpy.float32)
 
-center_of_rotation = 128
 pixel_per_voxel = 1
 fp = alg.pb_forward_project
-stack = fp(phantom, angles , center_of_rotation, pixel_per_voxel)
+stack = fp(phantom, angles , pixel_per_voxel)
 print ("stack " ,stack.min(), stack.max())
 #bp = alg.pb_backward_project(stack, angles, center_of_rotation, pixel_per_voxel)
 
 
 # CGLS
-niterations = 15
+niterations = 30
 threads = 4
 isPixelDataInLogScale = False
 normalize = True
@@ -85,9 +85,13 @@ delta = 1e-3
 invnorm [numpy.where(invnorm==0)] = delta
 invnorm [numpy.where(invnorm>=1-delta)] = 1-delta
 
-center_of_rotation = numpy.shape(invnorm)[]
+center_of_rotation = numpy.shape(invnorm)[2]/2
+center_of_rotation = find_center_vo(invnorm)
 
 print ("invnorm " ,invnorm.min(), invnorm.max())	
+#img_cgls = alg.cgls(numpy.transpose(invnorm,[0,1,2]), angles, center_of_rotation , \
+#   pixel_per_voxel ,  niterations, threads, isPixelDataInLogScale)
+
 img_cgls = alg.cgls(numpy.transpose(invnorm,[0,2,1]), angles, center_of_rotation , \
    pixel_per_voxel ,  niterations, threads, isPixelDataInLogScale)
 

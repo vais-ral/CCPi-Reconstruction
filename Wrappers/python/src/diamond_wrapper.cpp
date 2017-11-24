@@ -419,8 +419,8 @@ void reconstruct_tvreg()
 extern np::ndarray
 pb_forward_project(np::ndarray ndarray_volume,
 	np::ndarray ndarray_angles,
-	int resolution
-) {
+	int resolution)
+{
 
 
 	CCPi::instrument *instrument = new CCPi::Diamond();
@@ -433,11 +433,15 @@ pb_forward_project(np::ndarray ndarray_volume,
 	int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
 	int detector_width = (int)(1.42 * (float)msize);
 	double rotation_center = (float)detector_width/2;
+	int detector_height = ndarray_volume.shape(2);
+	int number_of_projections = ndarray_angles.shape(0);
 	//int detector_width = ndarray_volume.shape(2);
 	std::cout << "pb_forward_project detector_width " << detector_width << std::endl;
+	std::cout << "pb_forward_project detector_height " << detector_height << std::endl;
+	std::cout << "pb_forward_project number_of_projections " << number_of_projections << std::endl;
 	// storage for the projections
 	numpy_3d pixels(reinterpret_cast<float*>(ndarray_volume.get_data()),
-		boost::extents[ndarray_angles.shape(0)][ndarray_volume.shape(1)][detector_width]);
+		boost::extents[number_of_projections][detector_height][detector_width]);
 
 	int n_angles = ndarray_angles.shape(0);
 	std::cout << "pb_forward_project n_angles " << n_angles <<  std::endl;
@@ -472,7 +476,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 		int n_v = instrument->get_num_v_pixels();
 
 		std::cout << "pb_forward_project setup experimental geometry n_h " << n_h << " n_v " << n_v << std::endl;
-
+		
 
 		real full_vox_origin[3];
 		real voxel_size[3];
@@ -493,7 +497,8 @@ pb_forward_project(np::ndarray ndarray_volume,
 			float * C = reinterpret_cast<float *>(ndarray_volume.get_data());
 
 			std::cout << "pb_forward_project copy input data to d " << std::endl;
-
+			
+			//#pragma openmp parallel for
 			for (int i = 0; i < output_volume_x; i++) {
 				for (int j = 0; j < output_volume_y; j++) {
 					for (int k = 0; k < output_volume_z; k++) {
@@ -514,7 +519,8 @@ pb_forward_project(np::ndarray ndarray_volume,
 
 			// get_pixel_data(); // should be pixel
 			// finally create a numpy array and copy the results
-			bp::tuple shape = bp::make_tuple(n_angles, n_h, n_v);
+			//[number_of_projections][detector_height][detector_width]
+			bp::tuple shape = bp::make_tuple(n_angles, n_v, n_h);
 			np::dtype dtype = np::dtype::get_builtin<float>();
 
 			np::ndarray ndarray_projections_stack = np::zeros(shape, dtype);
@@ -524,7 +530,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 			for (int i = 0; i < n_angles; i++) {
 				for (int j = 0; j < n_h; j++) {
 					for (int k = 0; k < n_v; k++) {
-						ndarray_projections_stack[i][j][k] = Ad[i][j][k];
+						ndarray_projections_stack[i][k][j] = Ad[i][j][k];
 					}
 				}
 			}
@@ -783,7 +789,7 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 //	
 //}
 
-/***********************************************************************/
+/***********************************************************************
 extern np::ndarray
 pb_forward_project2(np::ndarray ndarray_volume,
 	np::ndarray ndarray_angles,

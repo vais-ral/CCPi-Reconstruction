@@ -24,6 +24,7 @@ from edo.CILViewer import CILViewer
 from ccpi.segmentation.SimpleflexSegmentor import SimpleflexSegmentor
 
 from ccpi.reconstruction.parallelbeam import alg
+from ccpi.reconstruction.FindCenterOfRotation import *
 import vtk
 import matplotlib.pyplot as plt
 
@@ -115,6 +116,7 @@ def normalize(stack):
 filename = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
 norm, angle_proj = load_data(filename)
 
+
 ###############################################################################
 ## 2) 
 ## 
@@ -136,6 +138,8 @@ isPixelDataInLogScale = False
 # CGLS
 img_cgls = alg.cgls(norm, angle_proj, center_of_rotation , resolution , 
                     niterations, threads, isPixelDataInLogScale)
+					
+img_cgls = img_cgls[:160]
 ## MLEM
 #img_mlem = alg.mlem(norm, angle_proj,  center_of_rotation , resolution , 
 #                    niterations, threads, isPixelDataInLogScale)
@@ -181,27 +185,39 @@ pixel_per_voxel = resolution
 #img_cgls = numpy.transpose(img_cgls, [0,2,1])
 
 center_of_rotation = numpy.shape(img_cgls)[1]/2
-stack = fp(img_cgls, angle_proj , center_of_rotation, pixel_per_voxel)
+
+stack = fp(img_cgls, angle_proj , pixel_per_voxel)
+center_of_rotation = find_center_vo(stack)
+
 print ("stack: ", numpy.shape(stack), stack.min(), stack.max())
 
 
-if False:
+if True:
 	m = stack.min()
 	M = stack.max()
 	scale = 1 / (M-m)
 	shift = -m 
 	print ("m,M,scale,shift" , m,M,scale,shift)
 	stack = stack * scale + shift
+	
+# invert the projections
+invnorm = 1-stack
 # the cgls doesn't like 0's and more the 1s	
-#stack [numpy.where(stack<=0)] = 1e-3
-#stack [numpy.where(stack>1)] = 1
+invnorm [numpy.where(invnorm<=0)] = 1e-3
+invnorm [numpy.where(invnorm>1)] = 1 - 1e-3
 
 print ("Orig projections " , numpy.shape(norm))
-print ("Projected volume " , numpy.shape(stack))
+print ("Projected volume " , numpy.shape(invnorm))
+center_of_rotation = numpy.shape(invnorm)[1]/2
+
+niterations = 15
+
+img_cgls2 = alg.cgls(invnorm, angle_proj, center_of_rotation , resolution , 
+                    niterations, threads, isPixelDataInLogScale)
 
 no=60
 
-cols = 4
+cols = 5
 rows = 1
 current = 1
 fig = plt.figure()
@@ -219,7 +235,7 @@ a=fig.add_subplot(rows,cols,current)
 a.set_title('volume projected {0}'.format(numpy.shape(stack)))
 imgplot = plt.imshow(stack[no])
 
-sl = stack[no].T[18:153]
+sl = stack[no].T
 
 sl = normalize(sl)
 
@@ -228,5 +244,9 @@ a=fig.add_subplot(rows,cols,current)
 a.set_title('crop projected norm inv {0}'.format(numpy.shape(sl)))
 imgplot = plt.imshow(1-sl)
 
+current = current + 1
+a=fig.add_subplot(rows,cols,current)
+a.set_title('reconstructed vol norm inv {0}'.format(numpy.shape(img_cgls2)))
+imgplot = plt.imshow(img_cgls2[80])
 
 plt.show()

@@ -103,7 +103,7 @@ extern void reconstruct_tvreg();
 extern np::ndarray
 pb_forward_project(np::ndarray ndarray_volume,
 	np::ndarray angles,
-	double rotation_center, int resolution
+	int resolution
 );
 
 extern np::ndarray
