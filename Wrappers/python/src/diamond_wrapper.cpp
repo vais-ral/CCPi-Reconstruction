@@ -10,6 +10,7 @@
 #include "mpi.hpp"
 #include "base_types.hpp"
 #include "utils.hpp"
+#include "math.h"
 
 // assuming normalised data from SAVU
 // Inputs : numpy_boost<double,3> pixels
@@ -128,12 +129,13 @@ np::ndarray reconstruct_iter(np::ndarray ndarray_pixels,
     // Todo - vector? and remove buffered region
     for (int i = 0; i < dims[0]; i++)
       for (int j = 0; j < dims[1]; j++)
-	for (int k = 0; k < dims[2]; k++)
-	  varray[i][j][k] = (*voxels)[i][j][k];
+	    for (int k = 0; k < dims[2]; k++)
+	       varray[i][j][k] = (*voxels)[i][j][k];
     delete voxels;
   }
   return varray;
 }
+
 /*********WITH PREVIOUS STEP************/
 np::ndarray reconstruct_iter(np::ndarray ndarray_pixels,
 	np::ndarray ndarray_angles,
@@ -430,9 +432,13 @@ pb_forward_project(np::ndarray ndarray_volume,
 	std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" <<std::endl;
 
 	//detector width >= sqrt(2) * volume_width
-	int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
-	int detector_width = (int)(1.42 * (float)msize);
-	double rotation_center = (float)detector_width/2;
+	//int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
+	//int detector_width = (int)(1.42 * (float)msize);
+
+	int msize = sqrt(ndarray_volume.shape(0) * ndarray_volume.shape(0) + ndarray_volume.shape(1) * ndarray_volume.shape(1));
+	int detector_width = msize;
+
+	double rotation_center = (double)detector_width/2;
 	int detector_height = ndarray_volume.shape(2);
 	int number_of_projections = ndarray_angles.shape(0);
 	//int detector_width = ndarray_volume.shape(2);
@@ -520,7 +526,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 			// get_pixel_data(); // should be pixel
 			// finally create a numpy array and copy the results
 			//[number_of_projections][detector_height][detector_width]
-			bp::tuple shape = bp::make_tuple(n_angles, n_v, n_h);
+			bp::tuple shape = bp::make_tuple(n_angles, n_h, n_v);
 			np::dtype dtype = np::dtype::get_builtin<float>();
 
 			np::ndarray ndarray_projections_stack = np::zeros(shape, dtype);
@@ -530,7 +536,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 			for (int i = 0; i < n_angles; i++) {
 				for (int j = 0; j < n_h; j++) {
 					for (int k = 0; k < n_v; k++) {
-						ndarray_projections_stack[i][k][j] = Ad[i][j][k];
+						ndarray_projections_stack[i][j][k] = Ad[i][j][k];
 					}
 				}
 			}

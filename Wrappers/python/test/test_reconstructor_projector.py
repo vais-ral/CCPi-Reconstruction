@@ -115,7 +115,7 @@ def normalize(stack):
     
 filename = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
 norm, angle_proj = load_data(filename)
-
+norm = numpy.ascontiguousarray(norm)
 
 ###############################################################################
 ## 2) 
@@ -128,7 +128,7 @@ center_of_rotation = numpy.double(86.2)
 #resolution
 resolution = 1
 # number of iterations
-niterations = 4
+niterations = 10
 # number of threads
 threads = 4
 #data are in log scale?
@@ -138,8 +138,24 @@ isPixelDataInLogScale = False
 # CGLS
 img_cgls = alg.cgls(norm, angle_proj, center_of_rotation , resolution , 
                     niterations, threads, isPixelDataInLogScale)
+
+
 					
-img_cgls = img_cgls[:160]
+img_cgls = numpy.transpose(img_cgls, axes=[0,2,1])					
+# check if padded
+shape = numpy.shape(img_cgls)
+#counter = shape[2] - 1
+#while True:
+#	if numpy.all(img_cgls[:,:,counter] == 0):
+#		counter = counter -1 
+#	else:
+#		break
+#
+#if counter < shape[2] - 1:
+#	img_cgls = img_cgls[:,:,:counter]
+
+#img_cgls = img_cgls[:160]
+
 ## MLEM
 #img_mlem = alg.mlem(norm, angle_proj,  center_of_rotation , resolution , 
 #                    niterations, threads, isPixelDataInLogScale)
@@ -208,16 +224,26 @@ invnorm [numpy.where(invnorm>1)] = 1 - 1e-3
 
 print ("Orig projections " , numpy.shape(norm))
 print ("Projected volume " , numpy.shape(invnorm))
-center_of_rotation = numpy.shape(invnorm)[1]/2
+center_of_rotation = numpy.shape(invnorm)[2]/2
 
-niterations = 15
+niterations = 5
 
 img_cgls2 = alg.cgls(invnorm, angle_proj, center_of_rotation , resolution , 
                     niterations, threads, isPixelDataInLogScale)
 
+# crop
+cinvnorm = invnorm[:,37:183:]
+tinvnorm = numpy.ascontiguousarray(numpy.transpose(cinvnorm, [0,2,1]) )
+
+#center_of_rotation = numpy.shape(tinvnorm)[2]/2
+niterations = 10
+center_of_rotation = find_center_vo(tinvnorm)
+img_cgls3 = alg.cgls(tinvnorm, angle_proj, center_of_rotation , resolution , 
+                    niterations, threads, isPixelDataInLogScale)
+
 no=60
 
-cols = 5
+cols = 6
 rows = 1
 current = 1
 fig = plt.figure()
@@ -235,18 +261,29 @@ a=fig.add_subplot(rows,cols,current)
 a.set_title('volume projected {0}'.format(numpy.shape(stack)))
 imgplot = plt.imshow(stack[no])
 
-sl = stack[no].T
-
-sl = normalize(sl)
-
-current = current + 1
-a=fig.add_subplot(rows,cols,current)
-a.set_title('crop projected norm inv {0}'.format(numpy.shape(sl)))
-imgplot = plt.imshow(1-sl)
-
 current = current + 1
 a=fig.add_subplot(rows,cols,current)
 a.set_title('reconstructed vol norm inv {0}'.format(numpy.shape(img_cgls2)))
 imgplot = plt.imshow(img_cgls2[80])
 
+
+#sl = stack[no][37:183].T
+#sl = normalize(sl)
+#sl = tinvnorm[no]
+
+current = current + 1
+a=fig.add_subplot(rows,cols,current)
+a.set_title('crop projected transposed norm inv {0}'.format(numpy.shape(tinvnorm)))
+imgplot = plt.imshow(tinvnorm[no])
+
+current = current + 1
+a=fig.add_subplot(rows,cols,current)
+a.set_title('reconstructed vol norm inv {0}'.format(numpy.shape(img_cgls3)))
+imgplot = plt.imshow(img_cgls3[80])
 plt.show()
+
+if False:
+	from ccpi.viewer.CILViewer2D import *
+	v = CILViewer2D()
+	v.setInputAsNumpy(img_cgls3)
+	v.startRenderLoop()

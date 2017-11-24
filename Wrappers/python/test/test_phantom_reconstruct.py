@@ -43,7 +43,7 @@ pX,pY,pZ = numpy.shape(phantom)
 
 #angles = numpy.asarray([i / 3.1415 / 10 for i in range(10)], dtype=numpy.float32)
 nangles = 60
-angles = numpy.linspace(0,180, nangles, dtype=numpy.float32)
+angles = numpy.linspace(0,360, nangles, dtype=numpy.float32)
 
 phantom = numpy.asarray(phantom, dtype=numpy.float32)
 
@@ -55,7 +55,7 @@ print ("stack " ,stack.min(), stack.max())
 
 
 # CGLS
-niterations = 30
+niterations = 3
 threads = 4
 isPixelDataInLogScale = False
 normalize = True
@@ -92,7 +92,7 @@ print ("invnorm " ,invnorm.min(), invnorm.max())
 #img_cgls = alg.cgls(numpy.transpose(invnorm,[0,1,2]), angles, center_of_rotation , \
 #   pixel_per_voxel ,  niterations, threads, isPixelDataInLogScale)
 
-img_cgls = alg.cgls(numpy.transpose(invnorm,[0,2,1]), angles, center_of_rotation , \
+img_cgls = alg.cgls(numpy.transpose(invnorm,[0,1,2]), angles, center_of_rotation , \
    pixel_per_voxel ,  niterations, threads, isPixelDataInLogScale)
 
 #img_cgls2 = alg.cgls(norm, angles, center_of_rotation , \
