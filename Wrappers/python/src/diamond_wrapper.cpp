@@ -432,10 +432,10 @@ pb_forward_project(np::ndarray ndarray_volume,
 	std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" <<std::endl;
 
 	//detector width >= sqrt(2) * volume_width
-	//int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
+	int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
 	//int detector_width = (int)(1.42 * (float)msize);
 
-	int msize = sqrt(ndarray_volume.shape(0) * ndarray_volume.shape(0) + ndarray_volume.shape(1) * ndarray_volume.shape(1));
+	//int msize = sqrt(ndarray_volume.shape(0) * ndarray_volume.shape(0) + ndarray_volume.shape(1) * ndarray_volume.shape(1));
 	int detector_width = msize;
 
 	double rotation_center = (double)detector_width/2;
@@ -500,14 +500,13 @@ pb_forward_project(np::ndarray ndarray_volume,
 			voxel_data d(boost::extents[output_volume_x][output_volume_y][output_volume_z],
 				boost::c_storage_order());
 			// Copy the input data to d
-			float * C = reinterpret_cast<float *>(ndarray_volume.get_data());
-
+			
 			std::cout << "pb_forward_project copy input data to d " << std::endl;
 			
 			//#pragma openmp parallel for
-			for (int i = 0; i < output_volume_x; i++) {
+			for (int k = 0; k < output_volume_z; k++) {
 				for (int j = 0; j < output_volume_y; j++) {
-					for (int k = 0; k < output_volume_z; k++) {
+					for (int i = 0; i < output_volume_x; i++) {
 						//index = i + (j * output_volume_x) + (k * output_volume_x * output_volume_y);
 						//float val = (*(C + index));
 						float val = bp::extract<float>(ndarray_volume[i][j][k]);
@@ -526,17 +525,18 @@ pb_forward_project(np::ndarray ndarray_volume,
 			// get_pixel_data(); // should be pixel
 			// finally create a numpy array and copy the results
 			//[number_of_projections][detector_height][detector_width]
-			bp::tuple shape = bp::make_tuple(n_angles, n_h, n_v);
+			//the shape of the the exp projection stack is: 91x136x160, as phi-vertical-horizontal.
+			bp::tuple shape = bp::make_tuple(n_angles, n_v, n_h);
 			np::dtype dtype = np::dtype::get_builtin<float>();
 
 			np::ndarray ndarray_projections_stack = np::zeros(shape, dtype);
 
 			//float * A = reinterpret_cast<float *>(ndarray_projections_stack.get_data());
 			
-			for (int i = 0; i < n_angles; i++) {
-				for (int j = 0; j < n_h; j++) {
-					for (int k = 0; k < n_v; k++) {
-						ndarray_projections_stack[i][j][k] = Ad[i][j][k];
+			for (int k = 0; k < n_h; k++) {
+				for (int j = 0; j < n_v; j++) {
+					for (int i = 0; i < n_angles; i++) {
+						ndarray_projections_stack[i][j][k] = Ad[i][k][j];
 					}
 				}
 			}

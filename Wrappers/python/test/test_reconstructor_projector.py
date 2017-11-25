@@ -20,12 +20,12 @@
 import numpy
 import h5py
 #from ccpi.viewer.CILViewer import CILViewer
-from edo.CILViewer import CILViewer
+from ccpi.viewer.CILViewer2D import *
 from ccpi.segmentation.SimpleflexSegmentor import SimpleflexSegmentor
 
 from ccpi.reconstruction.parallelbeam import alg
 from ccpi.reconstruction.FindCenterOfRotation import *
-import vtk
+#import vtk
 import matplotlib.pyplot as plt
 
 
@@ -141,9 +141,10 @@ img_cgls = alg.cgls(norm, angle_proj, center_of_rotation , resolution ,
 
 
 					
-img_cgls = numpy.transpose(img_cgls, axes=[0,2,1])					
+#img_cgls = numpy.transpose(img_cgls, axes=[0,2,1])					
 # check if padded
 shape = numpy.shape(img_cgls)
+img_cgls = img_cgls[:,:shape[1]-1,:]
 #counter = shape[2] - 1
 #while True:
 #	if numpy.all(img_cgls[:,:,counter] == 0):
@@ -233,7 +234,7 @@ img_cgls2 = alg.cgls(invnorm, angle_proj, center_of_rotation , resolution ,
 
 # crop
 cinvnorm = invnorm[:,37:183:]
-tinvnorm = numpy.ascontiguousarray(numpy.transpose(cinvnorm, [0,2,1]) )
+tinvnorm = numpy.ascontiguousarray(numpy.transpose(invnorm, [0,2,1]) )
 
 #center_of_rotation = numpy.shape(tinvnorm)[2]/2
 niterations = 10
@@ -243,47 +244,48 @@ img_cgls3 = alg.cgls(tinvnorm, angle_proj, center_of_rotation , resolution ,
 
 no=60
 
-cols = 6
-rows = 1
+cols = 3
+rows = 2
 current = 1
 fig = plt.figure()
+# projections row
 a=fig.add_subplot(rows,cols,current)
-a.set_title('volume {0}, slice {1}'.format(numpy.shape(img_cgls),80))
-imgplot = plt.imshow(img_cgls[80])
-
-current = current + 1
-a=fig.add_subplot(rows,cols,current)
-a.set_title('exp projections {0}'.format(numpy.shape(norm)))
+a.set_title('exp projections \n{0}'.format(numpy.shape(norm)))
 imgplot = plt.imshow(norm[no])
 
 current = current + 1
 a=fig.add_subplot(rows,cols,current)
-a.set_title('volume projected {0}'.format(numpy.shape(stack)))
+a.set_title('norm Forward-Projections \n{0}'.format(numpy.shape(stack)))
 imgplot = plt.imshow(stack[no])
 
 current = current + 1
 a=fig.add_subplot(rows,cols,current)
-a.set_title('reconstructed vol norm inv {0}'.format(numpy.shape(img_cgls2)))
-imgplot = plt.imshow(img_cgls2[80])
+a.set_title('transposed norm neg FP\n{0}'.format(numpy.shape(tinvnorm)))
+imgplot = plt.imshow(tinvnorm[no])
 
+# volume slices row
+current = current + 1
+a=fig.add_subplot(rows,cols,current)
+a.set_title('reconstructed volume \n{0}, slice {1}'.format(numpy.shape(img_cgls),80))
+imgplot = plt.imshow(img_cgls[80])
+
+current = current + 1
+a=fig.add_subplot(rows,cols,current)
+a.set_title('reconstructed vol norm negative \n{0}'.format(numpy.shape(img_cgls2)))
+imgplot = plt.imshow(img_cgls2[80])
 
 #sl = stack[no][37:183].T
 #sl = normalize(sl)
 #sl = tinvnorm[no]
 
-current = current + 1
-a=fig.add_subplot(rows,cols,current)
-a.set_title('crop projected transposed norm inv {0}'.format(numpy.shape(tinvnorm)))
-imgplot = plt.imshow(tinvnorm[no])
 
 current = current + 1
 a=fig.add_subplot(rows,cols,current)
-a.set_title('reconstructed vol norm inv {0}'.format(numpy.shape(img_cgls3)))
+a.set_title('reconstructed vol norm neg trans fp\n {0}'.format(numpy.shape(img_cgls3)))
 imgplot = plt.imshow(img_cgls3[80])
 plt.show()
 
-if False:
-	from ccpi.viewer.CILViewer2D import *
+def showInteractive(vol):
 	v = CILViewer2D()
-	v.setInputAsNumpy(img_cgls3)
+	v.setInputAsNumpy(vol)
 	v.startRenderLoop()
