@@ -5,6 +5,8 @@ import numpy as np
 import sys
 import os.path
 from PIL import Image
+from ccpi.reconstruction.FindCenterOfRotation import find_center_vo
+from ccpi.reconstruction.parallelbeam import alg
 
 class Instrument(object):
     """This is a base class for the instrument type. This will act as an interface between the C/C++ source
@@ -22,6 +24,8 @@ class Instrument(object):
         self.pixels = pixels
         self.angles = angles
         self.data_v_offset = 0
+        self.acceptedInputKeywords = ['pixels', 'angles', 'volume']
+        self.pars = {'pixels':pixels, 'angles':angles ,'data_v_offset':self.data_v_offset}
 
     def read(filename):
         """This is a base method to read the instrument setup, pixels data and angles data
@@ -60,20 +64,98 @@ class Instrument(object):
         return npix          
         
     def __str__(self):
-        return "Insrument: %s" % (self.description)
+        return "Instrument: %s" % (self.description)
+        
+    def doForwardProject(self):
+        raise NotImplementedError('doForwardProject must be implemented in the concrete class')
+    
+    def doBackwardProject(self):
+        raise NotImplementedError('doBackwardProject must be implemented in the concrete class')
+        
+    def setParameter(self, **kwargs):
+        '''set named parameter for the instrument
+        
+        raises Exception if the named parameter is not recognized
+        
+        '''
+        for key , value in kwargs.items():
+            if key in self.acceptedInputKeywords:
+                self.pars[key] = value
+            else:
+                raise Exception('Wrong parameter {0} for '.format(key) +
+                                'reconstructor')
+    # setParameter
+    def getParameter(self, key):
+        '''Get a named parameter or list of parameter'''
+        if type(key) is str:
+            if key in self.acceptedInputKeywords:
+                return self.pars[key]
+            else:
+                raise Exception('Unrecongnised parameter: {0} '.format(key) )
+        elif type(key) is list:
+            outpars = []
+            for k in key:
+                outpars.append(self.getParameter(k))
+            return outpars
+        else:
+            raise Exception('Unhandled input {0}' .format(str(type(key))))
         
 class Diamond(Instrument):
-    """This represents diamond instrument. 
+    """This represents diamond instrument (parallel beam). 
+    
     TODO: Implement the reading and populating the object to be passed as argument to the reconstruction.
     """
     def __init__(self, pixels=None, angles=None):
         Instrument.__init__(self, pixels, angles)
+        self.acceptedInputKeywords.append('pixels_per_voxel')
+        self.acceptedInputKeywords.append('center_of_rotation')
+        self.pars['pixels_per_voxel'] = 1
     
     def is_cone_beam(self):
         return False
         
     def read(filename):
         pass
+    
+    def doForwardProject(self, volume, angles, pixel_per_voxel=1, 
+                         normalized=False, negative=False):
+        '''Performs a forward projection'''
+        self.setParameter(angles=angles)
+        pixels = alg.pb_forward_project(volume, 
+                                              angles , 
+                                              pixel_per_voxel)
+        self.setParameter(pixels=pixels)
+        if normalized:
+            m = pixels.min()
+            M = pixels.max()
+            scale = 1 / (M-m)
+            shift = -m 
+            print ("m,M,scale,shift" , m,M,scale,shift)
+            pixels = pixels * scale + shift
+            if negative:
+                pixels = 1-pixels
+        return pixels
+    
+    def doBackwardProject(self, center_of_rotation=None, pixel_per_voxel=1):
+        '''Does a backward projection'''
+        self.pixels , self.angles = self.getParameter(['pixels','angles'])
+        if center_of_rotation is None:
+            center_of_rotation = find_center_vo(self.pixels)
+            print (self.acceptedInputKeywords)
+            self.setParameter(center_of_rotation=center_of_rotation)
+        
+        back = alg.pb_backward_project(self.pixels, 
+                                   self.angles, 
+                                   center_of_rotation, 
+                                   pixel_per_voxel)
+        return back
+    def find_center_of_rotation(self, pixels=None):
+        if pixels is None:
+            pixels = self.getParameter('pixels')
+            return self.find_center_of_rotation(pixels)
+        else:
+            return find_center_vo(pixels)
+        
         
 class Xtek(Instrument):
     """This represents Xtek instrument. This class implements the reading of data from the Xtek output directory
