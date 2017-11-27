@@ -115,7 +115,7 @@ def normalize(stack):
     
 filename = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
 norm, angle_proj = load_data(filename)
-norm = numpy.ascontiguousarray(norm)
+#norm = numpy.ascontiguousarray(norm)
 
 ###############################################################################
 ## 2) 

@@ -12,6 +12,13 @@ from ccpi.reconstruction.FindCenterOfRotation import *
 import h5py
 import numpy
 import matplotlib.pyplot as plt
+from ccpi.viewer.CILViewer2D import *
+
+def display(vol):
+	v = CILViewer2D()
+	v.setInputAsNumpy(vol)
+	v.startRenderLoop()
+	return v
 
 nx = h5py.File(r'../../../data/phant3D_256.h5', "r")
 ph = numpy.asarray(nx.get('/dataset1'))
@@ -55,7 +62,7 @@ print ("stack " ,stack.min(), stack.max())
 
 
 # CGLS
-niterations = 3
+niterations = 10
 threads = 4
 isPixelDataInLogScale = False
 normalize = True
@@ -92,7 +99,7 @@ print ("invnorm " ,invnorm.min(), invnorm.max())
 #img_cgls = alg.cgls(numpy.transpose(invnorm,[0,1,2]), angles, center_of_rotation , \
 #   pixel_per_voxel ,  niterations, threads, isPixelDataInLogScale)
 
-img_cgls = alg.cgls(numpy.transpose(invnorm,[0,1,2]), angles, center_of_rotation , \
+img_cgls = alg.cgls(invnorm, angles, center_of_rotation , \
    pixel_per_voxel ,  niterations, threads, isPixelDataInLogScale)
 
 #img_cgls2 = alg.cgls(norm, angles, center_of_rotation , \
@@ -131,10 +138,8 @@ if cols >= current:
 plt.show()
 
 if True:
-	from ccpi.viewer.CILViewer2D import *
-	v = CILViewer2D()
-	v.setInputAsNumpy(img_cgls)
-	v.startRenderLoop()
+	v = display(img_cgls)
+	
 
 # pf = h5py.File("phantom3D256_projections.h5" , "w")
 # pf.create_dataset("/projections", data=stack)
