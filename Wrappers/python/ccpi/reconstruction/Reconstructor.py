@@ -4,31 +4,18 @@ Created on Fri Nov 17 11:45:35 2017
 
 @author: ofn77899
 """
-from abc import ABCMeta, abstractmethod
-from enum import Enum
 
+#from common import CCPiBaseClass
+from ccpi.reconstruction.parallelbeam import alg as pbalg
+from ccpi.reconstruction.conebeam import alg as cbalg
+from ccpi.reconstruction.FindCenterOfRotation import find_center_vo
+import numpy
 
-class Reconstructor(metaclass=ABCMeta):
-    '''Abstract class that defines the Reconstruction class for reconstruction
-
-This class defines the methods that must be implemented by concrete classes.
-Each concrete sub-class is requested to define a Factory to create an instance
-of the specific reconstruction.
-
-    '''
+class CCPiBaseClass(object):
     def __init__(self, **kwargs):
-        return NotImplemented
+        self.acceptedInputKeywords = []
+        self.pars = {}
     
-    @staticmethod
-    def create(type, **kwargs):
-        if type in Reconstructor.__subclasses__():
-            if kwargs == {}:
-                return type.Factory.create()
-            else:
-                return type.Factory.create(**kwargs)
-        else:
-            raise TypeError(r'Reconstructor "{0}" not available'.format(type))
-           
     def setParameter(self, **kwargs):
         '''set named parameter for the reconstructor engine
         
@@ -39,8 +26,7 @@ of the specific reconstruction.
             if key in self.acceptedInputKeywords:
                 self.pars[key] = value
             else:
-                raise Exception('Wrong parameter {0} for '.format(key) +
-                                'reconstructor')
+                raise Exception('Wrong parameter "{0}" for {1}'.format(key, self.__class__.__name__ ))
     # setParameter
 
     def getParameter(self, key):
@@ -56,20 +42,76 @@ of the specific reconstruction.
             return outpars
         else:
             raise Exception('Unhandled input {0}' .format(str(type(key))))
+    #getParameter
+    
+
+class Reconstructor(CCPiBaseClass):
+    '''Abstract class that defines the Reconstruction class for reconstruction
+
+This class defines the methods that must be implemented by concrete classes.
+Each concrete sub-class is requested to define a Factory to create an instance
+of the specific reconstruction.
+
+    '''
+    def __init__(self, **kwargs):
+        self.acceptedInputKeywords = ['instrument']
+    
+    @staticmethod
+    def create(type, **kwargs):
+        if type in Reconstructor.__subclasses__():
+            if kwargs == {}:
+                return type.Factory.create()
+            else:
+                return type.Factory.create(**kwargs)
+        else:   
+            if type in IterativeReconstructor.__subclasses__():
+                print ("found type {0}".format(type.__name__))
+                return type.Factory.create(**kwargs)
+            raise TypeError(r'Reconstructor "{0}" not available'.format(type))
+           
+        
+    
+    def iterate(self, **kwargs):
+        return NotImplementedError('iterate must be implemented in the concrete class')
+    
+    @staticmethod
+    def printAvailableAlgorithms():
+        msg = 'Available Iterative Reconstruction Algorithms:\n'
+        for algs in Reconstructor.__subclasses__():
+            if algs != IterativeReconstructor:
+                msg = msg + '{0}, instantiate as Reconstructor.create({0}, **kwargs)\n'\
+                    .format(algs.__name__)
+        for algs in IterativeReconstructor.__subclasses__():
+            msg = msg + '{0}, instantiate as Reconstructor.create({0}, **kwargs)\n'\
+                .format(algs.__name__)
+        return msg
+    
+    
                 
     class Factory():
         @staticmethod
         def create(**kwargs):
             return NotImplemented 
         
-class CGLS(Reconstructor):
+class IterativeReconstructor(Reconstructor):
     
     class Factory:
+        @staticmethod
         def create(**kwargs):
             if kwargs != {}:
-                return CGLS(**kwargs)
+                return IterativeReconstructor(algorithm=pbalg.cgls, **kwargs)
             else:
-                return CGLS()
+                return IterativeReconstructor(algorithm=pbalg.cgls)
+        
+    @staticmethod
+    def create(type, **kwargs):
+        if type in IterativeReconstructor.__subclasses__():
+            if kwargs == {}:
+                return type.Factory.create()
+            else:
+                return type.Factory.create(**kwargs)
+        else:
+            raise TypeError(r'Reconstructor "{0}" not available'.format(type))
     
     def __init__(self, **kwargs):
         self.acceptedInputKeywords = \
@@ -78,14 +120,86 @@ class CGLS(Reconstructor):
                 'iterations','dark_field' , 'resolution', 'isLogScale' , \
                 'threads' , 'iterationValues', 'regularize']
                
-        self.pars = {}
+        self.pars = {'algorithm' : pbalg.cgls,
+                    'resolution' : 1, 
+                     'isLogScale' : False,
+                     'threads' : 16, 
+                     'iterations' : 8}
+        
         print ("{0} created".format(__name__))
         if kwargs != {}:
             print (kwargs) 
+            self.setParameter(**kwargs)
         
+    def iterate(self, **kwargs):
+        if kwargs != {}:
+            self.setParameter(**kwargs)
+        try:
+            normalized_projections = self.getParameter('normalized_projection')
+        except KeyError:
+            raise Exception('Insufficient data. Please pass the normalized projections or flat, dark and projections')
         
+        try:
+            angles = self.getParameter('angles')
+        except KeyError:
+            raise Exception('Please pass the angles')
+            
+        #center of rotation
+        try:
+            center_of_rotation = self.getParameter('center_of_rotation')
+        except KeyError:
+            # estimate center of rotation
+            center_of_rotation = find_center_vo(normalized_projections)
+            self.setParameter(center_of_rotation=center_of_rotation)
+        
+        resolution , niterations, threads, isPixelDataInLogScale = \
+            self.getParameter(['resolution' , 'niterations', 
+                               'threads', 'isPixelDataInLogScale'])      
+        algorithm = self.getParameter('algorithm')
+        # CGLS
+        volume = algorithm(normalized_projection, angles, center_of_rotation , 
+                          resolution , niterations, threads, 
+                          isPixelDataInLogScale)
+        
+        return volume
+
+class CGLS(IterativeReconstructor):
+    class Factory:
+        @staticmethod
+        def create(**kwargs):
+            if kwargs != {}:
+                return IterativeReconstructor(algorithm=pbalg.cgls, **kwargs)
+            else:
+                return IterativeReconstructor(algorithm=pbalg.cgls)
+            
+class SIRT(IterativeReconstructor):
+    class Factory:
+        @staticmethod
+        def create(**kwargs):
+            if kwargs != {}:
+                return IterativeReconstructor(algorithm=pbalg.sirt, **kwargs)
+            else:
+                return IterativeReconstructor(algorithm=pbalg.sirt)
+
+class MLEM(IterativeReconstructor):
+    class Factory:
+        @staticmethod
+        def create(**kwargs):
+            if kwargs != {}:
+                return IterativeReconstructor(algorithm=pbalg.sirt, **kwargs)
+            else:
+                return IterativeReconstructor(algorithm=pbalg.sirt)
         
 if __name__ == "__main__":
-    r = Reconstructor.create(CGLS)
-    r.setParameter(resolution=1)
+    r = Reconstructor.create(CGLS, resolution=1, center_of_rotation=9.3)
+    #r.setParameter(resolution=1)
+    
+#    instrument = Diamond()
+#    instrument.readNexus()
+#    instrument.setParameter(projections, angles, flats, darks)
+#    instrument.getNormalizedData()
+#    
+#    r = Reconstructor.create('cgls', instrument)
+#    volume= r.iterate(allpars)
+#    
        
