@@ -23,8 +23,8 @@ def display(vol):
 nx = h5py.File(r'../../../data/phant3D_256.h5', "r")
 ph = numpy.asarray(nx.get('/dataset1'))
 
-#phantom = ph[1:254,2:253,3:252]
-phantom = ph[10:250,:,20:240].copy()
+phantom = numpy.asarray(ph[10:250,:,20:240], dtype=numpy.float32)
+
 
 pX,pY,pZ = numpy.shape(phantom)
 
@@ -52,7 +52,6 @@ pX,pY,pZ = numpy.shape(phantom)
 nangles = 60
 angles = numpy.linspace(0,360, nangles, dtype=numpy.float32)
 
-phantom = numpy.asarray(phantom, dtype=numpy.float32)
 
 pixel_per_voxel = 1
 fp = alg.pb_forward_project

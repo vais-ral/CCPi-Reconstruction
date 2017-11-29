@@ -118,7 +118,7 @@ class IterativeReconstructor(Reconstructor):
                ['algorithm','projection_data' ,'normalized_projection', \
                 'angles' , 'center_of_rotation' , 'flat_field', \
                 'iterations','dark_field' , 'resolution', 'isLogScale' , \
-                'threads' , 'iterationValues', 'regularize']
+                'threads' , 'iterationValues', 'regularization_parameter']
                
         self.pars = {'algorithm' : pbalg.cgls,
                     'resolution' : 1, 
@@ -156,11 +156,31 @@ class IterativeReconstructor(Reconstructor):
             self.getParameter(['resolution' , 'niterations', 
                                'threads', 'isPixelDataInLogScale'])      
         algorithm = self.getParameter('algorithm')
-        # CGLS
-        volume = algorithm(normalized_projection, angles, center_of_rotation , 
-                          resolution , niterations, threads, 
-                          isPixelDataInLogScale)
         
+        if algorithm._name__ == "cgls" or \
+           algorithm._name__ == "sirt" or \
+           algorithm._name__ == "mlem":
+            # CGLS
+            volume = algorithm(normalized_projections, angles, center_of_rotation , 
+                              resolution , niterations, threads, 
+                              isPixelDataInLogScale)
+        elif algorithm._name__ == "cgls_conv":
+            iteration_values1 = numpy.zeros((niterations,))
+            volume = algorithm(normalized_projections, angles, 
+                                      center_of_rotation , resolution , 
+                              niterations , threads,
+                              iteration_values1 , isPixelDataInLogScale)
+        elif algorithm.__name__ == "cgls_tikhonov" or \
+             algorithm.__name__ == "cgls_TVreg":
+            iteration_values1 = numpy.zeros((niterations,))
+            regularization_parameter = self.getParameter('regularization_parameter')
+            volume = algorithm(normalized_projections, angles,
+                               center_of_rotation , resolution , 
+                               niterations, threads,
+                               regularization_parameter, iteration_values1 , 
+                               isPixelDataInLogScale)
+
+            
         return volume
 
 class CGLS(IterativeReconstructor):
@@ -190,6 +210,42 @@ class MLEM(IterativeReconstructor):
             else:
                 return IterativeReconstructor(algorithm=pbalg.sirt)
         
+
+class CGLS_CONV(IterativeReconstructor):
+    class Factory:
+        @staticmethod
+        def create(**kwargs):
+            if kwargs != {}:
+                return IterativeReconstructor(algorithm=pbalg.cgls_conv, **kwargs)
+            else:
+                return IterativeReconstructor(algorithm=pbalg.cgls_conv)
+            
+            
+        
+            
+## CGLS CONV
+#iteration_values1 = numpy.zeros((niterations,))
+#img_cgls_conv = alg.cgls_conv(norm, angle_proj, center_of_rotation , 
+#                              resolution , 
+#                              niterations , threads,
+#                              iteration_values1 , isPixelDataInLogScale)
+#
+##Regularization parameter
+#regularization = numpy.double(1e-3)
+#
+## CGLS TIKHONOV
+#iteration_values2 = numpy.zeros((niterations,))
+#img_cgls_tikhonov = alg.cgls_tikhonov(norm, angle_proj, center_of_rotation , 
+#                                      resolution , niterations, threads,
+#                                      regularization, iteration_values2 , 
+#                                      isPixelDataInLogScale)
+#
+## CGLS Total Variation Regularization 
+#iteration_values3 = numpy.zeros((niterations,))
+#img_cgls_TVreg = alg.cgls_TVreg(norm, angle_proj, center_of_rotation , 
+#                                resolution ,  niterations, threads,
+#                                      regularization, iteration_values3,
+#                                      isPixelDataInLogScale)
 if __name__ == "__main__":
     r = Reconstructor.create(CGLS, resolution=1, center_of_rotation=9.3)
     #r.setParameter(resolution=1)

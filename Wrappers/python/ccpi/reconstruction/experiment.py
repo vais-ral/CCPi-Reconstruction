@@ -5,84 +5,113 @@ Created on Tue Nov 28 09:43:36 2017
 @author: ofn77899
 """
 
+from ccpi.reconstruction.Reconstructor import Reconstructor, IterativeReconstructor
+from ccpi.reconstruction.parallelbeam import alg as pbalg
+from ccpi.reconstruction.conebeam import alg as cbalg
+
+
 class TomographyExperiment(CCPiBaseClass):
     
     def __init__(self, **kwargs):
-        self.acceptedInputKeywords = ['projections' , 'normalized_projections',
-                                      'angles', 'flat_field', 'dark_field',
-                                      'instrument', 'reconstructor']
-        
+        self.acceptedInputKeywords = ['instrument', 'reconstructor']
+        self.available_reconstructors = ['cgls' , 'sirt', 'mlem', 'cgls_conv',
+                                         'cgls_tv', 'cgls_tikhonov']
         for key , value in kwargs.items():
             if key in self.acceptedInputKeywords()
                 self.setParameter(key=value)
             else:
                 print(r'Warning: discarded parameter: "{0}"'.format(key))
     
-    def getNormalizedProjections(self, projections=None, flat_field=None, dark_field=None, 
-                  angles=None, store=False):
-        if projections is None:
-            try:
-                projections = self.getParameter('projections')
-            except Exception:
-                raise Exception('Please provide the projection data')
-        if flat_field is None:
-            try:
-                flat_field = self.getParameter('flat_field')
-            except Exception:
-                raise Exception('Please provide the flat_field data')
-        if dark_field is None:
-            try:
-                dark_field = self.getParameter('dark_field')
-            except Exception:
-                raise Exception('Please provide the dark_field data')
+    def createReconstructor(self, reconstructor_name):
+        isConeBeam = self.isConeBeam()
         
-        norm = TomographyExperiment.normalize(projections, 
-                                                flat_field, 
-                                                dark_field)
-        if store:
-            self.setParameter(normalized_projections=norm)
-        return norm
+        if reconstructor_name == 'cgls':
+            if isConeBeam:
+                algorithm = cbalg.cgls
+            else:
+                algorithm = pbalg.cgls
+        elif reconstructor_name == 'sirt':
+            if isConeBeam:
+                algorithm = cbalg.sirt
+            else:
+                algorithm = pbalg.sirt
+        elif reconstructor_name == 'mlem':
+            if isConeBeam:
+                algorithm = cbalg.mlem
+            else:
+                algorithm = pbalg.mlem
+        elif reconstructor_name == 'cgls_conv':
+            if isConeBeam:
+                algorithm = cbalg.cgls_conv
+            else:
+                algorithm = pbalg.cgls_conv
+        elif reconstructor_name == 'cgls_tv':
+            if isConeBeam:
+                algorithm = cbalg.cgls_tv
+            else:
+                algorithm = pbalg.cgls_tv
+        elif reconstructor_name == 'cgls_tikhonov':
+            if isConeBeam:
+                algorithm = cbalg.cgls_tikhonov
+            else:
+                algorithm = pbalg.cgls_tikhonov
+        
+        reconstructor = Reconstructor.create(algorithm=algorithm)
+        self.setParameter(reconstructor=reconstructor)        
+        
+    def isConeBeam(self):
+        instrument = self.getParameter('instrument')
+        return instrument.isConeBeam()
     
-    @staticmethod
-    def normalize(projections, flats, darks):
-        # 2 is dark field
-        #darks = [stack[i] for i in range(len(itype)) if itype[i] == 2 ]
-        if len(numpy.shape(darks)) == 3:
-            dark = darks[0]
-            for i in range(1, len(darks)):
-                dark += darks[i]
-            dark = dark / len(darks)
+    def printAvailableReconstructionAlgorithms(self):
+        for alg in self.available_reconstructors:
+            print (alg)
+        
+    def configureReconstructor(self, reconstructor=None , **kwargs):
+        if reconstructor is None:
+            reconstructor = self.getParameter('reconstructor')
+        
+        # pass evenctual 
+        
+        instrument= self.getParameter('instrument')
+        if instrument.isConeBeam():
+            pass
         else:
-            # supposedly is 2
-            dark = darks
+            normalized_projections = instrument.getNormalizedProjections()
+            angles = instrument.getParameter('angles')
+            center_of_rotation = instrument.getCenterOfRotation()
         
+        algorithm = reconstructor.getParameter('algorithm')
         
-        # 1 is flat field
-        #flats = [stack[i] for i in range(len(itype)) if itype[i] == 1 ]
-        if len(numpy.shape(flats)) == 3:
-            flat = flats[0]
-            for i in range(1, len(flats)):
-                flat += flats[i]
-            flat = flat / len(flats)
-        else:
-            # supposedly the size is 2: already an image
-            dark = darks    
+        if algorithm.__name__ == 'cgls' or \
+           algorithm.__name__ == 'sirt' or \
+           algorithm.__name__ == 'mlem' or \
+           algorithm.__name__  == 'cgls_conv':
+            if self.isConeBeam():
+                pass
+            else:
+                pass
+            
+        elif algorithm.__name__  == 'cgls_tv' or \
+             algorithm.__name__  == 'cgls_tikhonov':
+            if isConeBeam:
+                pass
+            else:
+                if kwargs is not {}:
+                    if 'regularization_parameter' in kwargs.keys():
+                        reconstructor.setParameter(
+                            regularization_parameter=kwargs['regularization_parameter']
+                            )
+                    else:
+                        try:
+                            # this should rise an exception
+                            reg = reconstructor.getParameter('regularization_parameter')
+                        except Exception():
+                            raise Exception('ERROR: Please set the regularization parameter for the reconstructor')
         
-        norm = [TomographyExperiment.normalize2D(projection, dark, flat) \
-                for projection in projections]
-        norm = numpy.asarray (norm, dtype=numpy.float32)
+        reconstructor.iterate()
         
-        return norm
-    
-    @staticmethod
-    def normalize2D(projection, dark, flat, def_val=0.01):
-            a = (projection - dark)
-            b = (flat-dark)
-            with numpy.errstate(divide='ignore', invalid='ignore'):
-                c = numpy.true_divide( a, b )
-                c[ ~ numpy.isfinite( c )] = def_val  # set to not zero if 0/0 
-            return c
-    
+        return True
         
     
     
