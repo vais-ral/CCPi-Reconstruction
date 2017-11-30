@@ -8,7 +8,7 @@ Created on Tue Nov 28 09:43:36 2017
 from ccpi.reconstruction.Reconstructor import Reconstructor, IterativeReconstructor
 from ccpi.reconstruction.parallelbeam import alg as pbalg
 from ccpi.reconstruction.conebeam import alg as cbalg
-
+from ccpi.common import CCPiBaseClass
 
 class TomographyExperiment(CCPiBaseClass):
     
@@ -17,7 +17,7 @@ class TomographyExperiment(CCPiBaseClass):
         self.available_reconstructors = ['cgls' , 'sirt', 'mlem', 'cgls_conv',
                                          'cgls_tv', 'cgls_tikhonov']
         for key , value in kwargs.items():
-            if key in self.acceptedInputKeywords()
+            if key in self.acceptedInputKeywords():
                 self.setParameter(key=value)
             else:
                 print(r'Warning: discarded parameter: "{0}"'.format(key))
@@ -25,6 +25,13 @@ class TomographyExperiment(CCPiBaseClass):
     def createReconstructor(self, reconstructor_name):
         isConeBeam = self.isConeBeam()
         
+        algorithm = self.getAlgorithm(reconstructor_name)
+        
+        reconstructor = Reconstructor.create(algorithm=algorithm)
+        self.setParameter(reconstructor=reconstructor)        
+    
+    
+    def getAlgorithm(self, reconstructor_name):
         if reconstructor_name == 'cgls':
             if isConeBeam:
                 algorithm = cbalg.cgls
@@ -55,10 +62,8 @@ class TomographyExperiment(CCPiBaseClass):
                 algorithm = cbalg.cgls_tikhonov
             else:
                 algorithm = pbalg.cgls_tikhonov
-        
-        reconstructor = Reconstructor.create(algorithm=algorithm)
-        self.setParameter(reconstructor=reconstructor)        
-        
+        return algorithm
+    
     def isConeBeam(self):
         instrument = self.getParameter('instrument')
         return instrument.isConeBeam()
@@ -68,10 +73,20 @@ class TomographyExperiment(CCPiBaseClass):
             print (alg)
         
     def configureReconstructor(self, reconstructor=None , **kwargs):
-        if reconstructor is None:
-            reconstructor = self.getParameter('reconstructor')
+        '''Configures the reconstructor with the current data present in the experiment
         
-        # pass evenctual 
+        returns True if fully configured, raises exceptions when missing data'''
+        if reconstructor is not None:
+            self.setParameter(reconstructor=reconstructor)
+            
+        reconstructor = self.getParameter('reconstructor')
+        
+        # pass keyworded arguments
+        for key in kwargs.keys():
+            try:
+                reconstructor.setParameter(key=kwargs[key])
+            except Exception:
+                pass
         
         instrument= self.getParameter('instrument')
         if instrument.isConeBeam():
@@ -80,6 +95,11 @@ class TomographyExperiment(CCPiBaseClass):
             normalized_projections = instrument.getNormalizedProjections()
             angles = instrument.getParameter('angles')
             center_of_rotation = instrument.getCenterOfRotation()
+            
+            # pass the data to the reconstructor
+            reconstructor.setParameter(normalized_projection = normalized_projections,
+                                       angles=angles, 
+                                       center_of_rotation=center_of_rotation)
         
         algorithm = reconstructor.getParameter('algorithm')
         
@@ -97,22 +117,39 @@ class TomographyExperiment(CCPiBaseClass):
             if isConeBeam:
                 pass
             else:
-                if kwargs is not {}:
-                    if 'regularization_parameter' in kwargs.keys():
-                        reconstructor.setParameter(
-                            regularization_parameter=kwargs['regularization_parameter']
-                            )
-                    else:
-                        try:
-                            # this should rise an exception
-                            reg = reconstructor.getParameter('regularization_parameter')
-                        except Exception():
-                            raise Exception('ERROR: Please set the regularization parameter for the reconstructor')
+                try:
+                    # this should rise an exception if not configured
+                    reg = reconstructor.getParameter('regularization_parameter')
+                except Exception():
+                    raise Exception('ERROR: Please set the regularization parameter for the reconstructor')
         
-        reconstructor.iterate()
         
         return True
         
+    def reconstruct(self, algorithm_name=None, 
+                    number_of_iterations = None, 
+                    instrument = None, 
+                    regularization_parameter = None):
+        
+        
+        kwargs = {}
+        if algorithm_name is not None:
+            algorithm = self.getAlgorithm(algorithm_name)
+            kwargs['algorithm']=algorithm
+        if number_of_iterations is not None:
+            #reconstructor.setParameter(iterations=number_of_iterations)
+            kwargs['iterations']=number_of_iterations
+        if regularization_parameter is not None:
+            #reconstructor.setParameter(regularization_parameter=regularization_parameter)
+            kwargs['regularization_parameter']=regularization_parameter
+        
+        if self.configureReconstructor(**kwargs):
+            reconstructor = self.getParameter('reconstructor')
+            reconstructor.iterate()
+        
+            
+            
+            
     
     
     
