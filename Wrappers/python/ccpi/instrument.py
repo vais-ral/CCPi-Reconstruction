@@ -2,13 +2,14 @@
 This is CT instrument information. it includes cone beam and parallel beam instrument information
 '''
 import numpy as np
-import sys
+import h5py
 import os.path
 from PIL import Image
+from ccpi.common import CCPiBaseClass
 from ccpi.reconstruction.FindCenterOfRotation import find_center_vo
-from ccpi.reconstruction.parallelbeam import alg
+from ccpi.reconstruction.parallelbeam import alg as pbalg
 
-class Instrument(object):
+class Instrument(CCPiBaseClass):
     """This is a base class for the instrument type. This will act as an interface between the C/C++ source
     for the reconstruction and the python wrapper. 
     
@@ -36,7 +37,7 @@ class Instrument(object):
         """
         raise NotImplementedError('Read method is not implemented for this instrument')
                 
-    def is_cone_beam(self):
+    def isConeBeam(self):
         """This is to check if the instrument type is cone beam or parallel beam
         This will be overwritten by the child class
         """
@@ -72,33 +73,7 @@ class Instrument(object):
     def doBackwardProject(self):
         raise NotImplementedError('doBackwardProject must be implemented in the concrete class')
         
-    def setParameter(self, **kwargs):
-        '''set named parameter for the instrument
-        
-        raises Exception if the named parameter is not recognized
-        
-        '''
-        for key , value in kwargs.items():
-            if key in self.acceptedInputKeywords:
-                self.pars[key] = value
-            else:
-                raise Exception('Wrong parameter {0} for '.format(key) +
-                                'reconstructor')
-    # setParameter
-    def getParameter(self, key):
-        '''Get a named parameter or list of parameter'''
-        if type(key) is str:
-            if key in self.acceptedInputKeywords:
-                return self.pars[key]
-            else:
-                raise Exception('Unrecongnised parameter: {0} '.format(key) )
-        elif type(key) is list:
-            outpars = []
-            for k in key:
-                outpars.append(self.getParameter(k))
-            return outpars
-        else:
-            raise Exception('Unhandled input {0}' .format(str(type(key))))
+    
         
 class Diamond(Instrument):
     """This represents diamond instrument (parallel beam). 
@@ -109,9 +84,13 @@ class Diamond(Instrument):
         Instrument.__init__(self, pixels, angles)
         self.acceptedInputKeywords.append('pixels_per_voxel')
         self.acceptedInputKeywords.append('center_of_rotation')
+        self.acceptedInputKeywords.append('projections')
+        self.acceptedInputKeywords.append('normalized_projections')
+        self.acceptedInputKeywords.append('flat_field')
+        self.acceptedInputKeywords.append('dark_field')
         self.pars['pixels_per_voxel'] = 1
     
-    def is_cone_beam(self):
+    def isConeBeam(self):
         return False
         
     def read(filename):
@@ -121,7 +100,7 @@ class Diamond(Instrument):
                          normalized=False, negative=False):
         '''Performs a forward projection'''
         self.setParameter(angles=angles)
-        pixels = alg.pb_forward_project(volume, 
+        pixels = pbalg.pb_forward_project(volume, 
                                               angles , 
                                               pixel_per_voxel)
         self.setParameter(pixels=pixels)
@@ -144,18 +123,92 @@ class Diamond(Instrument):
             print (self.acceptedInputKeywords)
             self.setParameter(center_of_rotation=center_of_rotation)
         
-        back = alg.pb_backward_project(self.pixels, 
+        back = pbalg.pb_backward_project(self.pixels, 
                                    self.angles, 
                                    center_of_rotation, 
                                    pixel_per_voxel)
         return back
-    def find_center_of_rotation(self, pixels=None):
+    
+    def getCenterOfRotation(self, pixels=None):
         if pixels is None:
-            pixels = self.getParameter('pixels')
-            return self.find_center_of_rotation(pixels)
+            try:
+                pixels = self.getParameter('normalized_projections')
+            except KeyError:
+                pixels = self.getNormalizedProjections()
+                self.setParameter(normalized_projections=pixels)
+            return self.getCenterOfRotation(pixels)
         else:
             return find_center_vo(pixels)
         
+    def getNormalizedProjections(self):
+        projections, flat , dark = self.getParameter(['projections', 
+                                                      'flat_field', 
+                                                      'dark_field'])
+        
+    
+        norm = [ Diamond.normalize(sl, dark, flat, 0.001) for sl in projections ]
+            
+        return np.asarray(norm, dtype=np.float32)
+            
+    
+    @staticmethod        
+    def normalize(projection, dark, flat, def_val=0.1):
+        a = (projection - dark)
+        b = (flat-dark)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            c = np.true_divide( a, b )
+            c[ ~ np.isfinite( c )] = def_val  # set to not zero if 0/0 
+        return c
+    
+                
+    def loadNexus(self, filename):
+        '''Load a dataset stored in a NeXuS file (HDF5)'''
+        ###############################################################################
+        ## Load a dataset
+        print ("Loading Data")
+        nx = h5py.File(filename, "r")
+        
+        data = nx.get('entry1/tomo_entry/data/rotation_angle')
+        angles = np.zeros(data.shape)
+        data.read_direct(angles)
+        
+        data = nx.get('entry1/tomo_entry/data/data')
+        stack = np.zeros(data.shape)
+        data.read_direct(stack)
+        
+        ##
+        # Normalize
+        data = nx.get('entry1/tomo_entry/instrument/detector/image_key')
+        itype = np.zeros(data.shape)
+        data.read_direct(itype)
+        # 2 is dark field
+        darks = [stack[i] for i in range(len(itype)) if itype[i] == 2 ]
+        dark = darks[0]
+        for i in range(1, len(darks)):
+            dark += darks[i]
+        dark = dark / len(darks)
+        #dark[0][0] = dark[0][1]
+        
+        # 1 is flat field
+        flats = [stack[i] for i in range(len(itype)) if itype[i] == 1 ]
+        flat = flats[0]
+        for i in range(1, len(flats)):
+            flat += flats[i]
+        flat = flat / len(flats)
+        #flat[0][0] = dark[0][1]
+        
+        
+        # 0 is projection data
+        proj = [stack[i] for i in range(len(itype)) if itype[i] == 0 ]
+        angle_proj = [angles[i] for i in range(len(itype)) if itype[i] == 0 ]
+        angle_proj = np.asarray (angle_proj)
+        angle_proj = angle_proj.astype(np.float32)
+        
+        #return angle_proj , proj , dark, flat
+        self.setParameter(projections=proj, angles=angle_proj, flat_field= flat,
+                          dark_field=dark)
+
+
         
 class Xtek(Instrument):
     """This represents Xtek instrument. This class implements the reading of data from the Xtek output directory
@@ -178,7 +231,7 @@ class Xtek(Instrument):
         self.num_of_horizontal_pixels = 0
         self.has_offsets = False        
         
-    def is_cone_beam(self):
+    def isConeBeam(self):
         """
         Returns: True since Xtek is cone beam based instrument.
         """

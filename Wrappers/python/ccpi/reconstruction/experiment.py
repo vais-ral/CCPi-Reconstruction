@@ -4,8 +4,8 @@ Created on Tue Nov 28 09:43:36 2017
 
 @author: ofn77899
 """
-
-from ccpi.reconstruction.Reconstructor import Reconstructor, IterativeReconstructor
+import numpy
+from ccpi.reconstruction.Reconstructor import IterativeReconstructor
 from ccpi.reconstruction.parallelbeam import alg as pbalg
 from ccpi.reconstruction.conebeam import alg as cbalg
 from ccpi.common import CCPiBaseClass
@@ -13,6 +13,7 @@ from ccpi.common import CCPiBaseClass
 class TomographyExperiment(CCPiBaseClass):
     
     def __init__(self, **kwargs):
+        CCPiBaseClass.__init__(self)
         self.acceptedInputKeywords = ['instrument', 'reconstructor']
         self.available_reconstructors = ['cgls' , 'sirt', 'mlem', 'cgls_conv',
                                          'cgls_tv', 'cgls_tikhonov']
@@ -23,15 +24,16 @@ class TomographyExperiment(CCPiBaseClass):
                 print(r'Warning: discarded parameter: "{0}"'.format(key))
     
     def createReconstructor(self, reconstructor_name):
-        isConeBeam = self.isConeBeam()
         
         algorithm = self.getAlgorithm(reconstructor_name)
         
-        reconstructor = Reconstructor.create(algorithm=algorithm)
+        reconstructor = IterativeReconstructor.Factory.create(algorithm)
         self.setParameter(reconstructor=reconstructor)        
     
     
     def getAlgorithm(self, reconstructor_name):
+        isConeBeam = self.isConeBeam()
+        
         if reconstructor_name == 'cgls':
             if isConeBeam:
                 algorithm = cbalg.cgls
@@ -93,11 +95,12 @@ class TomographyExperiment(CCPiBaseClass):
             pass
         else:
             normalized_projections = instrument.getNormalizedProjections()
+            #reconstructor.setParameter(normalized_projection = normalized_projections)
             angles = instrument.getParameter('angles')
             center_of_rotation = instrument.getCenterOfRotation()
             
             # pass the data to the reconstructor
-            reconstructor.setParameter(normalized_projection = normalized_projections,
+            reconstructor.setParameter(normalized_projections = normalized_projections,
                                        angles=angles, 
                                        center_of_rotation=center_of_rotation)
         
@@ -145,10 +148,52 @@ class TomographyExperiment(CCPiBaseClass):
         
         if self.configureReconstructor(**kwargs):
             reconstructor = self.getParameter('reconstructor')
-            reconstructor.iterate()
+            check = self.sanityCheck()
+            if check[0]:
+                return reconstructor.iterate()
+            else:
+                raise Exception(check[1])
         
             
+    def sanityCheck(self):
+        instrument = self.getParameter('instrument')
+        projection_data = instrument.getParameter('projections')
+        dark_field = instrument.getParameter('dark_field')
+        flat_field = instrument.getParameter('flat_field')
+        angles = instrument.getParameter('angles')
+        
+        if projection_data is not None and dark_field is not None and \
+            angles is not None and flat_field is not None:
+            data_shape =  numpy.shape(projection_data)
+            angle_shape = numpy.shape(angles)
             
+            if angle_shape[0] != data_shape[0]:
+                #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
+                #                (angle_shape[0] , data_shape[0]) )
+                return (False , 'Projections and angles dimensions do not match:'+
+                                ' %d vs %d' % (angle_shape[0] , data_shape[0]) )
+            
+            if data_shape[1:] != numpy.shape(flat_field):
+                #raise Exception('Projection and flat field dimensions do not match')
+                return (False , 'Projection and flat field dimensions do not match')
+            if data_shape[1:] != numpy.shape(dark_field):
+                #raise Exception('Projection and dark field dimensions do not match')
+                return (False , 'Projection and dark field dimensions do not match')
+            
+            return (True , '' )
+        elif self.pars['normalized_projection_data'] is not None:
+            data_shape =  numpy.shape(self.pars['normalized_projection_data'])
+            angle_shape = numpy.shape(angles)
+            
+            if angle_shape[0] != data_shape[0]:
+                #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
+                #                (angle_shape[0] , data_shape[0]) )
+                return (False , 'Projections and angles dimensions do not match: %d vs %d' % \
+                                (angle_shape[0] , data_shape[0]) )
+            else:
+                return (True , '' )
+        else:
+            return (False , 'Not enough data')       
             
     
     

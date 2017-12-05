@@ -82,11 +82,10 @@ of the specific reconstruction.
             if algs != IterativeReconstructor:
                 msg = msg + '{0}, instantiate as Reconstructor.create({0}, **kwargs)\n'\
                     .format(algs.__name__)
-        for algs in IterativeReconstructor.__subclasses__():
+        for algs in IterativeReconstructor.getAvailableAlgorithms():
             msg = msg + '{0}, instantiate as Reconstructor.create({0}, **kwargs)\n'\
                 .format(algs.__name__)
         return msg
-    
     
                 
     class Factory():
@@ -98,25 +97,16 @@ class IterativeReconstructor(Reconstructor):
     
     class Factory:
         @staticmethod
-        def create(**kwargs):
+        def create(algorithm, **kwargs):
             if kwargs != {}:
-                return IterativeReconstructor(algorithm=pbalg.cgls, **kwargs)
+                return IterativeReconstructor(algorithm=algorithm, **kwargs)
             else:
-                return IterativeReconstructor(algorithm=pbalg.cgls)
+                return IterativeReconstructor(algorithm=algorithm)
         
-    @staticmethod
-    def create(type, **kwargs):
-        if type in IterativeReconstructor.__subclasses__():
-            if kwargs == {}:
-                return type.Factory.create()
-            else:
-                return type.Factory.create(**kwargs)
-        else:
-            raise TypeError(r'Reconstructor "{0}" not available'.format(type))
     
     def __init__(self, **kwargs):
         self.acceptedInputKeywords = \
-               ['algorithm','projection_data' ,'normalized_projection', \
+               ['algorithm','projection_data' ,'normalized_projections', \
                 'angles' , 'center_of_rotation' , 'flat_field', \
                 'iterations','dark_field' , 'resolution', 'isLogScale' , \
                 'threads' , 'iterationValues', 'regularization_parameter']
@@ -127,16 +117,20 @@ class IterativeReconstructor(Reconstructor):
                      'threads' : 16, 
                      'iterations' : 8}
         
-        print ("{0} created".format(__name__))
+        print ("{0} created".format(self.getParameter('algorithm').__name__))
         if kwargs != {}:
             print (kwargs) 
             self.setParameter(**kwargs)
+            
+    @staticmethod
+    def getAvailableAlgorithms():
+        return ['cgls' , 'sirt', 'mlem', 'cgls_conv', 'cgls_TVreg' , 'cgls_tikhonov']
         
     def iterate(self, **kwargs):
         if kwargs != {}:
             self.setParameter(**kwargs)
         try:
-            normalized_projections = self.getParameter('normalized_projection')
+            normalized_projections = self.getParameter('normalized_projections')
         except KeyError:
             raise Exception('Insufficient data. Please pass the normalized projections or flat, dark and projections')
         
@@ -154,18 +148,18 @@ class IterativeReconstructor(Reconstructor):
             self.setParameter(center_of_rotation=center_of_rotation)
         
         resolution , niterations, threads, isPixelDataInLogScale = \
-            self.getParameter(['resolution' , 'niterations', 
-                               'threads', 'isPixelDataInLogScale'])      
+            self.getParameter(['resolution' , 'iterations', 
+                               'threads', 'isLogScale'])      
         algorithm = self.getParameter('algorithm')
-        
-        if algorithm._name__ == "cgls" or \
-           algorithm._name__ == "sirt" or \
-           algorithm._name__ == "mlem":
+        print (dir(algorithm))
+        if algorithm.__name__ == "cgls" or \
+           algorithm.__name__ == "sirt" or \
+           algorithm.__name__ == "mlem":
             # CGLS
             volume = algorithm(normalized_projections, angles, center_of_rotation , 
                               resolution , niterations, threads, 
                               isPixelDataInLogScale)
-        elif algorithm._name__ == "cgls_conv":
+        elif algorithm.__name__ == "cgls_conv":
             iteration_values1 = numpy.zeros((niterations,))
             volume = algorithm(normalized_projections, angles, 
                                       center_of_rotation , resolution , 
@@ -184,44 +178,44 @@ class IterativeReconstructor(Reconstructor):
             
         return volume
 
-class CGLS(IterativeReconstructor):
-    class Factory:
-        @staticmethod
-        def create(**kwargs):
-            if kwargs != {}:
-                return IterativeReconstructor(algorithm=pbalg.cgls, **kwargs)
-            else:
-                return IterativeReconstructor(algorithm=pbalg.cgls)
-            
-class SIRT(IterativeReconstructor):
-    class Factory:
-        @staticmethod
-        def create(**kwargs):
-            if kwargs != {}:
-                return IterativeReconstructor(algorithm=pbalg.sirt, **kwargs)
-            else:
-                return IterativeReconstructor(algorithm=pbalg.sirt)
-
-class MLEM(IterativeReconstructor):
-    class Factory:
-        @staticmethod
-        def create(**kwargs):
-            if kwargs != {}:
-                return IterativeReconstructor(algorithm=pbalg.sirt, **kwargs)
-            else:
-                return IterativeReconstructor(algorithm=pbalg.sirt)
-        
-
-class CGLS_CONV(IterativeReconstructor):
-    class Factory:
-        @staticmethod
-        def create(**kwargs):
-            if kwargs != {}:
-                return IterativeReconstructor(algorithm=pbalg.cgls_conv, **kwargs)
-            else:
-                return IterativeReconstructor(algorithm=pbalg.cgls_conv)
-            
-            
+#class CGLS(IterativeReconstructor):
+#    class Factory:
+#        @staticmethod
+#        def create(**kwargs):
+#            if kwargs != {}:
+#                return IterativeReconstructor(algorithm=pbalg.cgls, **kwargs)
+#            else:
+#                return IterativeReconstructor(algorithm=pbalg.cgls)
+#            
+#class SIRT(IterativeReconstructor):
+#    class Factory:
+#        @staticmethod
+#        def create(**kwargs):
+#            if kwargs != {}:
+#                return IterativeReconstructor(algorithm=pbalg.sirt, **kwargs)
+#            else:
+#                return IterativeReconstructor(algorithm=pbalg.sirt)
+#
+#class MLEM(IterativeReconstructor):
+#    class Factory:
+#        @staticmethod
+#        def create(**kwargs):
+#            if kwargs != {}:
+#                return IterativeReconstructor(algorithm=pbalg.sirt, **kwargs)
+#            else:
+#                return IterativeReconstructor(algorithm=pbalg.sirt)
+#        
+#
+#class CGLS_CONV(IterativeReconstructor):
+#    class Factory:
+#        @staticmethod
+#        def create(**kwargs):
+#            if kwargs != {}:
+#                return IterativeReconstructor(algorithm=pbalg.cgls_conv, **kwargs)
+#            else:
+#                return IterativeReconstructor(algorithm=pbalg.cgls_conv)
+#            
+#            
         
             
 ## CGLS CONV
