@@ -141,15 +141,18 @@ class Diamond(Instrument):
             return find_center_vo(pixels)
         
     def getNormalizedProjections(self):
-        projections, flat , dark = self.getParameter(['projections', 
-                                                      'flat_field', 
-                                                      'dark_field'])
-        
-    
-        norm = [ Diamond.normalize(sl, dark, flat, 0.001) for sl in projections ]
-            
-        return np.asarray(norm, dtype=np.float32)
-            
+        try:
+			return self.getParameter('normalized_projections')
+		except KeyError:
+			projections, flat , dark = self.getParameter(['projections', 
+														  'flat_field', 
+														  'dark_field'])
+			
+		
+			norm = [ Diamond.normalize(sl, dark, flat, 0.001) for sl in projections ]
+				
+			return np.asarray(norm, dtype=np.float32)
+				
     
     @staticmethod        
     def normalize(projection, dark, flat, def_val=0.1):
