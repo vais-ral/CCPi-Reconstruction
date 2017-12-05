@@ -24,6 +24,8 @@ requirements:
     - numpy
     - boost ==1.64
     - libtiff
+    - h5py
+    - scipy
 
 	
 about:
