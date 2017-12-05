@@ -37,7 +37,8 @@ extra_link_args = []
 extra_libraries = []
 
 if platform.system() == 'Windows':
-   extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', '/openmp','/DHAS_TIFF','/DCCPiReconstructionIterative_EXPORTS']   
+   extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', 
+   '/openmp','/DHAS_TIFF','/DCCPiReconstructionIterative_EXPORTS']   
    extra_include_dirs += ["..\\..\\Core\\src\\","..\\..\\Core\\src\\Algorithms","..\\..\\Core\\src\\Readers", "."]
    extra_include_dirs += library_include_path
    extra_library_dirs += library_lib_path

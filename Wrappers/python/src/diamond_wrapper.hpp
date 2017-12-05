@@ -1,7 +1,11 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
+//#define BOOST_PYTHON_STATIC_LIB  
+//#define BOOST_LIB_NAME "boost_numpy"
+//#include <boost/config/auto_link.hpp>
 
 #include "base_types.hpp"
+#include <iostream>
 
 namespace bp = boost::python;
 namespace np = boost::python::numpy;
@@ -88,3 +92,19 @@ reconstruct_cgls_tvreg_step(np::ndarray pixels,
 	np::ndarray last_iteration_volume);
 
 extern void reconstruct_tvreg();
+
+
+extern np::ndarray
+pb_forward_project(np::ndarray ndarray_volume,
+	np::ndarray angles,
+	int resolution
+);
+
+extern np::ndarray
+pb_backward_project(np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+);
+
+
+

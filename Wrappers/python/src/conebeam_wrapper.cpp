@@ -343,7 +343,12 @@ boost::python::tuple conebeam_load_xtek(const std::string& filename)
 }
 
 
-np::ndarray conebeam_create_sinogram(const float source_x, const float source_y, const float source_z, const float detector_x, np::ndarray ndarray_h_pixels, np::ndarray ndarray_v_pixels, np::ndarray ndarray_angles, np::ndarray ndarray_voxels, np::ndarray grid_offset, np::ndarray voxel_size)
+np::ndarray conebeam_create_sinogram(const float source_x, const float source_y, const float source_z, 
+	const float detector_x, 
+	np::ndarray ndarray_h_pixels, np::ndarray ndarray_v_pixels, np::ndarray ndarray_angles, 
+	np::ndarray ndarray_voxels, 
+	np::ndarray grid_offset, 
+	np::ndarray voxel_size)
 {
 	np::dtype dt = np::dtype::get_builtin<float>();
 	bp::tuple shape = bp::make_tuple(ndarray_angles.shape(0), ndarray_h_pixels.shape(0), ndarray_v_pixels.shape(0));

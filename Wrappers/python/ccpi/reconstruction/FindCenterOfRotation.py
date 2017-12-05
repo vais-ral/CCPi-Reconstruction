@@ -257,6 +257,8 @@ def _create_mask(nrow, ncol, radius, drop):
 
 
 
+
+
 #fname = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
 #nx = h5py.File(fname, "r")
 #
@@ -324,3 +326,4 @@ def _create_mask(nrow, ncol, radius, drop):
 
 #cor = find_center_vo (norm)
 #print ("Center of rotation %f" % cor)
+
