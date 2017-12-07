@@ -87,15 +87,7 @@ class TomographyExperiment(CCPiBaseClass):
         reconstructor = self.getParameter('reconstructor')
         
         # pass keyworded arguments
-        for key in kwargs.keys():
-            print ("Setting {0} as {1}".format(key, kwargs[key]))
-            try:
-                reconstructor.setParameter(key=kwargs[key])
-                print ("Setting {0} as {1} Done".format(key, kwargs[key]))
-            except KeyError as err:
-                print ("KeyError failed to set {0} as {1}".format(key, kwargs[key]))
-                print (err)
-                
+        reconstructor.setParameter(**kwargs)
         
         instrument= self.getParameter('instrument')
         if instrument.isConeBeam():
