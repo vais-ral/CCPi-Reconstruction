@@ -74,21 +74,28 @@ class TomographyExperiment(CCPiBaseClass):
         for alg in self.available_reconstructors:
             print (alg)
         
-    def configureReconstructor(self, reconstructor=None , **kwargs):
+    def configureReconstructor(self, **kwargs):
         '''Configures the reconstructor with the current data present in the experiment
         
         returns True if fully configured, raises exceptions when missing data'''
-        if reconstructor is not None:
+        
+        print ("configureReconstructor {0}".format(kwargs.keys()))
+
+        if 'reconstructor' in kwargs.keys():
             self.setParameter(reconstructor=reconstructor)
             
         reconstructor = self.getParameter('reconstructor')
         
         # pass keyworded arguments
         for key in kwargs.keys():
+            print ("Setting {0} as {1}".format(key, kwargs[key]))
             try:
                 reconstructor.setParameter(key=kwargs[key])
-            except Exception:
-                pass
+                print ("Setting {0} as {1} Done".format(key, kwargs[key]))
+            except KeyError as err:
+                print ("KeyError failed to set {0} as {1}".format(key, kwargs[key]))
+                print (err)
+                
         
         instrument= self.getParameter('instrument')
         if instrument.isConeBeam():
@@ -97,7 +104,11 @@ class TomographyExperiment(CCPiBaseClass):
             normalized_projections = instrument.getNormalizedProjections()
             #reconstructor.setParameter(normalized_projection = normalized_projections)
             angles = instrument.getParameter('angles')
-            center_of_rotation = instrument.getCenterOfRotation()
+            if 'center_of_rotation' in kwargs:
+                center_of_rotation = kwargs['center_of_rotation']
+            else:
+                print ("calling instrument.getCenterOfRotation()")
+                center_of_rotation = instrument.getCenterOfRotation()
             
             # pass the data to the reconstructor
             reconstructor.setParameter(normalized_projections = normalized_projections,
@@ -130,23 +141,27 @@ class TomographyExperiment(CCPiBaseClass):
         return True
         
     def reconstruct(self, algorithm_name=None, 
-                    number_of_iterations = None, 
+                    iterations = None, 
                     instrument = None, 
-                    regularization_parameter = None):
+                    regularization_parameter = None,
+                    center_of_rotation = None):
         
         
         kwargs = {}
         if algorithm_name is not None:
             algorithm = self.getAlgorithm(algorithm_name)
             kwargs['algorithm']=algorithm
-        if number_of_iterations is not None:
+        if iterations is not None:
             #reconstructor.setParameter(iterations=number_of_iterations)
-            kwargs['iterations']=number_of_iterations
+            kwargs['iterations']=iterations
         if regularization_parameter is not None:
             #reconstructor.setParameter(regularization_parameter=regularization_parameter)
             kwargs['regularization_parameter']=regularization_parameter
+        if center_of_rotation is not None:
+            kwargs['center_of_rotation'] = center_of_rotation
         
         if self.configureReconstructor(**kwargs):
+            print ("reconstructor configured correctly")
             reconstructor = self.getParameter('reconstructor')
             check = self.sanityCheck()
             if check[0]:
@@ -157,16 +172,21 @@ class TomographyExperiment(CCPiBaseClass):
             
     def sanityCheck(self):
         instrument = self.getParameter('instrument')
-        projection_data = instrument.getParameter('projections')
-        dark_field = instrument.getParameter('dark_field')
-        flat_field = instrument.getParameter('flat_field')
+        try:
+            projection_data = instrument.getParameter('projections')
+            dark_field = instrument.getParameter('dark_field')
+            flat_field = instrument.getParameter('flat_field')
+        except KeyError:
+            norm_proj = instrument.getParameter('normalized_projections')
+            projection_data = None
+            dark_field = None
+            flat_field = None
         angles = instrument.getParameter('angles')
         
         if projection_data is not None and dark_field is not None and \
             angles is not None and flat_field is not None:
             data_shape =  numpy.shape(projection_data)
             angle_shape = numpy.shape(angles)
-            
             if angle_shape[0] != data_shape[0]:
                 #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
                 #                (angle_shape[0] , data_shape[0]) )
@@ -181,10 +201,11 @@ class TomographyExperiment(CCPiBaseClass):
                 return (False , 'Projection and dark field dimensions do not match')
             
             return (True , '' )
-        elif self.pars['normalized_projection_data'] is not None:
-            data_shape =  numpy.shape(self.pars['normalized_projection_data'])
+        elif norm_proj is not None:
+            data_shape =  numpy.shape(norm_proj)
             angle_shape = numpy.shape(angles)
             
+            print (data_shape)          
             if angle_shape[0] != data_shape[0]:
                 #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
                 #                (angle_shape[0] , data_shape[0]) )

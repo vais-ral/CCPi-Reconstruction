@@ -20,7 +20,7 @@ class CCPiBaseClass(object):
             if key in self.acceptedInputKeywords:
                 self.pars[key] = value
             else:
-                raise Exception('Wrong parameter "{0}" for {1}'.format(key, self.__class__.__name__ ))
+                raise KeyError('Wrong parameter "{0}" for {1}'.format(key, self.__class__.__name__ ))
     # setParameter
 
     def getParameter(self, key):
@@ -28,7 +28,7 @@ class CCPiBaseClass(object):
             if key in self.acceptedInputKeywords:
                 return self.pars[key]
             else:
-                raise Exception('Unrecongnised parameter: {0} '.format(key) )
+                raise KeyError('Unrecongnised parameter: {0} '.format(key) )
         elif type(key) is list:
             outpars = []
             for k in key:

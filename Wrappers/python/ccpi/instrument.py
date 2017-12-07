@@ -130,28 +130,34 @@ class Diamond(Instrument):
         return back
     
     def getCenterOfRotation(self, pixels=None):
-        if pixels is None:
-            try:
-                pixels = self.getParameter('normalized_projections')
-            except KeyError:
-                pixels = self.getNormalizedProjections()
-                self.setParameter(normalized_projections=pixels)
-            return self.getCenterOfRotation(pixels)
-        else:
-            return find_center_vo(pixels)
+        print ("getCenterOfRotation")
+        try:
+            return self.getParameter('center_of_rotation')
+        except KeyError:
+
+            if pixels is None:
+                try:
+                    pixels = self.getParameter('normalized_projections')
+                except KeyError:
+                    pixels = self.getNormalizedProjections()
+                    self.setParameter(normalized_projections=pixels)
+                return self.getCenterOfRotation(pixels)
+            else:
+                print ("getCenterOfRotation find_center_vo")
+                return find_center_vo(pixels)
         
     def getNormalizedProjections(self):
         try:
-			return self.getParameter('normalized_projections')
-		except KeyError:
-			projections, flat , dark = self.getParameter(['projections', 
+            return self.getParameter('normalized_projections')
+        except KeyError:
+            projections, flat , dark = self.getParameter(['projections', 
 														  'flat_field', 
 														  'dark_field'])
 			
 		
-			norm = [ Diamond.normalize(sl, dark, flat, 0.001) for sl in projections ]
+            norm = [ Diamond.normalize(sl, dark, flat, 0.001) for sl in projections ]
 				
-			return np.asarray(norm, dtype=np.float32)
+            return np.asarray(norm, dtype=np.float32)
 				
     
     @staticmethod        
