@@ -9,6 +9,7 @@ class CCPiBaseClass(object):
     def __init__(self, **kwargs):
         self.acceptedInputKeywords = []
         self.pars = {}
+        self.debug = True
     
     def setParameter(self, **kwargs):
         '''set named parameter for the reconstructor engine
@@ -37,4 +38,6 @@ class CCPiBaseClass(object):
         else:
             raise Exception('Unhandled input {0}' .format(str(type(key))))
     #getParameter
-    
+    def log(self, msg):
+        if self.debug:
+            print ("{0}: {1}".format(self.__class__.__name__, msg))

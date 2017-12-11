@@ -22,6 +22,8 @@ of the specific reconstruction.
 
     '''
     def __init__(self, **kwargs):
+        
+        CCPiBaseClass.__init__(self, **kwargs)
         self.acceptedInputKeywords = ['instrument']
     
     @staticmethod
@@ -59,6 +61,12 @@ of the specific reconstruction.
         @staticmethod
         def create(**kwargs):
             return NotImplemented 
+
+    
+    def logCurrentConfiguration(self):
+        for key in self.pars.keys():
+            self.log("{0}={1}".format(key, self.getParameter('{0}'.format(key))))
+
         
 class IterativeReconstructor(Reconstructor):
     
@@ -72,6 +80,7 @@ class IterativeReconstructor(Reconstructor):
         
     
     def __init__(self, **kwargs):
+        Reconstructor.__init__(self, **kwargs)
         self.acceptedInputKeywords = \
                ['algorithm','projection_data' ,'normalized_projections', \
                 'angles' , 'center_of_rotation' , 'flat_field', \
@@ -92,15 +101,18 @@ class IterativeReconstructor(Reconstructor):
     @staticmethod
     def getAvailableAlgorithms():
         return ['cgls' , 'sirt', 'mlem', 'cgls_conv', 'cgls_TVreg' , 'cgls_tikhonov']
-        
+    
     def iterate(self, **kwargs):
         if kwargs != {}:
             self.setParameter(**kwargs)
         try:
+            ## TODO get the normalized proj from the experiment/instrument
             normalized_projections = self.getParameter('normalized_projections')
         except KeyError:
             raise Exception('Insufficient data. Please pass the normalized projections or flat, dark and projections')
-        
+    
+        self.logCurrentConfiguration()
+
         try:
             angles = self.getParameter('angles')
         except KeyError:

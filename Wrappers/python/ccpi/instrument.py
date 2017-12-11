@@ -21,6 +21,7 @@ class Instrument(CCPiBaseClass):
     def __init__(self, pixels, angles):
         """Initialises the pixels and angles for the instrument.            
         """
+        CCPiBaseClass.__init__(self)
         self.description = 'Base Instrument Class'
         self.pixels = pixels
         self.angles = angles
@@ -144,7 +145,9 @@ class Diamond(Instrument):
                 return self.getCenterOfRotation(pixels)
             else:
                 print ("getCenterOfRotation find_center_vo")
-                return find_center_vo(pixels)
+                cor = find_center_vo(pixels)
+                self.setParameter(center_of_rotation=cor)
+                return cor
         
     def getNormalizedProjections(self):
         try:
