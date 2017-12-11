@@ -1,0 +1,29 @@
+package:
+  name: cil_reconstruction
+  version: {{ environ['CIL_VERSION'] }}
+
+
+build:
+  preserve_egg_dir: False
+  script_env:
+    - CIL_VERSION   
+#  number: 0
+  
+requirements:
+  build:
+    - boost ==1.64.0	
+    - boost-cpp ==1.64.0 
+#    - toolchain
+#    - python 3.5        # [win]
+#    - cmake >=3.1
+#    - zlib 1.2.11
+#    - vc 14  # [win and py>=35]    
+
+  run:
+    - boost ==1.64.0
+#    - vc 14
+	
+about:
+  home: http://www.ccpi.ac.uk
+  license:  BSD license
+  summary: 'CCPi Toolbox'
