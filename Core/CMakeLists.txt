@@ -14,7 +14,7 @@
 
 cmake_minimum_required (VERSION 3.0)
 
-project(IterativeReconstructionLibray)
+project(IterativeReconstructionLibrary)
 #https://stackoverflow.com/questions/13298504/using-cmake-with-setup-py
 
 # The version number.
@@ -24,9 +24,6 @@ set (CIL_VERSION $ENV{CIL_VERSION} CACHE INTERNAL "Core Imaging Library version"
 #set (LIBRARY_INC C:/Apps/Miniconda2/envs/cil/Library/)
 
 # conda orchestrated build
-set (LIBRARY_LIB $ENV{LIBRARY_LIB})
-set (LIBRARY_INC $ENV{LIBRARY_INC})
- 
 
 message("CIL_VERSION ${CIL_VERSION}")
 
@@ -36,8 +33,47 @@ message("Creating Iterative Reconstruction CGLS as shared library")
 message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
 
 
-#include_directories(${Boost_INCLUDE_DIRS}) 
-add_library(cgls_lib SHARED
+
+if(WIN32)
+ set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /openmp /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
+ set (LIBRARY_LIB $ENV{LIBRARY_LIB})
+ set (LIBRARY_INC $ENV{LIBRARY_INC})
+ 
+ #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE:LIB")
+# [100%] Linking CXX shared library cgls_lib.dll
+#   Creating library cgls_lib.lib and object cgls_lib.exp
+#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
+#   Creating library cgls_lib.lib and object cgls_lib.exp
+#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
+#[100%] Built target cgls_lib
+  set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib")
+  
+  set (EXTRA_LIBRARIES 
+		"boost_python3-vc140-mt-1_64" 
+		"boost_numpy3-vc140-mt-1_64"
+		"tiff"
+		)
+		
+  message("library lib: ${LIBRARY_LIB}")
+  
+elseif(UNIX)
+   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
+   set(LIBRARY_INC $ENV{CONDA_PREFIX})	 
+   set(LIBRARY_LIB $ENV{CONDA_PREFIX}/lib)
+   set (EXTRA_LIBRARIES 
+		"boost_python3" 
+		"boost_numpy3"
+		"tiff"
+		"gomp"
+		)
+   set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+link_directories(${LIBRARY_LIB})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}")
+message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
+
+add_library(libcilrec SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mpi.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/instruments.cpp
@@ -62,50 +98,16 @@ add_library(cgls_lib SHARED
 	#${CMAKE_CURRENT_SOURCE_DIR}/module/diamond_wrapper.cpp
 	)
 
+target_link_libraries(libcilrec ${EXTRA_LIBRARIES} )
 
-if(WIN32)
- set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /openmp /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
- #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE:LIB")
-# [100%] Linking CXX shared library cgls_lib.dll
-#   Creating library cgls_lib.lib and object cgls_lib.exp
-#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
-#   Creating library cgls_lib.lib and object cgls_lib.exp
-#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
-#[100%] Built target cgls_lib
-  set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib")
-  
-  set (EXTRA_LIBRARIES 
-		"boost_python3-vc140-mt-1_64" 
-		"boost_numpy3-vc140-mt-1_64"
-		"tiff"
-		)
-		
-  message("library lib: ${LIBRARY_LIB}")
-  
-elseif(UNIX)
-   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
-   set (EXTRA_LIBRARIES 
-		"boost_python3" 
-		"boost_numpy3"
-		"tiff"
-		"gomp"
-		)
-   set(LIBRARY_INC $ENV{PREFIX})	 
-   set(LIBRARY_LIB $ENV{PREFIX}/lib)
-endif()
-
-link_directories(${LIBRARY_LIB})
-target_link_libraries(cgls_lib ${EXTRA_LIBRARIES} )
-
-include_directories(cgls_lib PUBLIC 
+include_directories(libcilrec PUBLIC 
                       ${LIBRARY_INC}/include 
-					  ${CMAKE_CURRENT_SOURCE_DIR}/src/
-					  )
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}")
-message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
-
-
+		      ${CMAKE_CURRENT_SOURCE_DIR}/src/  )
+#
+message ("I'd install into $ENV{PREFIX}/lib")
+install(TARGETS libcilrec LIBRARY 
+	DESTINATION $ENV{PREFIX}/lib 
+	CONFIGURATIONS ${CMAKE_BUILD_TYPE} 
+	NAMELINK_ONLY)
 ## test
 #add_executable(regularizer_test ${CMAKE_CURRENT_SOURCE_DIR}/test/test_regularizer.cpp)
-#target_link_libraries (regularizer_test LINK_PUBLIC regularizers_lib)

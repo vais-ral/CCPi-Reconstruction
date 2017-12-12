@@ -13,4 +13,5 @@ mkdir ${SRC_DIR}/build/build
 cd ${SRC_DIR}/build/build
 cmake -G "Unix Makefiles" ../Core
 
-make -j2
+make -j2 VERBOSE=1
+make install
