@@ -20,10 +20,21 @@ project(IterativeReconstructionLibray)
 # The version number.
 
 set (CIL_VERSION $ENV{CIL_VERSION} CACHE INTERNAL "Core Imaging Library version" FORCE)
+#set (LIBRARY_LIB C:/Apps/Miniconda2/envs/cil/Library/lib)
+#set (LIBRARY_INC C:/Apps/Miniconda2/envs/cil/Library/)
+
+# conda orchestrated build
+set (LIBRARY_LIB $ENV{LIBRARY_LIB})
+set (LIBRARY_INC $ENV{LIBRARY_INC})
+ 
+
+message("CIL_VERSION ${CIL_VERSION}")
 
 ## Build the regularizers package as a library
 message("Creating Iterative Reconstruction CGLS as shared library")
-include(GenerateExportHeader)
+
+message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
+
 
 #include_directories(${Boost_INCLUDE_DIRS}) 
 add_library(cgls_lib SHARED
@@ -51,12 +62,48 @@ add_library(cgls_lib SHARED
 	#${CMAKE_CURRENT_SOURCE_DIR}/module/diamond_wrapper.cpp
 	)
 
-target_link_libraries(cgls_lib ${BOOST_ROOT})
-include_directories(cgls_lib PUBLIC $ENV{LIBRARY_INC}/include ${CMAKE_CURRENT_SOURCE_DIR}/src/)
-	
 
-GENERATE_EXPORT_HEADER(cgls_lib)
-#install (TARGETS cgls_lib DESTINATION $ENV{PREFIX}/lib)
+if(WIN32)
+ set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /openmp /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
+ #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE:LIB")
+# [100%] Linking CXX shared library cgls_lib.dll
+#   Creating library cgls_lib.lib and object cgls_lib.exp
+#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
+#   Creating library cgls_lib.lib and object cgls_lib.exp
+#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
+#[100%] Built target cgls_lib
+  set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib")
+  
+  set (EXTRA_LIBRARIES 
+		"boost_python3-vc140-mt-1_64" 
+		"boost_numpy3-vc140-mt-1_64"
+		"tiff"
+		)
+		
+  message("library lib: ${LIBRARY_LIB}")
+  
+elseif(UNIX)
+   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl --no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
+   set (EXTRA_LIBRARIES 
+		"boost_python3" 
+		"boost_numpy3"
+		"tiff"
+		"gomp"
+		)
+	 
+endif()
+
+link_directories(${LIBRARY_LIB})
+target_link_libraries(cgls_lib ${EXTRA_LIBRARIES} )
+
+include_directories(cgls_lib PUBLIC 
+                      ${LIBRARY_INC}/include 
+					  ${CMAKE_CURRENT_SOURCE_DIR}/src/
+					  )
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}")
+message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
+
 
 ## test
 #add_executable(regularizer_test ${CMAKE_CURRENT_SOURCE_DIR}/test/test_regularizer.cpp)

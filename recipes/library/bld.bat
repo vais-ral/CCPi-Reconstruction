@@ -10,7 +10,7 @@ cd "%SRC_DIR%\build"
 
 echo "we should be in %SRC_DIR%\build"
 
-cmake -G "NMake Makefiles" -DBOOST_ROOT="%LIBRARY_PREFIX%" "%SRC_DIR%\build"
+cmake -G "NMake Makefiles" "%SRC_DIR%\build"
 
 :: Build C library
 nmake
