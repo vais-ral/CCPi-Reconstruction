@@ -9,6 +9,11 @@ build:
     - CIL_VERSION   
 #  number: 0
   
+build:
+  features:
+    - vc14  # [win and py35]
+  
+  
 requirements:
   build:
     - boost ==1.64.0	
@@ -17,7 +22,7 @@ requirements:
     - python 3.5        # [win]
 #    - cmake >=3.1
 #    - zlib 1.2.11
-    - vc 14  # [win and py>=35] 
+    #- vc 14  # [win and py>=35] 
     - libtiff    
 
   run:
