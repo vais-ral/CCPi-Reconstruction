@@ -83,14 +83,15 @@ if(WIN32)
   message("library lib: ${LIBRARY_LIB}")
   
 elseif(UNIX)
-   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl --no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
+   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
    set (EXTRA_LIBRARIES 
 		"boost_python3" 
 		"boost_numpy3"
 		"tiff"
 		"gomp"
 		)
-	 
+   set(LIBRARY_INC $ENV{PREFIX})	 
+   set(LIBRARY_LIB $ENV{PREFIX}/lib)
 endif()
 
 link_directories(${LIBRARY_LIB})
