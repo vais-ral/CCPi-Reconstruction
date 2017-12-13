@@ -11,7 +11,7 @@ build:
   
 build:
   features:
-    - vc14  # [win and py35]
+    - vc 14  # [win and py35]
   
   
 requirements:
@@ -22,14 +22,14 @@ requirements:
     - python 3.5        
     - cmake >=3.1
 #    - zlib 1.2.11
-    - vc14  # [win and py35] 
+    - vc 14  # [win and py35] 
     - libtiff    
     - numpy
 
   run:
     - boost ==1.64.0
     - libtiff
-    - vc14 # [win]
+    - vc 14 # [win]
     - python 3.5
     - numpy
 	
