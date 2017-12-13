@@ -29,15 +29,12 @@ message("CIL_VERSION ${CIL_VERSION}")
 
 ## Build the regularizers package as a library
 message("Creating Iterative Reconstruction CGLS as shared library")
-
 message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
 
 
 
 if(WIN32)
  set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /openmp /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
- set (LIBRARY_LIB $ENV{LIBRARY_LIB})
- set (LIBRARY_INC $ENV{LIBRARY_INC})
  
  #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE:LIB")
 # [100%] Linking CXX shared library cgls_lib.dll
@@ -58,8 +55,6 @@ if(WIN32)
   
 elseif(UNIX)
    set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
-   set(LIBRARY_INC $ENV{CONDA_PREFIX})	 
-   set(LIBRARY_LIB $ENV{CONDA_PREFIX}/lib)
    set (EXTRA_LIBRARIES 
 		"boost_python3" 
 		"boost_numpy3"
@@ -73,7 +68,7 @@ link_directories(${LIBRARY_LIB})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}")
 message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
 
-add_library(libcilrec SHARED
+add_library(cilrec SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/mpi.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/instruments.cpp
@@ -98,16 +93,16 @@ add_library(libcilrec SHARED
 	#${CMAKE_CURRENT_SOURCE_DIR}/module/diamond_wrapper.cpp
 	)
 
-target_link_libraries(libcilrec ${EXTRA_LIBRARIES} )
+target_link_libraries(cilrec ${EXTRA_LIBRARIES} )
 
-include_directories(libcilrec PUBLIC 
+include_directories(cilrec PUBLIC 
                       ${LIBRARY_INC}/include 
 		      ${CMAKE_CURRENT_SOURCE_DIR}/src/  )
 #
-message ("I'd install into $ENV{PREFIX}/lib")
-install(TARGETS libcilrec LIBRARY 
-	DESTINATION $ENV{PREFIX}/lib 
+message ("I'd install into ${CMAKE_INSTALL_PREFIX}/lib")
+install(TARGETS cilrec 
+	LIBRARY DESTINATION lib
 	CONFIGURATIONS ${CMAKE_BUILD_TYPE} 
-	NAMELINK_ONLY)
+	)
 ## test
 #add_executable(regularizer_test ${CMAKE_CURRENT_SOURCE_DIR}/test/test_regularizer.cpp)
