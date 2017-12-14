@@ -31,7 +31,7 @@ message("CIL_VERSION ${CIL_VERSION}")
 message("Creating Iterative Reconstruction CGLS as shared library")
 message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
 
-
+set(CMAKE_BUILD_TYPE "Release")
 
 if(WIN32)
  set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /openmp /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
@@ -61,7 +61,7 @@ elseif(UNIX)
 		"tiff"
 		"gomp"
 		)
-   set(CMAKE_BUILD_TYPE "Release")
+   
 endif()
 
 link_directories(${LIBRARY_LIB})
@@ -99,10 +99,19 @@ include_directories(cilrec PUBLIC
                       ${LIBRARY_INC}/include 
 		      ${CMAKE_CURRENT_SOURCE_DIR}/src/  )
 #
+if (UNIX)
 message ("I'd install into ${CMAKE_INSTALL_PREFIX}/lib")
 install(TARGETS cilrec 
 	LIBRARY DESTINATION lib
 	CONFIGURATIONS ${CMAKE_BUILD_TYPE} 
 	)
+elseif(WIN32)
+message ("I'd install into ${CMAKE_INSTALL_PREFIX} lib bin")
+  install(TARGETS cilrec 
+	RUNTIME DESTINATION bin
+	ARCHIVE DESTINATION lib
+	CONFIGURATIONS ${CMAKE_BUILD_TYPE} 
+	)
+endif()
 ## test
 #add_executable(regularizer_test ${CMAKE_CURRENT_SOURCE_DIR}/test/test_regularizer.cpp)
