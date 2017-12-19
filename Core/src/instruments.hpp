@@ -12,9 +12,9 @@ namespace CCPi {
   enum ring_artefact_alg { no_ring_artefacts, ring_artefacts_column,
 			   ring_artefacts_aml };
 
-  void remove_column_ring_artefacts(pixel_data &pixels, const sl_int nangles,
+  void CCPI_EXPORT remove_column_ring_artefacts(pixel_data &pixels, const sl_int nangles,
 				    const sl_int nh, const sl_int nv);
-  void remove_aml_ring_artefacts(pixel_data &pixels, const sl_int nangles,
+  void CCPI_EXPORT remove_aml_ring_artefacts(pixel_data &pixels, const sl_int nangles,
 				 const sl_int nh, const sl_int nv,
 				 const real param_n, const real param_r,
 				 const int num_series);
