@@ -3,7 +3,7 @@ echo $CIL_VERSION
 #    echo "Need to set CIL_VERSION"
 #    exit 1
 #fi  
-export CIL_VERSION=0.9.1
+#export CIL_VERSION=0.9.1
 
 
 
