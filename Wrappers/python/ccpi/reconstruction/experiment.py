@@ -21,13 +21,14 @@ class TomographyExperiment(CCPiBaseClass):
             if key in self.acceptedInputKeywords():
                 self.setParameter(key=value)
             else:
-                print(r'Warning: discarded parameter: "{0}"'.format(key))
+                self.log(r'Warning: discarded parameter: "{0}"'.format(key))
     
-    def createReconstructor(self, reconstructor_name):
+    def createReconstructor(self, reconstructor_name, debug=False):
         
         algorithm = self.getAlgorithm(reconstructor_name)
         
-        reconstructor = IterativeReconstructor.Factory.create(algorithm)
+        reconstructor = IterativeReconstructor.Factory.create(algorithm, 
+                                                              debug=debug)
         self.setParameter(reconstructor=reconstructor)        
     
     
@@ -79,10 +80,11 @@ class TomographyExperiment(CCPiBaseClass):
         
         returns True if fully configured, raises exceptions when missing data'''
         
-        print ("configureReconstructor {0}".format(kwargs.keys()))
+        self.log ("configureReconstructor {0}".format(kwargs.keys()))
 
         if 'reconstructor' in kwargs.keys():
-            self.setParameter(reconstructor=reconstructor)
+            self.setParameter(**{'reconstructor': 
+                kwargs['reconstructor']})
             
         reconstructor = self.getParameter('reconstructor')
         
@@ -99,7 +101,7 @@ class TomographyExperiment(CCPiBaseClass):
             if 'center_of_rotation' in kwargs:
                 center_of_rotation = kwargs['center_of_rotation']
             else:
-                print ("calling instrument.getCenterOfRotation()")
+                self.log ("calling instrument.getCenterOfRotation()")
                 center_of_rotation = instrument.getCenterOfRotation()
             
             # pass the data to the reconstructor
@@ -120,7 +122,7 @@ class TomographyExperiment(CCPiBaseClass):
             
         elif algorithm.__name__  == 'cgls_tv' or \
              algorithm.__name__  == 'cgls_tikhonov':
-            if isConeBeam:
+            if instrument.isConeBeam():
                 pass
             else:
                 try:
@@ -153,7 +155,7 @@ class TomographyExperiment(CCPiBaseClass):
             kwargs['center_of_rotation'] = center_of_rotation
         
         if self.configureReconstructor(**kwargs):
-            print ("reconstructor configured correctly")
+            self.log ("reconstructor configured correctly")
             reconstructor = self.getParameter('reconstructor')
             check = self.sanityCheck()
             if check[0]:
@@ -197,7 +199,7 @@ class TomographyExperiment(CCPiBaseClass):
             data_shape =  numpy.shape(norm_proj)
             angle_shape = numpy.shape(angles)
             
-            print (data_shape)          
+            self.log (data_shape)          
             if angle_shape[0] != data_shape[0]:
                 #raise Exception('Projections and angles dimensions do not match: %d vs %d' % \
                 #                (angle_shape[0] , data_shape[0]) )

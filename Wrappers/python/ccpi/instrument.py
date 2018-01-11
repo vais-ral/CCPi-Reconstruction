@@ -110,7 +110,8 @@ class Diamond(Instrument):
             M = pixels.max()
             scale = 1 / (M-m)
             shift = -m 
-            print ("m,M,scale,shift" , m,M,scale,shift)
+            self.log ("m={0}, M={1}, scale={2}, shift={3}".format(m,M,
+                      scale,shift))
             pixels = pixels * scale + shift
             if negative:
                 pixels = 1-pixels
@@ -121,7 +122,7 @@ class Diamond(Instrument):
         self.pixels , self.angles = self.getParameter(['pixels','angles'])
         if center_of_rotation is None:
             center_of_rotation = find_center_vo(self.pixels)
-            print (self.acceptedInputKeywords)
+            self.log (self.acceptedInputKeywords)
             self.setParameter(center_of_rotation=center_of_rotation)
         
         back = pbalg.pb_backward_project(self.pixels, 
@@ -131,7 +132,7 @@ class Diamond(Instrument):
         return back
     
     def getCenterOfRotation(self, pixels=None):
-        print ("getCenterOfRotation")
+        self.log ("getCenterOfRotation")
         try:
             return self.getParameter('center_of_rotation')
         except KeyError:
@@ -144,7 +145,7 @@ class Diamond(Instrument):
                     self.setParameter(normalized_projections=pixels)
                 return self.getCenterOfRotation(pixels)
             else:
-                print ("getCenterOfRotation find_center_vo")
+                self.log ("getCenterOfRotation find_center_vo")
                 cor = find_center_vo(pixels)
                 self.setParameter(center_of_rotation=cor)
                 return cor
@@ -177,7 +178,7 @@ class Diamond(Instrument):
         '''Load a dataset stored in a NeXuS file (HDF5)'''
         ###############################################################################
         ## Load a dataset
-        print ("Loading Data")
+        self.log ("Loading Data")
         nx = h5py.File(filename, "r")
         
         data = nx.get('entry1/tomo_entry/data/rotation_angle')

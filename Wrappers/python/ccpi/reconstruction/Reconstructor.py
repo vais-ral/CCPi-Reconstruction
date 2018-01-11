@@ -92,10 +92,14 @@ class IterativeReconstructor(Reconstructor):
                      'isLogScale' : False,
                      'threads' : 16, 
                      'iterations' : 8}
+        if 'debug' in kwargs.keys():
+            self.debug = kwargs.pop('debug')
+            
+            
+        self.log ("{0} created".format(self.getParameter('algorithm').__name__))
         
-        print ("{0} created".format(self.getParameter('algorithm').__name__))
         if kwargs != {}:
-            print (kwargs) 
+            self.log (kwargs) 
             self.setParameter(**kwargs)
             
     @staticmethod
@@ -121,10 +125,10 @@ class IterativeReconstructor(Reconstructor):
         #center of rotation
         try:
             center_of_rotation = self.getParameter('center_of_rotation')
-            print ("center of rotation found as {0}".format(center_of_rotation))
+            self.log ("center of rotation found as {0}".format(center_of_rotation))
         except KeyError:
             # estimate center of rotation
-            print ("estimating center of rotation".format(center_of_rotation))
+            self.log ("estimating center of rotation".format(center_of_rotation))
             center_of_rotation = find_center_vo(normalized_projections)
             self.setParameter(center_of_rotation=center_of_rotation)
         
@@ -132,7 +136,7 @@ class IterativeReconstructor(Reconstructor):
             self.getParameter(['resolution' , 'iterations', 
                                'threads', 'isLogScale'])      
         algorithm = self.getParameter('algorithm')
-        print ("niterations",niterations,"threads",threads)
+        self.log ("niterations {0} threads {1}".format(niterations,threads))
         if algorithm.__name__ == "cgls" or \
            algorithm.__name__ == "sirt" or \
            algorithm.__name__ == "mlem":
