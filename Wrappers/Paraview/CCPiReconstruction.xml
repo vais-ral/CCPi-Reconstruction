@@ -1,0 +1,69 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="CCPiReconstruction" class="CCPiReconstructionParaviewImpl" label="Reconstruction(CCPi)">
+      <Documentation
+         long_help="Reconstruction."
+         short_help="Reconstruction">
+        TODO: write some documentation.
+      </Documentation>
+
+      <InputProperty name="Pixels"
+                     port_index="0"
+                     command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkImageData"/>
+        </DataTypeDomain>
+        <Documentation>
+          This is input pixel data
+        </Documentation>
+      </InputProperty>
+
+      <InputProperty name="RotationAngles"
+                     port_index="1"
+                     command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkImageData"/>
+        </DataTypeDomain>
+        <Documentation>
+          This is input rotation angle data
+        </Documentation>
+      </InputProperty>
+
+      <IntVectorProperty name="Algorithm"
+                         command="SetAlgorithm"
+                         number_of_elements="1"
+                         default_values="0">
+        <EnumerationDomain name="algorithm_dropdown">
+          <Entry value="0" text="CGLS"/>
+          <Entry value="1" text="SIRT"/>
+          <Entry value="2" text="MLEM"/>
+        </EnumerationDomain>
+        <Documentation>
+        This property indicates which algorithm will be used.
+        </Documentation>
+      </IntVectorProperty>
+
+      <IntVectorProperty name="Iterations" command="SetIterations"
+                            number_of_elements="1" default_values="1">
+      </IntVectorProperty>
+
+      <IntVectorProperty name="Resolution" command="SetResolution"
+                            number_of_elements="1" default_values="1">
+      </IntVectorProperty>
+
+      <DoubleVectorProperty name="RotationCentre" command="SetRotationCentre"
+                            number_of_elements="1" default_values="0.0">
+      </DoubleVectorProperty>
+      
+    </SourceProxy>  
+  </ProxyGroup>
+  <!-- End TransformImage -->
+</ServerManagerConfiguration>
