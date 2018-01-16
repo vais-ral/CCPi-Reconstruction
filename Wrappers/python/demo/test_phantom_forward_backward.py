@@ -13,6 +13,9 @@ import h5py
 import numpy
 import matplotlib.pyplot as plt
 from ccpi.viewer.CILViewer2D import *
+import os
+
+os.chdir('C:/Users/ofn77899/Documents/GitHub/CCPi-Reconstruction/Wrappers/python/demo')
 
 def display(vol):
 	v = CILViewer2D()
@@ -20,7 +23,7 @@ def display(vol):
 	v.startRenderLoop()
 	return v
 
-nx = h5py.File(r'../../../data/phant3D_256.h5', "r")
+nx = h5py.File(r'../../../../../CCPi/CIL-Docs/data/phant3D_256.h5', "r")
 ph = numpy.asarray(nx.get('/dataset1'))
 
 #phantom = ph[1:254,2:253,3:252]
@@ -89,7 +92,7 @@ if cols >= current:
 
 plt.show()
 
-if True:
+if False:
 	v = display(back)
 	
 

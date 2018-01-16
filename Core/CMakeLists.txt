@@ -26,6 +26,14 @@ set (CIL_VERSION $ENV{CIL_VERSION} CACHE INTERNAL "Core Imaging Library version"
 # conda orchestrated build
 
 message("CIL_VERSION ${CIL_VERSION}")
+#include(find_package)
+if (WIN32)
+	#set (BOOST_ROOT ${CONDA_PREFIX}\Library\lib)
+endif()
+message("BOOST_ROOT " ${BOOST_ROOT})
+#set(Boost_NO_SYSTEM_PATHS ON)
+find_package(Boost  REQUIRED
+	COMPONENTS python numpy)
 
 ## Build the regularizers package as a library
 message("Creating Iterative Reconstruction CGLS as shared library")
@@ -46,8 +54,9 @@ if(WIN32)
   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib")
   
   set (EXTRA_LIBRARIES 
-		"boost_python3-vc140-mt-1_64" 
-		"boost_numpy3-vc140-mt-1_64"
+      ${Boost_LIBRARIES}
+		#"boost_python3-vc140-mt-1_64" 
+		#"boost_numpy3-vc140-mt-1_64"
 		"tiff"
 		)
 		
@@ -56,8 +65,9 @@ if(WIN32)
 elseif(UNIX)
    set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
    set (EXTRA_LIBRARIES 
-		"boost_python3" 
-		"boost_numpy3"
+		${Boost_LIBRARIES}
+		#"boost_python3" 
+		#"boost_numpy3"
 		"tiff"
 		"gomp"
 		)
