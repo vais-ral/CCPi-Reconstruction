@@ -26,15 +26,29 @@ set (CIL_VERSION $ENV{CIL_VERSION} CACHE INTERNAL "Core Imaging Library version"
 # conda orchestrated build
 
 message("CIL_VERSION ${CIL_VERSION}")
-#include(find_package)
-if (WIN32)
-	#set (BOOST_ROOT ${CONDA_PREFIX}\Library\lib)
-endif()
-message("BOOST_ROOT " ${BOOST_ROOT})
-#set(Boost_NO_SYSTEM_PATHS ON)
-find_package(Boost  REQUIRED
-	COMPONENTS python numpy)
 
+find_package(PythonInterp REQUIRED)
+if (PYTHONINTERP_FOUND)
+  message ("Current Python " ${PYTHON_VERSION_STRING} " found " ${PYTHON_EXECUTABLE})
+  if (PYTHON_VERSION_MAJOR EQUAL "3")
+    set (BOOST_PYTHON "python3")
+	set (BOOST_NUMPY "numpy3")
+  else()
+    set (BOOST_PYTHON "python")
+	set (BOOST_NUMPY "numpy")
+  endif()
+endif()
+
+find_package(Boost  REQUIRED
+	COMPONENTS ${BOOST_PYTHON} ${BOOST_NUMPY})
+
+if (Boost_FOUND)
+   message("Boost version " ${Boost_VERSION})
+   message("Boost include dir " ${Boost_INCLUDE_DIRS})
+   message("Boost library dir " ${Boost_LIBRARY_DIRS})
+   message("Boost libraries " ${Boost_LIBRARIES})
+endif()
+	
 ## Build the regularizers package as a library
 message("Creating Iterative Reconstruction CGLS as shared library")
 message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")

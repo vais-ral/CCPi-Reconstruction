@@ -10,7 +10,7 @@ cd "%SRC_DIR%\build"
 
 echo "we should be in %SRC_DIR%\build"
 
-cmake -G "NMake Makefiles" -DLIBRARY_LIB="%CONDA_PREFIX%\lib" -DLIBRARY_INC="%CONDA_PREFIX%" -DCMAKE_INSTALL_PREFIX="%PREFIX%\Library" -DCONDA_PREFIX="%CONDA_PREFIX%" -DBOOST_ROOT="%CONDA_PREFIX%\Library\lib" "%SRC_DIR%\build"
+cmake -G "NMake Makefiles" -DLIBRARY_LIB="%CONDA_PREFIX%\lib" -DLIBRARY_INC="%CONDA_PREFIX%" -DCMAKE_INSTALL_PREFIX="%PREFIX%\Library" "%SRC_DIR%\build"
 
 ::-DBOOST_LIBRARYDIR="%CONDA_PREFIX%\Library\lib" -DBOOST_INCLUDEDIR="%CONDA_PREFIX%\Library\include" -DBOOST_ROOT="%CONDA_PREFIX%\Library\lib"
 
