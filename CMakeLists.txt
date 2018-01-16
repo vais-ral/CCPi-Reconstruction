@@ -44,6 +44,11 @@ IF(BUILD_AVIZO_PLUGIN)
 	add_subdirectory(Wrappers/Avizo)
 ENDIF()
 
+OPTION(BUILD_PARAVIEW_PLUGIN "Build Paraview plugin" OFF)
+IF(BUILD_PARAVIEW_PLUGIN)
+	add_subdirectory(Wrappers/Paraview)
+ENDIF()
+
 
 SET(CCPIRECONSTRUCTION_BUILD_LIBRARIES "CCPiReconstructionIterative")
 export(TARGETS CCPiReconstructionIterative
