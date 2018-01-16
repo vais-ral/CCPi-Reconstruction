@@ -20,11 +20,8 @@ project(IterativeReconstructionLibrary)
 # The version number.
 
 set (CIL_VERSION $ENV{CIL_VERSION} CACHE INTERNAL "Core Imaging Library version" FORCE)
-#set (LIBRARY_LIB C:/Apps/Miniconda2/envs/cil/Library/lib)
-#set (LIBRARY_INC C:/Apps/Miniconda2/envs/cil/Library/)
 
 # conda orchestrated build
-
 message("CIL_VERSION ${CIL_VERSION}")
 
 find_package(PythonInterp REQUIRED)
@@ -57,20 +54,10 @@ set(CMAKE_BUILD_TYPE "Release")
 
 if(WIN32)
  set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /openmp /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
- 
- #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE:LIB")
-# [100%] Linking CXX shared library cgls_lib.dll
-#   Creating library cgls_lib.lib and object cgls_lib.exp
-#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
-#   Creating library cgls_lib.lib and object cgls_lib.exp
-#LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use #/NODEFAULTLIB:library
-#[100%] Built target cgls_lib
   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib")
   
   set (EXTRA_LIBRARIES 
-      ${Boost_LIBRARIES}
-		#"boost_python3-vc140-mt-1_64" 
-		#"boost_numpy3-vc140-mt-1_64"
+        ${Boost_LIBRARIES}
 		"tiff"
 		)
 		
@@ -80,8 +67,6 @@ elseif(UNIX)
    set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
    set (EXTRA_LIBRARIES 
 		${Boost_LIBRARIES}
-		#"boost_python3" 
-		#"boost_numpy3"
 		"tiff"
 		"gomp"
 		)
@@ -114,7 +99,6 @@ add_library(cilrec SHARED
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Algorithms/tv_reg.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Readers/tiff.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/Readers/xtek.cpp
-	#${CMAKE_CURRENT_SOURCE_DIR}/module/diamond_wrapper.cpp
 	)
 
 target_link_libraries(cilrec ${EXTRA_LIBRARIES} )
