@@ -13,7 +13,7 @@
 #include "instruments.hpp"
 #include "algorithms.hpp"
 #include "ui_calls.hpp"
-#include "tv_reg.hpp"
+#include "Algorithms/tv_reg.hpp"
 
 /* Settings which makes the user do a CTRL-C break out of the loop*/
 #if defined(_WIN32) || defined(__WIN32__)

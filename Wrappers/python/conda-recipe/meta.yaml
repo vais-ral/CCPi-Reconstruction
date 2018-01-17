@@ -18,12 +18,16 @@ requirements:
     - boost-cpp ==1.64.0
     - cython
     - libtiff
+    - cil_reconstruction
 
   run:
     - python
     - numpy
     - boost ==1.64
     - libtiff
+    - h5py
+    - scipy
+    - cil_reconstruction
 
 	
 about:

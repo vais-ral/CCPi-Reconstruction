@@ -113,7 +113,8 @@ def normalize(stack):
 # This dataset is freely available at
 # https://github.com/DiamondLightSource/Savu/blob/master/test_data/data/24737_fd.nxs 
     
-filename = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
+#filename = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
+filename = r"/home/ofn77899/Data/24737_fd.nxs"
 norm, angle_proj = load_data(filename)
 norm = numpy.ascontiguousarray(norm)
 
@@ -228,8 +229,8 @@ invnorm [numpy.where(invnorm>1)] = 1 - 1e-3
 
 print ("Orig projections " , numpy.shape(norm))
 print ("Projected volume " , numpy.shape(invnorm))
-#center_of_rotation = numpy.shape(invnorm)[2]/2.
-center_of_rotation = diamond.find_center_of_rotation()
+center_of_rotation = numpy.shape(invnorm)[2]/2.
+#center_of_rotation = diamond.find_center_of_rotation()
 niterations = 5
 
 img_cgls2 = alg.cgls(invnorm, angle_proj, center_of_rotation , resolution , 

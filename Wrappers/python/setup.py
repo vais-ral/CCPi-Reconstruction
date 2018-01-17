@@ -42,7 +42,7 @@ if platform.system() == 'Windows':
    extra_include_dirs += ["..\\..\\Core\\src\\","..\\..\\Core\\src\\Algorithms","..\\..\\Core\\src\\Readers", "."]
    extra_include_dirs += library_include_path
    extra_library_dirs += library_lib_path
-   extra_libraries    += ['tiff']
+   extra_libraries    += ['tiff' , 'cilrec']
    if sys.version_info.major == 3 :   
        extra_libraries += ['boost_python3-vc140-mt-1_64', 'boost_numpy3-vc140-mt-1_64']
    else:
@@ -51,7 +51,7 @@ else:
    extra_include_dirs += ["../../Core/src/","../../Core/src/Algorithms","../../Core/src/Readers", "."]
    extra_include_dirs += library_include_path
    extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined','-DHAS_TIFF','-DCCPiReconstructionIterative_EXPORTS']  
-   extra_libraries    += ['tiff'] 
+   extra_libraries    += ['tiff' , 'cilrec'] 
    if sys.version_info.major == 3 :
        extra_libraries += ['boost_python3', 'boost_numpy3','gomp']
    else:
@@ -65,53 +65,11 @@ setup(
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("ccpi.reconstruction.parallelbeam",
                              sources=[  "src/diamond_module.cpp",
-                                        "src/diamond_wrapper.cpp",
-										"../../Core/src/mpi.cpp", 
-										"../../Core/src/utils.cpp",
-										"../../Core/src/instruments.cpp",
-										"../../Core/src/results.cpp",
-										"../../Core/src/voxels.cpp",
-										"../../Core/src/Algorithms/cgls.cpp",
-										"../../Core/src/Algorithms/mlem.cpp",
-										"../../Core/src/Algorithms/sirt.cpp",
-										"../../Core/src/total_v.cpp",
-										"../../Core/src/parallel.cpp",
-										"../../Core/src/cone.cpp",
-										"../../Core/src/diamond.cpp",
-										"../../Core/src/Readers/xtek.cpp",
-										"../../Core/src/Algorithms/tv_reg.cpp",
-										"../../Core/src/tv_core.cpp",
-										"../../Core/src/p2D.cpp",
-										"../../Core/src/c2D.cpp",
-										"../../Core/src/Readers/tiff.cpp",
-										"../../Core/src/timer.cpp",
-										"../../Core/src/tikhonov.cpp",
-										"../../Core/src/ui_calls.cpp"],
+                                        "src/diamond_wrapper.cpp"],
                              include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries, extra_link_args=extra_link_args ),
                              Extension("ccpi.reconstruction.conebeam",
                              sources=[  "src/conebeam_module.cpp",
-                                        "src/conebeam_wrapper.cpp",
-										"../../Core/src/mpi.cpp", 
-										"../../Core/src/utils.cpp",
-										"../../Core/src/instruments.cpp",
-										"../../Core/src/results.cpp",
-										"../../Core/src/voxels.cpp",
-										"../../Core/src/Algorithms/cgls.cpp",
-										"../../Core/src/Algorithms/mlem.cpp",
-										"../../Core/src/Algorithms/sirt.cpp",
-										"../../Core/src/total_v.cpp",
-										"../../Core/src/parallel.cpp",
-										"../../Core/src/cone.cpp",
-										"../../Core/src/diamond.cpp",
-										"../../Core/src/Readers/xtek.cpp",
-										"../../Core/src/Algorithms/tv_reg.cpp",
-										"../../Core/src/tv_core.cpp",
-										"../../Core/src/p2D.cpp",
-										"../../Core/src/c2D.cpp",
-										"../../Core/src/Readers/tiff.cpp",
-										"../../Core/src/timer.cpp",
-										"../../Core/src/tikhonov.cpp",
-										"../../Core/src/ui_calls.cpp"],
+                                        "src/conebeam_wrapper.cpp"],
                              include_dirs=extra_include_dirs, library_dirs=extra_library_dirs, extra_compile_args=extra_compile_args, libraries=extra_libraries )                             ],
 	zip_safe = False,
 	packages = {'ccpi','ccpi.reconstruction'}

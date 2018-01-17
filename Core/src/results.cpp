@@ -3,7 +3,7 @@
 #include <cstdio>
 #include "base_types.hpp"
 #include "results.hpp"
-#include "tiff.hpp"
+#include "Readers/tiff.hpp"
 #include "mpi.hpp"
 #include "ui_calls.hpp"
 

@@ -1,6 +1,7 @@
 
 #ifndef CCPI_RECON_RESULTS
 #define CCPI_RECON_RESULTS
+#include "CCPiDefines.h"
 
 namespace CCPi {
 
