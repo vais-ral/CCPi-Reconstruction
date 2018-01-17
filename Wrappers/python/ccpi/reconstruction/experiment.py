@@ -57,9 +57,9 @@ class TomographyExperiment(CCPiBaseClass):
                 algorithm = pbalg.cgls_conv
         elif reconstructor_name == 'cgls_tv':
             if isConeBeam:
-                algorithm = cbalg.cgls_tv
+                algorithm = cbalg.cgls_TVreg
             else:
-                algorithm = pbalg.cgls_tv
+                algorithm = pbalg.cgls_TVreg
         elif reconstructor_name == 'cgls_tikhonov':
             if isConeBeam:
                 algorithm = cbalg.cgls_tikhonov

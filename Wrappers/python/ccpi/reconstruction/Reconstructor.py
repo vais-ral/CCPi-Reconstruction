@@ -65,7 +65,10 @@ of the specific reconstruction.
     
     def logCurrentConfiguration(self):
         for key in self.pars.keys():
-            self.log("{0}={1}".format(key, self.getParameter('{0}'.format(key))))
+            string = self.getParameter('{0}'.format(key))
+            if key == 'normalized_projections':
+                string = numpy.shape(string)
+            self.log("{0}={1}".format(key, string))
 
         
 class IterativeReconstructor(Reconstructor):
@@ -86,6 +89,8 @@ class IterativeReconstructor(Reconstructor):
                 'angles' , 'center_of_rotation' , 'flat_field', \
                 'iterations','dark_field' , 'resolution', 'isLogScale' , \
                 'threads' , 'iterationValues', 'regularization_parameter']
+        if 'debug' in kwargs.keys():
+            self.debug = kwargs['debug']
                
         self.pars = {'algorithm' : pbalg.cgls,
                     'resolution' : 1, 
@@ -95,12 +100,12 @@ class IterativeReconstructor(Reconstructor):
         if 'debug' in kwargs.keys():
             self.debug = kwargs.pop('debug')
             
-            
-        self.log ("{0} created".format(self.getParameter('algorithm').__name__))
         
         if kwargs != {}:
             self.log (kwargs) 
             self.setParameter(**kwargs)
+            
+        self.log ("{0} created".format(self.getParameter('algorithm').__name__))
             
     @staticmethod
     def getAvailableAlgorithms():
