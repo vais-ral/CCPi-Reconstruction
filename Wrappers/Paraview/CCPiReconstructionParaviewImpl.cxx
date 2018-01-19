@@ -2,11 +2,7 @@
 
 #include "CCPiParaviewUserInterface.h"
 
-//maybe need these? check
 #include "vtkImageData.h"
-#include "vtkPolyData.h"
-#include "vtkPointData.h"
-#include "vtkDataArray.h"
 #include "vtkSmartPointer.h"
 #include "vtkInformationVector.h"
 #include "vtkInformation.h"
@@ -15,21 +11,16 @@
 
 #include <iostream>
 
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
 #include <boost/multi_array.hpp>
 #include "algorithms.hpp"
 #include "instruments.hpp"
 #include "cgls.hpp"
 #include "mlem.hpp"
 #include "sirt.hpp"
-#include "tv_reg.hpp"
 #include "results.hpp"
 #include "voxels.hpp"
 #include "mpi.hpp"
 #include "base_types.hpp"
-#include "utils.hpp"
-#include "math.h"
 
 vtkStandardNewMacro(CCPiReconstructionParaviewImpl);
 
