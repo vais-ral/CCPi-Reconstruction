@@ -7,6 +7,7 @@
 #include "vtkPolyData.h"
 #include "vtkPointData.h"
 #include "vtkDataArray.h"
+#include "vtkSmartPointer.h"
 #include "vtkInformationVector.h"
 #include "vtkInformation.h"
 #include "vtkIntArray.h"
@@ -49,14 +50,8 @@ void CCPiReconstructionParaviewImpl::PrintSelf(ostream& os, vtkIndent indent)
     this->Superclass::PrintSelf(os, indent);
 }
 
-int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
-    vtkInformationVector **inputVector,
-    vtkInformationVector *outputVector)
+int CCPiReconstructionParaviewImpl::intialise_variables(vtkSmartPointer<vtkImageData> pixels, vtkSmartPointer<vtkImageData> angles)
 {
-
-    vtkImageData *pixels = vtkImageData::GetData(inputVector[0]);
-    vtkImageData *angles = vtkImageData::GetData(inputVector[1]);
-
     int pixel_dims[3];
     pixels->GetDimensions(pixel_dims);
     std::cout << "Dimensions: " << pixel_dims[0] << ", " << pixel_dims[1] << ", " <<  pixel_dims[2] << std::endl;
@@ -98,6 +93,8 @@ int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
         return 0;
     }
 
+    std::cout << "New Dimensions: " << pixels_arr.shape()[0] << ", " << pixels_arr.shape()[1] << ", " <<  pixels_arr.shape()[2] << std::endl;
+
     angles_arr.resize(boost::extents[angles_dim[0]]);
 
     for (int a = 0; a < angles_dim[0]; a++) {
@@ -120,6 +117,25 @@ int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
         case 2:
             algorithm = new CCPi::mlem(Iterations);
             break;
+    }
+
+    return 1;
+}
+
+
+int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
+    vtkInformationVector **inputVector,
+    vtkInformationVector *outputVector)
+{
+    std::cout << "RequestInformation" << std::endl;
+
+    vtkImageData *pixels = vtkImageData::GetData(inputVector[0]);
+    vtkImageData *angles = vtkImageData::GetData(inputVector[1]);
+
+    int error = intialise_variables(pixels, angles);
+
+    if(error == 0) {
+        return 0;
     }
 
     int *dimensions = calculate_dimensions(instrument, algorithm, pixels_arr, angles_arr,
@@ -204,70 +220,7 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
 
 
     if(deleted_vars) {
-        int pixel_dims[3];
-        pixels->GetDimensions(pixel_dims);
-        std::cout << "Dimensions: " << pixel_dims[0] << ", " << pixel_dims[1] << ", " <<  pixel_dims[2] << std::endl;
-
-        int angles_dim[3];
-        angles->GetDimensions(angles_dim);
-        std::cout << "Angles length: " << angles_dim[0] << std::endl;
-
-        //check dimensionality of angle array and either x or z axis
-        if(pixel_dims[0] == angles_dim[0]) {
-            //angle array matches x - don't have to reverse
-            pixels_arr.resize(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
-
-            for (int z = 0; z < pixel_dims[2]; z++) {
-                for (int y = 0; y < pixel_dims[1]; y++) {
-                    for (int x = 0; x < pixel_dims[0]; x++) {
-                        float value = pixels->GetScalarComponentAsFloat(x,y,z,0);
-                        pixels_arr[x][y][z] = value;
-                    }
-                }
-            }
-
-        } else if (pixel_dims[2] == angles_dim[0]) {
-            //angle array mayches z - have to reverse
-            pixels_arr.resize(boost::extents[pixel_dims[2]][pixel_dims[1]][pixel_dims[0]]);
-            
-            for (int x = 0; x < pixel_dims[2]; x++) {
-                for (int y = 0; y < pixel_dims[1]; y++) {
-                    for (int z = 0; z < pixel_dims[0]; z++) {
-                        float value = pixels->GetScalarComponentAsFloat(z,y,x,0);
-                        pixels_arr[x][y][z] = value;
-                    }
-                }
-            }
-
-        } else {
-            //angle array does not match either the x or z dimension - error
-            vtkErrorMacro("The length angle array does not match the input");
-            return 0;
-        }
-        
-        std::cout << "New Dimensions: " << pixels_arr.shape()[0] << ", " << pixels_arr.shape()[1] << ", " <<  pixels_arr.shape()[2] << std::endl;
-
-        angles_arr.resize(boost::extents[angles_dim[0]]);
-
-        for (int a = 0; a < angles_dim[0]; a++) {
-            float value = angles->GetScalarComponentAsFloat(a,0,0,0);
-            angles_arr[a] = value;
-        }
-
-        algorithm = 0;
-        //TODO implement all?
-        switch(Algorithm) {
-            case 0:
-                algorithm = new CCPi::cgls_3d(Iterations);
-                break;
-            case 1:
-                algorithm = new CCPi::sirt(Iterations);
-                break;
-            case 2:
-                algorithm = new CCPi::mlem(Iterations);
-                break;
-        }
-        instrument = new CCPi::Diamond();
+        intialise_variables(pixels, angles);
     }
 
     this->UpdateProgress(0.5);

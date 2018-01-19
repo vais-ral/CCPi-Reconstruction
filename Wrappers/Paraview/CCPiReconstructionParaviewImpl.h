@@ -5,6 +5,7 @@
 #include "base_types.hpp"
 #include "algorithms.hpp"
 #include "instruments.hpp"
+#include "vtkSmartPointer.h"
 
 #include <string>
 
@@ -59,6 +60,7 @@ protected:
 private:
   CCPiReconstructionParaviewImpl(const CCPiReconstructionParaviewImpl&);  // Not implemented.
   void operator=(const CCPiReconstructionParaviewImpl&);  // Not implemented.
+  int intialise_variables(vtkSmartPointer<vtkImageData> pixels, vtkSmartPointer<vtkImageData> angles);
 
   //to save recalculation, initialise in RequestInformation, reuse from here in
   //Request Data, then delete in RequestData once finished.
