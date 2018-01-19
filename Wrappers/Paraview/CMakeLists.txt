@@ -18,6 +18,15 @@ ADD_PARAVIEW_PLUGIN(CCPiReconstruction(CCPi) "1.0"
   SERVER_SOURCES CCPiParaviewUserInterface.cpp
 )
 
+#Boost Libraries
+SET(Boost_USE_STATIC_LIBS        OFF) # only find dynamic libs
+SET(Boost_USE_MULTITHREADED  ON)
+find_package(Boost)
+if(Boost_FOUND)
+  include_directories(${Boost_INCLUDE_DIRS})
+  target_link_libraries(CCPiReconstruction ${Boost_LIBRARIES})
+endif()
+
 # TODO: work out
 INCLUDE_DIRECTORIES(${CCPiReconstructionIterative_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
