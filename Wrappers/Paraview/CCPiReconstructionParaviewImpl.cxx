@@ -59,21 +59,44 @@ int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
 
     int pixel_dims[3];
     pixels->GetDimensions(pixel_dims);
-
-    //todo determine whether to swap axis based on data. match up with angle array dimension?
-    pixels_arr.resize(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
-
-    for (int z = 0; z < pixel_dims[2]; z++) {
-        for (int y = 0; y < pixel_dims[1]; y++) {
-            for (int x = 0; x < pixel_dims[0]; x++) {
-                float value = pixels->GetScalarComponentAsFloat(x,y,z,0);
-                pixels_arr[x][y][z] = value;
-            }
-        }
-    }
+    std::cout << "Dimensions: " << pixel_dims[0] << ", " << pixel_dims[1] << ", " <<  pixel_dims[2] << std::endl;
 
     int angles_dim[3];
     angles->GetDimensions(angles_dim);
+    std::cout << "Angles length: " << angles_dim[0] << std::endl;
+
+    //check dimensionality of angle array and either x or z axis
+    if(pixel_dims[0] == angles_dim[0]) {
+        //angle array matches x - don't have to reverse
+        pixels_arr.resize(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
+
+        for (int z = 0; z < pixel_dims[2]; z++) {
+            for (int y = 0; y < pixel_dims[1]; y++) {
+                for (int x = 0; x < pixel_dims[0]; x++) {
+                    float value = pixels->GetScalarComponentAsFloat(x,y,z,0);
+                    pixels_arr[x][y][z] = value;
+                }
+            }
+        }
+
+    } else if (pixel_dims[2] == angles_dim[0]) {
+        //angle array mayches z - have to reverse
+        pixels_arr.resize(boost::extents[pixel_dims[2]][pixel_dims[1]][pixel_dims[0]]);
+        
+        for (int x = 0; x < pixel_dims[2]; x++) {
+            for (int y = 0; y < pixel_dims[1]; y++) {
+                for (int z = 0; z < pixel_dims[0]; z++) {
+                    float value = pixels->GetScalarComponentAsFloat(z,y,x,0);
+                    pixels_arr[x][y][z] = value;
+                }
+            }
+        }
+
+    } else {
+        //angle array does not match either the x or z dimension - error
+        vtkErrorMacro("The length angle array does not match the input");
+        return 0;
+    }
 
     angles_arr.resize(boost::extents[angles_dim[0]]);
 
@@ -165,7 +188,7 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
     //and also when views are changed. TODO: find out what is causing the repeat.
     //UPDATE: removing the outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), outWholeExt, 6); line
     //in RequestInformation fixes the repeat problem, but then the extents are wrong... 
-    std::cout << execution_fail_array[execution_count] << std::endl;
+    std::cout << "Execution Count: "  << execution_count << std::endl;
 
     //! Update Paraview UI with Progress bar
     CCPiParaviewUserInterface userInterface(this);
@@ -185,40 +208,44 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
         pixels->GetDimensions(pixel_dims);
         std::cout << "Dimensions: " << pixel_dims[0] << ", " << pixel_dims[1] << ", " <<  pixel_dims[2] << std::endl;
 
-        //todo delete
-        float* pixel_vals;
-
-        //todo determine whether to swap axis based on data. match up with angle array dimension?
-
-        /*boost::multi_array<float, 3> pixels_arr(boost::extents[pixel_dims[2]][pixel_dims[1]][pixel_dims[0]]);
-
-        std::cout << "test 3" << std::endl;
-
-        for (int x = 0; x < pixel_dims[2]; x++) {
-            for (int y = 0; y < pixel_dims[1]; y++) {
-                for (int z = 0; z < pixel_dims[0]; z++) {
-                    float value = pixels->GetScalarComponentAsFloat(z,y,x,0);
-                    pixels_arr[x][y][z] = value;
-                }
-            }
-        }*/
-
-        pixels_arr.resize(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
-
-        for (int z = 0; z < pixel_dims[2]; z++) {
-            for (int y = 0; y < pixel_dims[1]; y++) {
-                for (int x = 0; x < pixel_dims[0]; x++) {
-                    float value = pixels->GetScalarComponentAsFloat(x,y,z,0);
-                    pixels_arr[x][y][z] = value;
-                }
-            }
-        }
-        
-        std::cout << "New Dimensions: " << pixels_arr.shape()[0] << ", " << pixels_arr.shape()[1] << ", " <<  pixels_arr.shape()[2] << std::endl;
-
         int angles_dim[3];
         angles->GetDimensions(angles_dim);
         std::cout << "Angles length: " << angles_dim[0] << std::endl;
+
+        //check dimensionality of angle array and either x or z axis
+        if(pixel_dims[0] == angles_dim[0]) {
+            //angle array matches x - don't have to reverse
+            pixels_arr.resize(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
+
+            for (int z = 0; z < pixel_dims[2]; z++) {
+                for (int y = 0; y < pixel_dims[1]; y++) {
+                    for (int x = 0; x < pixel_dims[0]; x++) {
+                        float value = pixels->GetScalarComponentAsFloat(x,y,z,0);
+                        pixels_arr[x][y][z] = value;
+                    }
+                }
+            }
+
+        } else if (pixel_dims[2] == angles_dim[0]) {
+            //angle array mayches z - have to reverse
+            pixels_arr.resize(boost::extents[pixel_dims[2]][pixel_dims[1]][pixel_dims[0]]);
+            
+            for (int x = 0; x < pixel_dims[2]; x++) {
+                for (int y = 0; y < pixel_dims[1]; y++) {
+                    for (int z = 0; z < pixel_dims[0]; z++) {
+                        float value = pixels->GetScalarComponentAsFloat(z,y,x,0);
+                        pixels_arr[x][y][z] = value;
+                    }
+                }
+            }
+
+        } else {
+            //angle array does not match either the x or z dimension - error
+            vtkErrorMacro("The length angle array does not match the input");
+            return 0;
+        }
+        
+        std::cout << "New Dimensions: " << pixels_arr.shape()[0] << ", " << pixels_arr.shape()[1] << ", " <<  pixels_arr.shape()[2] << std::endl;
 
         angles_arr.resize(boost::extents[angles_dim[0]]);
 
