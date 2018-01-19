@@ -27,7 +27,6 @@ if(Boost_FOUND)
   target_link_libraries(CCPiReconstruction ${Boost_LIBRARIES})
 endif()
 
-# TODO: work out
 INCLUDE_DIRECTORIES(${CCPiReconstructionIterative_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 TARGET_LINK_LIBRARIES(CCPiReconstruction CCPiReconstructionIterative ${Boost_LIBRARIES})
