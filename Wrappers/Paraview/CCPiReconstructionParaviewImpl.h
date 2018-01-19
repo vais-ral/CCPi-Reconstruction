@@ -22,7 +22,6 @@ public:
   vtkTypeMacro(CCPiReconstructionParaviewImpl, vtkImageAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  //TODO: algorithm?
   vtkGetMacro(Algorithm, int);
   vtkSetMacro(Algorithm, int);
 
@@ -31,9 +30,6 @@ public:
 
   vtkGetMacro(Resolution, int);
   vtkSetMacro(Resolution, int);
-
-  //vtkSetVector3Macro(RotationCentre, float);
-  //vtkGetVector3Macro(RotationCentre, float);
 
   vtkGetMacro(RotationCentre, double);
   vtkSetMacro(RotationCentre, double);
@@ -60,7 +56,7 @@ protected:
 private:
   CCPiReconstructionParaviewImpl(const CCPiReconstructionParaviewImpl&);  // Not implemented.
   void operator=(const CCPiReconstructionParaviewImpl&);  // Not implemented.
-  int intialise_variables(vtkSmartPointer<vtkImageData> pixels, vtkSmartPointer<vtkImageData> angles);
+  int initialise_variables(vtkSmartPointer<vtkImageData> pixels, vtkSmartPointer<vtkImageData> angles);
 
   //to save recalculation, initialise in RequestInformation, reuse from here in
   //Request Data, then delete in RequestData once finished.
@@ -69,7 +65,6 @@ private:
   CCPi::instrument *instrument;
   boost::multi_array<float, 3> pixels_arr;
   boost::multi_array<float, 1> angles_arr;
-  bool deleted_vars = false;
 
   int execution_count = 0;
 };

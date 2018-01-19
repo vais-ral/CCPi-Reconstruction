@@ -50,15 +50,17 @@ void CCPiReconstructionParaviewImpl::PrintSelf(ostream& os, vtkIndent indent)
     this->Superclass::PrintSelf(os, indent);
 }
 
-int CCPiReconstructionParaviewImpl::intialise_variables(vtkSmartPointer<vtkImageData> pixels, vtkSmartPointer<vtkImageData> angles)
+
+//initialise the variables: converts the vtkImageData inputs to boost multiarrays, 
+//and create instrument and algorithm - used by both RequestInformation and
+//RequestData so extracted here to reduce code repetition.
+int CCPiReconstructionParaviewImpl::initialise_variables(vtkSmartPointer<vtkImageData> pixels, vtkSmartPointer<vtkImageData> angles)
 {
     int pixel_dims[3];
     pixels->GetDimensions(pixel_dims);
-    std::cout << "Dimensions: " << pixel_dims[0] << ", " << pixel_dims[1] << ", " <<  pixel_dims[2] << std::endl;
 
     int angles_dim[3];
     angles->GetDimensions(angles_dim);
-    std::cout << "Angles length: " << angles_dim[0] << std::endl;
 
     //check dimensionality of angle array and either x or z axis
     if(pixel_dims[0] == angles_dim[0]) {
@@ -92,8 +94,6 @@ int CCPiReconstructionParaviewImpl::intialise_variables(vtkSmartPointer<vtkImage
         vtkErrorMacro("The length angle array does not match the input");
         return 0;
     }
-
-    std::cout << "New Dimensions: " << pixels_arr.shape()[0] << ", " << pixels_arr.shape()[1] << ", " <<  pixels_arr.shape()[2] << std::endl;
 
     angles_arr.resize(boost::extents[angles_dim[0]]);
 
@@ -132,15 +132,19 @@ int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
     vtkImageData *pixels = vtkImageData::GetData(inputVector[0]);
     vtkImageData *angles = vtkImageData::GetData(inputVector[1]);
 
-    int error = intialise_variables(pixels, angles);
+    int error = initialise_variables(pixels, angles);
 
+    //need to propogate error in case initialise_variables fails
     if(error == 0) {
         return 0;
     }
 
+    //need to calculate dimensions in advance to set the extent properly, so call 
+    //calculate_dimensions to calculate them for us
+    machine::initialise(0);
     int *dimensions = calculate_dimensions(instrument, algorithm, pixels_arr, angles_arr,
                                            RotationCentre, Resolution, blocking_factor);
-
+    machine::exit();
 
     int outWholeExt[6];
     outWholeExt[0] = 0;
@@ -161,6 +165,7 @@ int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
     outSpacing[1] = 1.0;
     outSpacing[2] = 1.0;
 
+    //set some stuff for the extent
     vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
     outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), outWholeExt, 6);
@@ -170,8 +175,7 @@ int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
 
     vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_FLOAT, 1);
 
-    deleted_vars = false;
-
+    //reset execution count
     execution_count = 0;
 
     return 1;
@@ -209,23 +213,20 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
     //! Update Paraview UI with Progress bar
     CCPiParaviewUserInterface userInterface(this);
     this->UpdateProgress(0.1);
-    std::cout << this->GetMTime() << std::endl;
 
     vtkImageData *pixels = vtkImageData::GetData(inputVector[0]);
-    vtkInformation *pixelsInfo = inputVector[0]->GetInformationObject(0);
     vtkImageData *angles = vtkImageData::GetData(inputVector[1]);
-    vtkInformation *anglesInfo = inputVector[1]->GetInformationObject(0);
-    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
     vtkImageData *output = vtkImageData::GetData(outputVector->GetInformationObject(0));
 
-
-    if(deleted_vars) {
-        intialise_variables(pixels, angles);
+    //if execution count is not 0, that means we have repeated RequestData without
+    //calling RequestInformation, so the variables have been deleted so we need
+    //to reinitialise. Check if this still needed after repeat execution bug fixed.
+    if(execution_count != 0) {
+        initialise_variables(pixels, angles);
     }
 
     this->UpdateProgress(0.5);
-
-    deleted_vars = true;
 
     bool beam_hardening = false;
 
@@ -237,8 +238,6 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
                                      beam_hardening, false);
     machine::exit();
 
-    //std::cout << "Calulcated Dimensions: " << dimensions[0] << ", " << dimensions[1] << ", " <<  dimensions[2] << std::endl;
-
     //delete to free up memory
     delete instrument;
     delete algorithm;
@@ -249,6 +248,7 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
 
     this->UpdateProgress(0.8);
 
+    //need to set extent (again!) so get dimensions from voxels
     int dims[3];
     if (voxels == 0) {
         dims[0] = 1;
@@ -268,21 +268,10 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
     outWholeExt[4] = 0;
     outWholeExt[5] = dims[0]-1;
 
-    std::cout << "Output Dimensions: " << dims[0] << ", " << dims[1] << ", " <<  dims[2] << std::endl;
-
-    std::cout << "Old bounds: " << output->GetBounds()[0] << " " << output->GetBounds()[1] << " " << output->GetBounds()[2] << " " << output->GetBounds()[3] << " " << output->GetBounds()[4] << " " << output->GetBounds()[5]  << std::endl;
-
     output->SetOrigin(0,0,0);
     output->SetSpacing(1,1,1);
     output->SetExtent(outWholeExt);
-
     output->AllocateScalars(VTK_FLOAT,1);
-    output->ComputeBounds();
-
-    std::cout << (*voxels)[0][0][0] << std::endl;
-
-    std::cout << "New extents: " << output->GetExtent()[0] << " " << output->GetExtent()[1] << " " << output->GetExtent()[2] << " " << output->GetExtent()[3] << " " << output->GetExtent()[4] << " " << output->GetExtent()[5]  << std::endl;
-    std::cout << "New bounds: " << output->GetBounds()[0] << " " << output->GetBounds()[1] << " " << output->GetBounds()[2] << " " << output->GetBounds()[3] << " " << output->GetBounds()[4] << " " << output->GetBounds()[5]  << std::endl;
 
     if (voxels == 0) {
         output->SetScalarComponentFromFloat(0,0,0,0,0);
@@ -297,13 +286,9 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
         }
     }
 
-    std::cout << output->GetScalarComponentAsFloat(130,160,160,0) << std::endl;
-
     delete voxels;
 
     this->SetProgress(0.99);
-
-    std::cout << this->GetMTime() << std::endl;
 
     execution_count = execution_count + 1;
 
@@ -315,7 +300,6 @@ int CCPiReconstructionParaviewImpl::FillInputPortInformation(int port, vtkInform
     if (port == 1)
     {
         info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkImageData");
-        //info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
     }
   else
     {
