@@ -3,6 +3,9 @@
 
 #include "vtkImageAlgorithm.h"
 #include "base_types.hpp"
+#include "algorithms.hpp"
+#include "instruments.hpp"
+
 #include <string>
 
 #include <boost/python.hpp>
@@ -40,6 +43,10 @@ protected:
 
   int RequestData(vtkInformation *, vtkInformationVector **,
                   vtkInformationVector *);
+  int RequestInformation(vtkInformation *, vtkInformationVector **,
+                  vtkInformationVector *);
+  int RequestUpdateExtent(vtkInformation *, vtkInformationVector **,
+                  vtkInformationVector *);
 
   int Algorithm;
   int Iterations;
@@ -52,6 +59,17 @@ protected:
 private:
   CCPiReconstructionParaviewImpl(const CCPiReconstructionParaviewImpl&);  // Not implemented.
   void operator=(const CCPiReconstructionParaviewImpl&);  // Not implemented.
+
+  //to save recalculation, initialise in RequestInformation, reuse from here in
+  //Request Data, then delete in RequestData once finished.
+  CCPi::reconstruction_alg *algorithm;
+  int blocking_factor;
+  CCPi::instrument *instrument;
+  boost::multi_array<float, 3> pixels_arr;
+  boost::multi_array<float, 1> angles_arr;
+  bool deleted_vars = false;
+
+  int execution_count = 0;
 };
 
 #endif

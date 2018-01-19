@@ -10,6 +10,7 @@
 #include "vtkInformationVector.h"
 #include "vtkInformation.h"
 #include "vtkIntArray.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 
 #include <iostream>
 
@@ -48,38 +49,19 @@ void CCPiReconstructionParaviewImpl::PrintSelf(ostream& os, vtkIndent indent)
     this->Superclass::PrintSelf(os, indent);
 }
 
-int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
+int CCPiReconstructionParaviewImpl::RequestInformation(vtkInformation *request,
     vtkInformationVector **inputVector,
     vtkInformationVector *outputVector)
 {
-    //! Update Paraview UI with Progress bar
-    CCPiParaviewUserInterface userInterface(this);
-    this->UpdateProgress(0.1);
 
     vtkImageData *pixels = vtkImageData::GetData(inputVector[0]);
     vtkImageData *angles = vtkImageData::GetData(inputVector[1]);
-    vtkImageData *output = vtkImageData::GetData(outputVector->GetInformationObject(0));
 
     int pixel_dims[3];
     pixels->GetDimensions(pixel_dims);
-    std::cout << "Dimensions: " << pixel_dims[0] << ", " << pixel_dims[1] << ", " <<  pixel_dims[2] << std::endl;
 
-    float* pixel_vals;
-
-    /*boost::multi_array<float, 3> pixels_arr(boost::extents[pixel_dims[2]][pixel_dims[1]][pixel_dims[0]]);
-
-    std::cout << "test 3" << std::endl;
-
-    for (int x = 0; x < pixel_dims[2]; x++) {
-        for (int y = 0; y < pixel_dims[1]; y++) {
-            for (int z = 0; z < pixel_dims[0]; z++) {
-                float value = pixels->GetScalarComponentAsFloat(z,y,x,0);
-                pixels_arr[x][y][z] = value;
-            }
-        }
-    }*/
-
-    boost::multi_array<float, 3> pixels_arr(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
+    //todo determine whether to swap axis based on data. match up with angle array dimension?
+    pixels_arr.resize(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
 
     for (int z = 0; z < pixel_dims[2]; z++) {
         for (int y = 0; y < pixel_dims[1]; y++) {
@@ -90,21 +72,20 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
         }
     }
 
-    this->UpdateProgress(0.5);
-    std::cout << "New Dimensions: " << pixels_arr.shape()[0] << ", " << pixels_arr.shape()[1] << ", " <<  pixels_arr.shape()[2] << std::endl;
-
     int angles_dim[3];
     angles->GetDimensions(angles_dim);
-    std::cout << "Angles length: " << angles_dim[0] << std::endl;
 
-    boost::multi_array<float, 1> angles_arr(boost::extents[angles_dim[0]]);
+    angles_arr.resize(boost::extents[angles_dim[0]]);
 
     for (int a = 0; a < angles_dim[0]; a++) {
         float value = angles->GetScalarComponentAsFloat(a,0,0,0);
         angles_arr[a] = value;
     }
 
-    CCPi::reconstruction_alg *algorithm = 0;
+    blocking_factor = 0;
+    instrument = new CCPi::Diamond();
+
+    algorithm = 0;
     //TODO implement all?
     switch(Algorithm) {
         case 0:
@@ -118,11 +99,157 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
             break;
     }
 
-    const int blocking_factor = 0;
-    bool beam_hardening = false;
-    CCPi::instrument *instrument = new CCPi::Diamond();
+    int *dimensions = calculate_dimensions(instrument, algorithm, pixels_arr, angles_arr,
+                                           RotationCentre, Resolution, blocking_factor);
 
-    //do the thing
+
+    int outWholeExt[6];
+    outWholeExt[0] = 0;
+    outWholeExt[1] = dimensions[2];
+    outWholeExt[2] = 0;
+    outWholeExt[3] = dimensions[1];
+    outWholeExt[4] = 0;
+    outWholeExt[5] = dimensions[0];
+
+    double outOrigin[3];
+    double outSpacing[3];
+
+    outOrigin[0] = 0.0;
+    outOrigin[1] = 0.0;
+    outOrigin[2] = 0.0;
+
+    outSpacing[0] = 1.0;
+    outSpacing[1] = 1.0;
+    outSpacing[2] = 1.0;
+
+    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+    outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), outWholeExt, 6);
+
+    outInfo->Set(vtkDataObject::ORIGIN(), outOrigin, 3);
+    outInfo->Set(vtkDataObject::SPACING(), outSpacing, 3);
+
+    vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_FLOAT, 1);
+
+    deleted_vars = false;
+
+    execution_count = 0;
+
+    return 1;
+}
+
+int CCPiReconstructionParaviewImpl::RequestUpdateExtent(vtkInformation *request,
+    vtkInformationVector **inputVector,
+    vtkInformationVector *outputVector)
+{
+    int inExt[6];
+
+
+    vtkInformation *pixelsInfo = inputVector[0]->GetInformationObject(0);
+    vtkInformation *anglesInfo = inputVector[1]->GetInformationObject(0);
+
+    pixelsInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), inExt);
+    pixelsInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(), inExt, 6);
+
+    anglesInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), inExt);
+    anglesInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(), inExt, 6);
+
+    return 1;
+}
+
+int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
+    vtkInformationVector **inputVector,
+    vtkInformationVector *outputVector)
+{
+    //count executions - currently it repeats for no reason whilst being applied
+    //and also when views are changed. TODO: find out what is causing the repeat.
+    //UPDATE: removing the outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), outWholeExt, 6); line
+    //in RequestInformation fixes the repeat problem, but then the extents are wrong... 
+    std::cout << execution_fail_array[execution_count] << std::endl;
+
+    //! Update Paraview UI with Progress bar
+    CCPiParaviewUserInterface userInterface(this);
+    this->UpdateProgress(0.1);
+    std::cout << this->GetMTime() << std::endl;
+
+    vtkImageData *pixels = vtkImageData::GetData(inputVector[0]);
+    vtkInformation *pixelsInfo = inputVector[0]->GetInformationObject(0);
+    vtkImageData *angles = vtkImageData::GetData(inputVector[1]);
+    vtkInformation *anglesInfo = inputVector[1]->GetInformationObject(0);
+    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+    vtkImageData *output = vtkImageData::GetData(outputVector->GetInformationObject(0));
+
+
+    if(deleted_vars) {
+        int pixel_dims[3];
+        pixels->GetDimensions(pixel_dims);
+        std::cout << "Dimensions: " << pixel_dims[0] << ", " << pixel_dims[1] << ", " <<  pixel_dims[2] << std::endl;
+
+        //todo delete
+        float* pixel_vals;
+
+        //todo determine whether to swap axis based on data. match up with angle array dimension?
+
+        /*boost::multi_array<float, 3> pixels_arr(boost::extents[pixel_dims[2]][pixel_dims[1]][pixel_dims[0]]);
+
+        std::cout << "test 3" << std::endl;
+
+        for (int x = 0; x < pixel_dims[2]; x++) {
+            for (int y = 0; y < pixel_dims[1]; y++) {
+                for (int z = 0; z < pixel_dims[0]; z++) {
+                    float value = pixels->GetScalarComponentAsFloat(z,y,x,0);
+                    pixels_arr[x][y][z] = value;
+                }
+            }
+        }*/
+
+        pixels_arr.resize(boost::extents[pixel_dims[0]][pixel_dims[1]][pixel_dims[2]]);
+
+        for (int z = 0; z < pixel_dims[2]; z++) {
+            for (int y = 0; y < pixel_dims[1]; y++) {
+                for (int x = 0; x < pixel_dims[0]; x++) {
+                    float value = pixels->GetScalarComponentAsFloat(x,y,z,0);
+                    pixels_arr[x][y][z] = value;
+                }
+            }
+        }
+        
+        std::cout << "New Dimensions: " << pixels_arr.shape()[0] << ", " << pixels_arr.shape()[1] << ", " <<  pixels_arr.shape()[2] << std::endl;
+
+        int angles_dim[3];
+        angles->GetDimensions(angles_dim);
+        std::cout << "Angles length: " << angles_dim[0] << std::endl;
+
+        angles_arr.resize(boost::extents[angles_dim[0]]);
+
+        for (int a = 0; a < angles_dim[0]; a++) {
+            float value = angles->GetScalarComponentAsFloat(a,0,0,0);
+            angles_arr[a] = value;
+        }
+
+        algorithm = 0;
+        //TODO implement all?
+        switch(Algorithm) {
+            case 0:
+                algorithm = new CCPi::cgls_3d(Iterations);
+                break;
+            case 1:
+                algorithm = new CCPi::sirt(Iterations);
+                break;
+            case 2:
+                algorithm = new CCPi::mlem(Iterations);
+                break;
+        }
+        instrument = new CCPi::Diamond();
+    }
+
+    this->UpdateProgress(0.5);
+
+    deleted_vars = true;
+
+    bool beam_hardening = false;
+
+    //apply the algorithm
     machine::initialise(0);
 
     voxel_data *voxels = reconstruct(instrument, algorithm, pixels_arr, angles_arr,
@@ -130,8 +257,15 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
                                      beam_hardening, false);
     machine::exit();
 
+    //std::cout << "Calulcated Dimensions: " << dimensions[0] << ", " << dimensions[1] << ", " <<  dimensions[2] << std::endl;
+
+    //delete to free up memory
     delete instrument;
     delete algorithm;
+
+    //resize boost arrays to 0,0,0 to deallocate memory
+    pixels_arr.resize(boost::extents[0][0][0]);
+    angles_arr.resize(boost::extents[0]);
 
     this->UpdateProgress(0.8);
 
@@ -146,30 +280,52 @@ int CCPiReconstructionParaviewImpl::RequestData(vtkInformation *request,
         dims[1] = voxels->shape()[1];
         dims[2] = voxels->shape()[2];
     }
+    int outWholeExt[6];
+    outWholeExt[0] = 0;
+    outWholeExt[1] = dims[2]-1;
+    outWholeExt[2] = 0;
+    outWholeExt[3] = dims[1]-1;
+    outWholeExt[4] = 0;
+    outWholeExt[5] = dims[0]-1;
+
     std::cout << "Output Dimensions: " << dims[0] << ", " << dims[1] << ", " <<  dims[2] << std::endl;
 
-    output->SetDimensions(dims);
+    std::cout << "Old bounds: " << output->GetBounds()[0] << " " << output->GetBounds()[1] << " " << output->GetBounds()[2] << " " << output->GetBounds()[3] << " " << output->GetBounds()[4] << " " << output->GetBounds()[5]  << std::endl;
+
+    output->SetOrigin(0,0,0);
+    output->SetSpacing(1,1,1);
+    output->SetExtent(outWholeExt);
+
     output->AllocateScalars(VTK_FLOAT,1);
+    output->ComputeBounds();
 
     std::cout << (*voxels)[0][0][0] << std::endl;
 
     std::cout << "New extents: " << output->GetExtent()[0] << " " << output->GetExtent()[1] << " " << output->GetExtent()[2] << " " << output->GetExtent()[3] << " " << output->GetExtent()[4] << " " << output->GetExtent()[5]  << std::endl;
-    
+    std::cout << "New bounds: " << output->GetBounds()[0] << " " << output->GetBounds()[1] << " " << output->GetBounds()[2] << " " << output->GetBounds()[3] << " " << output->GetBounds()[4] << " " << output->GetBounds()[5]  << std::endl;
+
     if (voxels == 0) {
         output->SetScalarComponentFromFloat(0,0,0,0,0);
     } else {
         for (int i = 0; i < dims[0]; i++) {
             for (int j = 0; j < dims[1]; j++) {
                 for (int k = 0; k < dims[2]; k++) {
-                    output->SetScalarComponentFromFloat(i,j,k,0,(*voxels)[i][j][k]);
+                    //reverse x and z as converting from numpy back to vtk
+                    output->SetScalarComponentFromFloat(k,j,i,0,(*voxels)[i][j][k]);
                 }
             }
         }
     }
 
+    std::cout << output->GetScalarComponentAsFloat(130,160,160,0) << std::endl;
+
     delete voxels;
 
     this->SetProgress(0.99);
+
+    std::cout << this->GetMTime() << std::endl;
+
+    execution_count = execution_count + 1;
 
     return 1;
 }
