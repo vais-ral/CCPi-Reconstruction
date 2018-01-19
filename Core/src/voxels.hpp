@@ -33,6 +33,14 @@ CCPI_EXPORT voxel_data *reconstruct(CCPi::instrument *device,
 			       const int blocking_factor,
 			       const bool beam_hardenconst,const bool is_pixel_in_log);
 
+CCPI_EXPORT voxel_data *calculate_dimensions(CCPi::instrument *device,
+			       CCPi::reconstruction_alg *algorithm,
+			       const numpy_3d &pixels,
+			       const numpy_1d &angles,
+			       const real rotation_centre,
+			       const int pixels_per_voxel,
+			       const int blocking_factor);
+
 CCPI_EXPORT voxel_data *reconstruct(CCPi::instrument *device,
 			       CCPi::reconstruction_alg *algorithm,
 			       const numpy_3d &pixels,
