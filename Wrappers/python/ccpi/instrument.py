@@ -42,7 +42,7 @@ class Instrument(CCPiBaseClass):
         """This is to check if the instrument type is cone beam or parallel beam
         This will be overwritten by the child class
         """
-        raise NotImplementedError('is_cone_beam needs to be overwritten for particular instrument')        
+        raise NotImplementedError('isConeBeam needs to be overwritten for particular instrument')        
         
     def calc_v_alighment(self, num_v_pixels, pixels_per_voxel):
         """This will calculate the number of pixels based on the number of vertical pixels and pixels
@@ -57,7 +57,7 @@ class Instrument(CCPiBaseClass):
         nvox = int(num_v_pixels/pixels_per_voxel)
         if nvox%pixels_per_voxel != 0:
             nvox+=1
-        if self.is_cone_beam():
+        if self.isConeBeam():
             if nvox%2 !=0:
                 nvox+=1
         npix = nvox * pixels_per_voxel
