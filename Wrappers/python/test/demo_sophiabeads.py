@@ -7,7 +7,7 @@ import matplotlib.pyplot as pp
 import numpy as np
 
 # Set up Xtek instrument.
-x = CI.Xtek()
+x = CI.Xtek() 
 
 # Load SophiaBeads dataset with 256 projections. Update path for your system.
 x.read('/media/jakob/050d8d45-fab3-4285-935f-260e6c5f162c1/Data/SophiaBeads/SophiaBeads_256_averaged/SophiaBeads_256_averaged.xtekct')
