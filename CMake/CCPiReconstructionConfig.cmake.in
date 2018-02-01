@@ -8,7 +8,7 @@ get_filename_component(CCPIRECONSTRUCTION_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}"
 set(CCPIRECONSTRUCTION_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
  
 # Our library dependencies (contains definitions for IMPORTED targets)
-if(NOT TARGET CCPiReconstruction AND NOT CCPIRECONSTRUCION_BINARY_DIR)
+if(NOT TARGET CCPiReconstruction AND NOT CCPIRECONSTRUCTION_BINARY_DIR)
   include("${CCPIRECONSTRUCTION_CMAKE_DIR}/CCPiReconstructionTargets.cmake")
 endif()
  
