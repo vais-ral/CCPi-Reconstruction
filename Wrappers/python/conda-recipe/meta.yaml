@@ -12,7 +12,7 @@ build:
 requirements:
   build:
     - python
-    - numpy
+    - numpy x.x
     - setuptools
     - boost ==1.64.0	
     - boost-cpp ==1.64.0
@@ -22,7 +22,7 @@ requirements:
 
   run:
     - python
-    - numpy
+    - numpy x.x
     - boost ==1.64
     - libtiff
     - h5py
