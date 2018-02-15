@@ -45,7 +45,36 @@ if (Boost_FOUND)
    message("Boost library dir " ${Boost_LIBRARY_DIRS})
    message("Boost libraries " ${Boost_LIBRARIES})
 endif()
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    if (UNIX)
+	  set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
+	elseif(WIN32)
+	  string(REPLACE "-openmp" "/openmp" slash "${OpenMP_CXX_FLAGS}")
+	  message("openmp flag: original ${OpenMP_CXX_FLAGS} slash: ${slash}")
+	  set (OpenMP_CXX_FLAGS ${slash})
+	  message("openmp flag: substituted ${OpenMP_CXX_FLAGS}")
+	  string(REPLACE "-openmp" "/openmp" OpenMP_C_FLAGS "${OpenMP_C_FLAGS}")
+	  string(REPLACE "-openmp" "/openmp" OpenMP_EXE_LINKER_FLAGS "${OpenMP_EXE_LINKER_FLAGS}")
+	  message("openmp OpenMP_C_FLAGS: ${OpenMP_C_FLAGS} ")
+	  message("openmp OpenMP_EXE_LINKER_FLAGS: ${OpenMP_EXE_LINKER_FLAGS} ")
+	  
+	endif()
 	
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+	
+	
+endif()
+
+find_package(TIFF REQUIRED)
+if (TIFF_FOUND)
+  message("${TIFF_LIBRARIES}")
+else()
+  message("TIFF NOT FOUND")
+  #set(TIFF_LIBRARIES "tiff")
+endif()
 ## Build the regularizers package as a library
 message("Creating Iterative Reconstruction CGLS as shared library")
 message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
@@ -53,22 +82,21 @@ message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
 set(CMAKE_BUILD_TYPE "Release")
 
 if(WIN32)
- set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /openmp /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
+ set (FLAGS "/DWIN32 /EHsc /DBOOST_ALL_NO_LIB /DHAS_TIFF /DCCPiReconstructionIterative_EXPORTS")
   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib")
   
   set (EXTRA_LIBRARIES 
         ${Boost_LIBRARIES}
-		"tiff"
+		${TIFF_LIBRARIES}
 		)
 		
   message("library lib: ${LIBRARY_LIB}")
   
 elseif(UNIX)
-   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
+   set (FLAGS "-O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
    set (EXTRA_LIBRARIES 
 		${Boost_LIBRARIES}
-		"tiff"
-		"gomp"
+		${TIFF_LIBRARIES}
 		)
    
 endif()
