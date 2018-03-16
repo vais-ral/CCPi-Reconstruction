@@ -565,16 +565,16 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 
 	CCPi::instrument *instrument = new CCPi::Diamond();
 	int pixels_per_voxel = resolution;
-	//std::cout << "pb_backward_project created Diamond instrument " << std::endl;
-	//std::cout << "pb_backward_project input sinogram [ " << ndarray_projections_stack.shape(0) << " ";
-	//std::cout << ndarray_projections_stack.shape(1) << " " << ndarray_projections_stack.shape(2) << " ]" << std::endl;
+	std::cout << "pb_backward_project created Diamond instrument " << std::endl;
+	std::cout << "pb_backward_project input sinogram [ " << ndarray_projections_stack.shape(0) << " ";
+	std::cout << ndarray_projections_stack.shape(1) << " " << ndarray_projections_stack.shape(2) << " ]" << std::endl;
 
 	// storage for the projections
 	numpy_3d pixels(reinterpret_cast<float*>(ndarray_projections_stack.get_data()),
 		boost::extents[ndarray_projections_stack.shape(0)][ndarray_projections_stack.shape(1)][ndarray_projections_stack.shape(2)]);
 
 	int n_angles = ndarray_angles.shape(0);
-	//std::cout << "pb_backward_project n_angles " << n_angles << std::endl;
+	std::cout << "pb_backward_project n_angles " << n_angles << std::endl;
 
 	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()),
 		boost::extents[ndarray_angles.shape(0)]);
@@ -602,8 +602,8 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 		int n_h = instrument->get_num_h_pixels();
 		int n_v = instrument->get_num_v_pixels();
 
-		//std::cout << "pb_backward_project setup experimental geometry n_x " << nx_voxels << " n_y " << ny_voxels << " n_z " << maxz_voxels << std::endl;
-
+		std::cout << "pb_backward_project setup experimental geometry n_x " << nx_voxels << " n_y " << ny_voxels << " n_z " << maxz_voxels << std::endl;
+		std::cout << "pb_backward_project n_h " << n_h << " n_v " << n_v << " n_angles " << n_angles << std::endl;
 		int output_volume_x = nx_voxels;
 		int output_volume_y = ny_voxels;
 		int output_volume_z = maxz_voxels;
@@ -614,7 +614,7 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 		if (instrument->finish_voxel_geometry(full_vox_origin, voxel_size,
 			output_volume_x, output_volume_y, output_volume_z)) {
 
-			//std::cout << "pb_backward_project finish_voxel_geometry ok " << std::endl;
+			std::cout << "pb_backward_project finish_voxel_geometry ok " << std::endl;
 
 			pixel_data Ad(boost::extents[n_angles][n_h][n_v]);
 
@@ -622,7 +622,7 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 				boost::c_storage_order());
 			// Copy the input data to Ad
 			
-			//std::cout << "pb_backward_project copy input data to Ad " << std::endl;
+			std::cout << "pb_backward_project copy input data to Ad " << std::endl;
 
 			
 			for (int k = 0; k < n_v; k++) {
@@ -635,7 +635,7 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 				}
 			}
 
-			//std::cout << "pb_backward_project backward project" << std::endl;
+			std::cout << "pb_backward_project backward project" << std::endl;
 
 			instrument->backward_project(Ad, d, full_vox_origin, voxel_size,
 				output_volume_x, output_volume_y, output_volume_z);
@@ -656,11 +656,11 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 					}
 				}
 			}
-			//std::cout << "pb_backward_project: end " << std::endl;
+			std::cout << "pb_backward_project: end " << std::endl;
 			return ndarray_output_volume;
 		}
 		else {
-			//std::cout << "pb_backward_project returning zeros " << std::endl;
+			std::cout << "pb_backward_project returning zeros " << std::endl;
 
 			bp::tuple shape = bp::make_tuple(0, 0, 0);
 			np::dtype dtype = np::dtype::get_builtin<float>();
@@ -670,7 +670,7 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 		}
 	}
 	else {
-		//std::cout << "pb_backward_project returning zeros " << std::endl;
+		std::cout << "pb_backward_project returning zeros " << std::endl;
 
 		bp::tuple shape = bp::make_tuple(0, 0, 0);
 		np::dtype dtype = np::dtype::get_builtin<float>();
@@ -680,4 +680,69 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 	}
 
 
+}
+
+extern bp::dict
+pb_setup_acquisition_geometry(np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+) {
+
+
+	CCPi::instrument *instrument = new CCPi::Diamond();
+	int pixels_per_voxel = resolution;
+	std::cout << "pb_backward_project created Diamond instrument " << std::endl;
+	std::cout << "pb_backward_project input sinogram [ " << ndarray_projections_stack.shape(0) << " ";
+	std::cout << ndarray_projections_stack.shape(1) << " " << ndarray_projections_stack.shape(2) << " ]" << std::endl;
+
+	// storage for the projections
+	numpy_3d pixels(reinterpret_cast<float*>(ndarray_projections_stack.get_data()),
+		boost::extents[ndarray_projections_stack.shape(0)][ndarray_projections_stack.shape(1)][ndarray_projections_stack.shape(2)]);
+
+	int n_angles = ndarray_angles.shape(0);
+	std::cout << "pb_backward_project n_angles " << n_angles << std::endl;
+
+	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()),
+		boost::extents[ndarray_angles.shape(0)]);
+
+
+	if (instrument->setup_experimental_geometry(pixels, angles, rotation_center,
+		pixels_per_voxel)) {
+		int nx_voxels = 0;
+		int ny_voxels = 0;
+		int maxz_voxels = 0;
+		int nz_voxels = 0;
+		int block_size = 0;
+		int block_step = 0;
+		int num_processors = machine::get_number_of_processors();
+		calculate_block_sizes(nx_voxels, ny_voxels, nz_voxels, maxz_voxels,
+			block_size, block_step, num_processors,
+			0, pixels_per_voxel,
+			instrument, 0);
+		int z_data_size = block_size * pixels_per_voxel;
+		int z_data_step = block_step * pixels_per_voxel;
+		instrument->set_v_block(z_data_size);
+		int block_offset = machine::get_processor_id() * block_size;
+		int z_data_offset = block_offset * pixels_per_voxel;
+
+		int n_h = instrument->get_num_h_pixels();
+		int n_v = instrument->get_num_v_pixels();
+
+		std::cout << "pb_backward_project setup experimental geometry n_x " << nx_voxels << " n_y " << ny_voxels << " n_z " << maxz_voxels << std::endl;
+		std::cout << "pb_backward_project n_h " << n_h << " n_v " << n_v << " n_angles " << n_angles << std::endl;
+		int output_volume_x = nx_voxels;
+		int output_volume_y = ny_voxels;
+		int output_volume_z = maxz_voxels;
+
+		boost::python::dict d;
+		d["n_angles"] = n_angles;
+		d["n_h"] = n_h;
+		d["n_v"] = n_v;
+		d["output_volume_x"] = output_volume_x;
+		d["output_volume_y"] = output_volume_y;
+		d["output_volume_z"] = output_volume_z;
+
+		return d;
+
+	}
 }

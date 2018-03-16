@@ -106,5 +106,9 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 	double rotation_center, int resolution
 );
 
-
+extern bp::dict
+pb_setup_acquisition_geometry(np::ndarray ndarray_projections_stack,
+	np::ndarray ndarray_angles,
+	double rotation_center, int resolution
+);
 
