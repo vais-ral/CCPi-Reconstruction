@@ -427,9 +427,9 @@ pb_forward_project(np::ndarray ndarray_volume,
 
 	CCPi::instrument *instrument = new CCPi::Diamond();
 	int pixels_per_voxel = resolution;
-	//std::cout << "pb_forward_project created Diamond instrument " << std::endl;
-	//std::cout << "pb_forward_project input volume [ " << ndarray_volume.shape(0) << " ";
-	//std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" <<std::endl;
+	std::cout << "pb_forward_project created Diamond instrument " << std::endl;
+	std::cout << "pb_forward_project input volume [ " << ndarray_volume.shape(0) << " ";
+	std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" <<std::endl;
 
 	int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
 	int detector_width = msize;
@@ -446,7 +446,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 		boost::extents[number_of_projections][detector_height][detector_width]);
 
 	int n_angles = ndarray_angles.shape(0);
-	//std::cout << "pb_forward_project n_angles " << n_angles <<  std::endl;
+	std::cout << "pb_forward_project n_angles " << n_angles <<  std::endl;
 
 	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()), 
 		boost::extents[ndarray_angles.shape(0)]);
@@ -477,7 +477,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 		int n_h = instrument->get_num_h_pixels();
 		int n_v = instrument->get_num_v_pixels();
 
-		//std::cout << "pb_forward_project setup experimental geometry n_h " << n_h << " n_v " << n_v << std::endl;
+		std::cout << "pb_forward_project setup experimental geometry n_h " << n_h << " n_v " << n_v << std::endl;
 		
 
 		real full_vox_origin[3];
@@ -497,7 +497,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 				boost::c_storage_order());
 			// Copy the input data to d
 			
-			//std::cout << "pb_forward_project copy input data to d " << std::endl;
+			std::cout << "pb_forward_project copy input data to d " << std::endl;
 			
 			//#pragma openmp parallel for
 			for (int k = 0; k < output_volume_z; k++) {
@@ -529,11 +529,11 @@ pb_forward_project(np::ndarray ndarray_volume,
 					}
 				}
 			}
-			//std::cout << "pb_forward_project: end " << std::endl;
+			std::cout << "pb_forward_project: end " << std::endl;
 			return ndarray_projections_stack;
 		}
 		else {
-			//std::cout << "pb_forward_project returning zeros " << std::endl;
+			std::cout << "pb_forward_project returning zeros " << std::endl;
 
 			bp::tuple shape = bp::make_tuple(0, 0, 0);
 			np::dtype dtype = np::dtype::get_builtin<float>();
@@ -543,7 +543,7 @@ pb_forward_project(np::ndarray ndarray_volume,
 		}
 	}
 	else {
-		//std::cout << "pb_forward_project returning zeros " << std::endl;
+		std::cout << "pb_forward_project returning zeros " << std::endl;
 
 		bp::tuple shape = bp::make_tuple(0, 0, 0);
 		np::dtype dtype = np::dtype::get_builtin<float>();
@@ -555,6 +555,80 @@ pb_forward_project(np::ndarray ndarray_volume,
 	
 }
 
+extern bp::dict
+pb_setup_geometry_from_image(np::ndarray ndarray_volume,
+	np::ndarray ndarray_angles,
+	int resolution)
+{
+
+
+	CCPi::instrument *instrument = new CCPi::Diamond();
+	int pixels_per_voxel = resolution;
+	//std::cout << "pb_forward_project created Diamond instrument " << std::endl;
+	//std::cout << "pb_forward_project input volume [ " << ndarray_volume.shape(0) << " ";
+	//std::cout << ndarray_volume.shape(1) << " " << ndarray_volume.shape(2) << " ]" <<std::endl;
+
+	int msize = ndarray_volume.shape(0) > ndarray_volume.shape(1) ? ndarray_volume.shape(0) : ndarray_volume.shape(1);
+	int detector_width = msize;
+
+	double rotation_center = (double)detector_width / 2.;
+	int detector_height = ndarray_volume.shape(2);
+	int number_of_projections = ndarray_angles.shape(0);
+	std::cout << "pb_forward_project rotation_center " << rotation_center << std::endl;
+	//std::cout << "pb_forward_project detector_width " << detector_width << std::endl;
+	//std::cout << "pb_forward_project detector_height " << detector_height << std::endl;
+	//std::cout << "pb_forward_project number_of_projections " << number_of_projections << std::endl;
+	// storage for the projections
+	numpy_3d pixels(reinterpret_cast<float*>(ndarray_volume.get_data()),
+		boost::extents[number_of_projections][detector_height][detector_width]);
+
+	int n_angles = ndarray_angles.shape(0);
+	//std::cout << "pb_forward_project n_angles " << n_angles <<  std::endl;
+
+	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()),
+		boost::extents[ndarray_angles.shape(0)]);
+
+	int output_volume_x = ndarray_volume.shape(0);
+	int output_volume_y = ndarray_volume.shape(1);
+	int output_volume_z = ndarray_volume.shape(2);
+
+	boost::python::dict d;
+
+	if (instrument->setup_experimental_geometry(pixels, angles, rotation_center,
+		pixels_per_voxel)) {
+		int nx_voxels = 0;
+		int ny_voxels = 0;
+		int maxz_voxels = 0;
+		int nz_voxels = 0;
+		int block_size = 0;
+		int block_step = 0;
+		int num_processors = machine::get_number_of_processors();
+		calculate_block_sizes(nx_voxels, ny_voxels, nz_voxels, maxz_voxels,
+			block_size, block_step, num_processors,
+			0, pixels_per_voxel,
+			instrument, 0);
+		int z_data_size = block_size * pixels_per_voxel;
+		int z_data_step = block_step * pixels_per_voxel;
+		instrument->set_v_block(z_data_size);
+		int block_offset = machine::get_processor_id() * block_size;
+		int z_data_offset = block_offset * pixels_per_voxel;
+
+		int n_h = instrument->get_num_h_pixels();
+		int n_v = instrument->get_num_v_pixels();
+
+		
+		d["n_angles"] = n_angles;
+		d["n_h"] = n_h;
+		d["n_v"] = n_v;
+		d["output_volume_x"] = output_volume_x;
+		d["output_volume_y"] = output_volume_y;
+		d["output_volume_z"] = output_volume_z;
+
+	}
+
+	return d;
+
+}
 
 extern np::ndarray
 pb_backward_project(np::ndarray ndarray_projections_stack,
@@ -683,11 +757,11 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 }
 
 extern bp::dict
-pb_setup_acquisition_geometry(np::ndarray ndarray_projections_stack,
+pb_setup_geometry_from_acquisition(np::ndarray ndarray_projections_stack,
 	np::ndarray ndarray_angles,
 	double rotation_center, int resolution
 ) {
-
+	// given the acquisitiondata outputs the possible acquisition and image geometry
 
 	CCPi::instrument *instrument = new CCPi::Diamond();
 	int pixels_per_voxel = resolution;
@@ -705,6 +779,7 @@ pb_setup_acquisition_geometry(np::ndarray ndarray_projections_stack,
 	numpy_1d angles(reinterpret_cast<float*>(ndarray_angles.get_data()),
 		boost::extents[ndarray_angles.shape(0)]);
 
+	boost::python::dict d;
 
 	if (instrument->setup_experimental_geometry(pixels, angles, rotation_center,
 		pixels_per_voxel)) {
@@ -734,7 +809,6 @@ pb_setup_acquisition_geometry(np::ndarray ndarray_projections_stack,
 		int output_volume_y = ny_voxels;
 		int output_volume_z = maxz_voxels;
 
-		boost::python::dict d;
 		d["n_angles"] = n_angles;
 		d["n_h"] = n_h;
 		d["n_v"] = n_v;
@@ -742,7 +816,8 @@ pb_setup_acquisition_geometry(np::ndarray ndarray_projections_stack,
 		d["output_volume_y"] = output_volume_y;
 		d["output_volume_z"] = output_volume_z;
 
-		return d;
 
 	}
+	return d;
+
 }

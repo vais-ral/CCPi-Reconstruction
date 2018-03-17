@@ -100,6 +100,13 @@ pb_forward_project(np::ndarray ndarray_volume,
 	int resolution
 );
 
+extern bp::dict
+pb_setup_geometry_from_image(np::ndarray ndarray_volume,
+	np::ndarray angles,
+	int resolution
+);
+
+
 extern np::ndarray
 pb_backward_project(np::ndarray ndarray_projections_stack,
 	np::ndarray ndarray_angles,
@@ -107,7 +114,7 @@ pb_backward_project(np::ndarray ndarray_projections_stack,
 );
 
 extern bp::dict
-pb_setup_acquisition_geometry(np::ndarray ndarray_projections_stack,
+pb_setup_geometry_from_acquisition(np::ndarray ndarray_projections_stack,
 	np::ndarray ndarray_angles,
 	double rotation_center, int resolution
 );
