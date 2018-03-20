@@ -46,6 +46,9 @@ void export_reconstruction()
   def("pb_forward_project", pb_forward_project);
   def("pb_backward_project", pb_backward_project);
 
+  def("pb_setup_geometry_from_acquisition", pb_setup_geometry_from_acquisition);
+  def("pb_setup_geometry_from_image", pb_setup_geometry_from_image);
+
   
   //def("pb_backward_prject", pb_backward_project);
 
