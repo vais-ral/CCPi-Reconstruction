@@ -28,6 +28,7 @@ requirements:
     - h5py
     - scipy
     - cil_reconstruction
+    - ccpi-framework
 
 	
 about:
