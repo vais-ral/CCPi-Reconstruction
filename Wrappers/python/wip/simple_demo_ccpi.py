@@ -7,7 +7,7 @@ from ccpi.optimisation.funcs import Norm2sq, Norm1 , TV2D
 #from ccpi.astra.astra_ops import AstraProjectorSimple
 from ccpi.reconstruction.ops import CCPiProjectorSimple
 from ccpi.reconstruction.parallelbeam import alg as pbalg
-from ccpi.processors import CCPiForwardProjector, CCPiBackwardProjector 
+from ccpi.reconstruction.processors import CCPiForwardProjector, CCPiBackwardProjector 
 
 import numpy as np
 import matplotlib.pyplot as plt
