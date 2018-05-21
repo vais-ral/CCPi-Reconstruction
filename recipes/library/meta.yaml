@@ -11,28 +11,25 @@ build:
     
 requirements:
   build:
-    - boost ==1.64.0	
-    - boost-cpp ==1.64.0 
-#    - toolchain
-    - python 3.5 # [py35]
-    - python 2.7 # [py27]
+    - boost
+    - boost-cpp
+    - python
     - cmake >=3.1
-#    - zlib 1.2.11
     - vc 14 # [win and py35] 
+    - vc 14 # [win and py36] 
     - vc 9  # [win and py27]
     - libtiff    
     - numpy
 
   run:
-    - boost ==1.64.0
+    - boost
     - libtiff
     - vc 14 # [win and py35]
     - vc 9  # [win and py27]
-    - python 3.5 # [py35]
-    - python 2.7 # [py27]
+    - python
     - numpy
 	
 about:
   home: http://www.ccpi.ac.uk
-  license:  BSD license
+  license:  Apache v 2.0
   summary: 'CCPi Toolbox'
