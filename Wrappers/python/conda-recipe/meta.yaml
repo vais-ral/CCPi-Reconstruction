@@ -14,20 +14,20 @@ requirements:
     - python
     - numpy x.x
     - setuptools
-    - boost ==1.64.0	
-    - boost-cpp ==1.64.0
+    - boost
+    - boost-cpp
     - cython
     - libtiff
-    - cil_reconstruction
+    - cil_reconstruction =={{ environ['CIL_VERSION'] }}
 
   run:
     - python
     - numpy x.x
-    - boost ==1.64
+    - boost
     - libtiff
     - h5py
     - scipy
-    - cil_reconstruction
+    - cil_reconstruction =={{ environ['CIL_VERSION'] }}
 
 	
 about:
