@@ -24,20 +24,7 @@ set (CIL_VERSION $ENV{CIL_VERSION} CACHE INTERNAL "Core Imaging Library version"
 # conda orchestrated build
 message("CIL_VERSION ${CIL_VERSION}")
 
-find_package(PythonInterp REQUIRED)
-if (PYTHONINTERP_FOUND)
-  message ("Current Python " ${PYTHON_VERSION_STRING} " found " ${PYTHON_EXECUTABLE})
-  if (PYTHON_VERSION_MAJOR EQUAL "3")
-    set (BOOST_PYTHON "python3")
-	set (BOOST_NUMPY "numpy3")
-  else()
-    set (BOOST_PYTHON "python")
-	set (BOOST_NUMPY "numpy")
-  endif()
-endif()
-
-find_package(Boost  REQUIRED
-	COMPONENTS ${BOOST_PYTHON} ${BOOST_NUMPY})
+find_package(Boost)
 
 if (Boost_FOUND)
    message("Boost version " ${Boost_VERSION})
@@ -57,8 +44,7 @@ if(WIN32)
   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT.lib")
   
   set (EXTRA_LIBRARIES 
-        ${Boost_LIBRARIES}
-		"tiff"
+        "tiff"
 		)
 		
   message("library lib: ${LIBRARY_LIB}")
@@ -66,7 +52,6 @@ if(WIN32)
 elseif(UNIX)
    set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
    set (EXTRA_LIBRARIES 
-		${Boost_LIBRARIES}
 		"tiff"
 		"gomp"
 		)

@@ -20,14 +20,14 @@
 import numpy
 import h5py
 #from ccpi.viewer.CILViewer import CILViewer
-from ccpi.viewer.CILViewer2D import *
-from ccpi.segmentation.SimpleflexSegmentor import SimpleflexSegmentor
+#from ccpi.viewer.CILViewer2D import *
+#from ccpi.segmentation.SimpleflexSegmentor import SimpleflexSegmentor
 
 from ccpi.reconstruction.parallelbeam import alg
-from ccpi.reconstruction.FindCenterOfRotation import *
+#from ccpi.reconstruction.FindCenterOfRotation import *
 #import vtk
 import matplotlib.pyplot as plt
-
+import sys
 
 def load_data(filename):
     '''Load a dataset stored in a NeXuS file (HDF5)'''
@@ -114,6 +114,7 @@ def normalize(stack):
 # https://github.com/DiamondLightSource/Savu/blob/master/test_data/data/24737_fd.nxs 
     
 filename = "C:\\Users\\ofn77899\\Documents\\CCPi\\CGLS\\24737_fd_2.nxs"
+filename = sys.argv[1]
 norm, angle_proj = load_data(filename)
 #norm = numpy.ascontiguousarray(norm)
 
@@ -204,7 +205,9 @@ pixel_per_voxel = resolution
 center_of_rotation = numpy.shape(img_cgls)[1]/2
 
 stack = fp(img_cgls, angle_proj , pixel_per_voxel)
-center_of_rotation = find_center_vo(stack)
+#center_of_rotation = find_center_vo(stack)
+center_of_rotation = numpy.shape(stack)[1]/2
+
 
 print ("stack: ", numpy.shape(stack), stack.min(), stack.max())
 
@@ -238,7 +241,7 @@ tinvnorm = numpy.ascontiguousarray(numpy.transpose(invnorm, [0,2,1]) )
 
 #center_of_rotation = numpy.shape(tinvnorm)[2]/2
 niterations = 10
-center_of_rotation = find_center_vo(tinvnorm)
+#center_of_rotation = find_center_vo(tinvnorm)
 img_cgls3 = alg.cgls(tinvnorm, angle_proj, center_of_rotation , resolution , 
                     niterations, threads, isPixelDataInLogScale)
 
@@ -284,8 +287,3 @@ a=fig.add_subplot(rows,cols,current)
 a.set_title('reconstructed vol norm neg trans fp\n {0}'.format(numpy.shape(img_cgls3)))
 imgplot = plt.imshow(img_cgls3[80])
 plt.show()
-
-def showInteractive(vol):
-	v = CILViewer2D()
-	v.setInputAsNumpy(vol)
-	v.startRenderLoop()

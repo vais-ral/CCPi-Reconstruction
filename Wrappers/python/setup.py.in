@@ -44,18 +44,18 @@ if platform.system() == 'Windows':
    extra_library_dirs += library_lib_path
    extra_libraries    += ['tiff' , 'cilrec']
    if sys.version_info.major == 3 :   
-       extra_libraries += ['boost_python3-vc140-mt-1_64', 'boost_numpy3-vc140-mt-1_64']
+       extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@"]
    else:
-       extra_libraries += ['boost_python-vc90-mt-1_64', 'boost_numpy-vc90-mt-1_64']   
+       extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@"]   
 else:
    extra_include_dirs += ["../../Core/src/","../../Core/src/Algorithms","../../Core/src/Readers", "."]
    extra_include_dirs += library_include_path
    extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined','-DHAS_TIFF','-DCCPiReconstructionIterative_EXPORTS']  
    extra_libraries    += ['tiff' , 'cilrec'] 
-   if sys.version_info.major == 3 :
-       extra_libraries += ['boost_python3', 'boost_numpy3','gomp']
-   else:
-       extra_libraries += ['boost_python', 'boost_numpy','gomp']
+   #if sys.version_info.major == 3 :
+   extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@",'gomp']
+   #else:
+   #    extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@",'gomp']
 
 
 setup(
