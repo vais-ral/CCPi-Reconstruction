@@ -11,11 +11,8 @@ build:
     
 requirements:
   build:
-    - boost
-    - boost-cpp
-      #- python 3.5 # [py35]
-      #- python 3.6 # [py36]
-      #- python 2.7 # [py27]
+    - boost >=1.64
+    - boost-cpp >=1.64
     - python
     - cmake >=3.1
     - vc 14 # [win and py35] 
@@ -25,13 +22,10 @@ requirements:
     - numpy
 
   run:
-    - boost
+    - boost >=1.4
     - libtiff
     - vc 14 # [win and py35]
     - vc 9  # [win and py27]
-      #    - python 3.5 # [py35]
-      #- python 3.6 # [py35]
-      #- python 2.7 # [py27]
     - python
     - numpy
 	

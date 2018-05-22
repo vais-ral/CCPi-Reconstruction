@@ -14,8 +14,8 @@ requirements:
     - python
     - numpy x.x
     - setuptools
-    - boost
-    - boost-cpp
+    - boost >=1.64
+    - boost-cpp >=1.64
     - cython
     - libtiff
     - cil_reconstruction =={{ environ['CIL_VERSION'] }}
@@ -23,7 +23,7 @@ requirements:
   run:
     - python
     - numpy x.x
-    - boost
+    - boost >=1.64
     - libtiff
     - h5py
     - scipy
