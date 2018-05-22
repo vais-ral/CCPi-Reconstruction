@@ -24,10 +24,11 @@ if (PYTHONINTERP_FOUND)
   endif()
 endif()
 
-find_package(Boost  
+find_package(Boost
 	COMPONENTS ${BOOST_PYTHON} ${BOOST_NUMPY})
 	
-if (NOT Boost_FOUND)
+if (Boost_FOUND)
+else()
   if (PYTHON_VERSION_MAJOR EQUAL "3")
     set (BOOST_PYTHON "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
 	set (BOOST_NUMPY "numpy${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
@@ -37,8 +38,7 @@ if (NOT Boost_FOUND)
   endif()
 endif()
 
-find_package(Boost  REQUIRED
-	COMPONENTS ${BOOST_PYTHON} ${BOOST_NUMPY})
+find_package(Boost REQUIRED COMPONENTS ${BOOST_PYTHON} ${BOOST_NUMPY})
 
 find_library(cilseg REQUIRED)
 
