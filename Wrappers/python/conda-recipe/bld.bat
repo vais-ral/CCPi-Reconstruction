@@ -6,6 +6,8 @@ exit 1
 mkdir "%SRC_DIR%\ccpi"
 xcopy /e "%RECIPE_DIR%\..\..\.." "%SRC_DIR%\ccpi"
 cd ccpi\Wrappers\python
+del setup.py
+cmake . -G "NMake Makefiles"
 
 %PYTHON% setup.py build_ext
 if errorlevel 1 exit 1
