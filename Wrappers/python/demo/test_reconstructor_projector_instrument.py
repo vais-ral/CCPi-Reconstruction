@@ -24,10 +24,8 @@ from ccpi.viewer.CILViewer2D import *
 #from ccpi.segmentation.SimpleflexSegmentor import SimpleflexSegmentor
 
 from ccpi.reconstruction.parallelbeam import alg
-from ccpi.reconstruction.FindCenterOfRotation import *
 #import vtk
 import matplotlib.pyplot as plt
-from ccpi.instrument import Diamond
 
 def load_data(filename):
     '''Load a dataset stored in a NeXuS file (HDF5)'''
@@ -200,11 +198,7 @@ if False:
 fp = alg.pb_forward_project
 pixel_per_voxel = resolution
 
-diamond = Diamond()
 
-#stack = diamond.doForwardProject(img_cgls, angles=angle_proj, pixel_per_voxel)
-#stack = fp(img_cgls, angle_proj , pixel_per_voxel)
-#center_of_rotation = find_center_vo(stack)
 
 #print ("stack: ", numpy.shape(stack), stack.min(), stack.max())
 
@@ -220,8 +214,8 @@ if False:
 	# negative the projections
 	invnorm = 1-stack
 
-invnorm = diamond.doForwardProject(img_cgls, angles=angle_proj, pixel_per_voxel=								pixel_per_voxel, 
-								negative=True , normalized=True)
+invnorm = fp(img_cgls, angle_proj, pixel_per_voxel)
+invnorm = 1 - normalize(invnorm)
 
 # the cgls doesn't like 0's and more the 1s	
 invnorm [numpy.where(invnorm<=0)] = 1e-3
@@ -242,7 +236,8 @@ tinvnorm = numpy.ascontiguousarray(numpy.transpose(invnorm, [0,2,1]) )
 
 #center_of_rotation = numpy.shape(tinvnorm)[2]/2
 niterations = 2
-center_of_rotation = find_center_vo(tinvnorm)
+#center_of_rotation = find_center_vo(tinvnorm)
+center_of_rotation = 86.25
 img_cgls3 = alg.cgls(tinvnorm, angle_proj, center_of_rotation , resolution , 
                     niterations, threads, isPixelDataInLogScale)
 
