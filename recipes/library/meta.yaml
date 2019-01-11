@@ -17,7 +17,6 @@ requirements:
     - vc 14 # [win and py36] 
     - vc 9  # [win and py27]
     - libtiff    
-    #- numpy
 
   run:
     - libtiff

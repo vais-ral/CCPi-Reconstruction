@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from ccpi.viewer.CILViewer2D import *
 import os
 
-os.chdir('C:/Users/ofn77899/Documents/GitHub/CCPi-Reconstruction/Wrappers/python/demo')
+os.chdir('C:/Users/ofn77899/Documents/GitHub/CCPi-Reconstruction/Wrappers/Python/demo')
 
 def display(vol):
 	v = CILViewer2D()
