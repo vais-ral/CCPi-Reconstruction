@@ -5,7 +5,7 @@ exit 1
 
 mkdir "%SRC_DIR%\build"
 ROBOCOPY /E "%RECIPE_DIR%\..\..\Core" "%SRC_DIR%\build"
-::ROBOCOPY /E "%RECIPE_DIR%\..\..\Wrappers\python\src" "%SRC_DIR%\build\module"
+::ROBOCOPY /E "%RECIPE_DIR%\..\..\Wrappers\Python\src" "%SRC_DIR%\build\module"
 cd "%SRC_DIR%\build"
 
 echo "we should be in %SRC_DIR%\build"
