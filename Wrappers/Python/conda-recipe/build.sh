@@ -8,4 +8,5 @@ cp -r "${RECIPE_DIR}/../../../" ${SRC_DIR}/ccpi
 cd ${SRC_DIR}/ccpi/Wrappers/Python
 cmake .
 
-$PYTHON setup.py install
+echo "This is Path to the Python executable in the host prefix ${PYTHON}"
+${PYTHON} setup.py install
