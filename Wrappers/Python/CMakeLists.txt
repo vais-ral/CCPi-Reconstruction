@@ -100,8 +100,11 @@ else()
                       )
   endif()
 
-  message("install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/build/lib/ccpi DESTINATION ${PYTHON_DEST} )")
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/build/lib/ccpi DESTINATION ${PYTHON_DEST} )
+  if(NOT DEFINED ${PYTHON_DEST})
+    message(FATAL_ERROR "You must set PYTHON_DEST variable")
+  else()
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/build/lib/ccpi DESTINATION ${PYTHON_DEST} )
+  endif()
 endif()
 
 add_custom_target(PythonWrapper ALL DEPENDS pythonsetup)
