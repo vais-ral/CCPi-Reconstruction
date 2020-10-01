@@ -14,7 +14,15 @@ message("CIL_VERSION ${CIL_VERSION}")
 
 find_package(PythonInterp REQUIRED)
 
-find_package(Boost REQUIRED COMPONENTS python36 numpy36)
+set (BOOST_PYTHON "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+set (BOOST_NUMPY "numpy${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+
+set(Boost_NO_BOOST_CMAKE ON)
+find_package(Boost REQUIRED COMPONENTS ${BOOST_PYTHON} ${BOOST_NUMPY})
+
+
+#find_package(Boost REQUIRED COMPONENTS python36 numpy36)
+
 
 if (Boost_FOUND)
   message("Boost version " ${Boost_VERSION})
@@ -23,8 +31,8 @@ if (Boost_FOUND)
   message("Boost libraries " ${Boost_LIBRARIES})
 endif()
 
-message ("found " ${BOOST_PYTHON_LIB})
-message ("found " ${BOOST_NUMPY_LIB})
+message ("found " ${Boost_LIBRARIES})
+
 
 find_package(OpenMP)
 	
@@ -52,7 +60,8 @@ else()
   string(REGEX REPLACE "^lib(.*)" "\\1" BOOST_NUMPY_LIB "${place2}")
 endif()
 
-
+message ("found " ${BOOST_PYTHON_LIB})
+message ("found " ${BOOST_NUMPY_LIB})
 
 set(LIBRARY_INC ${CMAKE_SOURCE_DIR}/src/include)
 set(LIBRARY_LIB ${CMAKE_BINARY_DIR}/)

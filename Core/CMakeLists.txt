@@ -46,6 +46,8 @@ if(WIN32)
   set (EXTRA_LIBRARIES 
         "tiff"
 		)
+		
+  message("library lib: ${LIBRARY_LIB}")
   
 elseif(UNIX)
    set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
@@ -53,10 +55,10 @@ elseif(UNIX)
 		"tiff"
 		"gomp"
 		)
+   
 endif()
 
-link_directories(${CMAKE_INSTALL_PREFIX}/lib)
-#link_directories(${LIBRARY_LIB})
+link_directories(${LIBRARY_LIB})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}")
 message("CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
 
@@ -87,20 +89,20 @@ add_library(cilrec SHARED
 target_link_libraries(cilrec ${EXTRA_LIBRARIES} )
 
 include_directories(cilrec PUBLIC 
-				${CMAKE_INSTALL_PREFIX}/include 
+                      ${LIBRARY_INC}/include 
 		      ${CMAKE_CURRENT_SOURCE_DIR}/src/  )
 #
 if (UNIX)
 message ("I'd install into ${CMAKE_INSTALL_PREFIX}/lib")
 install(TARGETS cilrec 
-	LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+	LIBRARY DESTINATION lib
 	CONFIGURATIONS ${CMAKE_BUILD_TYPE} 
 	)
 elseif(WIN32)
 message ("I'd install into ${CMAKE_INSTALL_PREFIX} lib bin")
   install(TARGETS cilrec 
-	RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+	RUNTIME DESTINATION bin
+	ARCHIVE DESTINATION lib
 	CONFIGURATIONS ${CMAKE_BUILD_TYPE} 
 	)
 endif()

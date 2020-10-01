@@ -1,0 +1,14 @@
+python:
+    - 3.6
+    - 3.7
+    - 3.8
+numpy:
+    - 1.15 # [py<3.8]
+    - 1.16
+    - 1.17
+    - 1.18
+boost:
+    - 1.71
+pin_run_as_build:
+    boost:
+      max_pin: x.x
