@@ -36,6 +36,7 @@ if platform.system() == 'Windows':
 else:
     extra_include_dirs += ["../../Core/src/","../../Core/src/Algorithms","../../Core/src/Readers", "."]
     extra_include_dirs += library_include_path
+    extra_library_dirs += library_lib_path
     extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined','-DHAS_TIFF','-DCCPiReconstructionIterative_EXPORTS']  
     extra_libraries    += ['tiff' , 'cilrec'] 
     extra_libraries    += ['@BOOST_PYTHON_LIB@','@BOOST_NUMPY_LIB@','gomp']

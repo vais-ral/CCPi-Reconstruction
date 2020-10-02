@@ -63,9 +63,6 @@ endif()
 message ("found " ${BOOST_PYTHON_LIB})
 message ("found " ${BOOST_NUMPY_LIB})
 
-set(LIBRARY_INC ${CMAKE_SOURCE_DIR}/src/include)
-set(LIBRARY_LIB ${CMAKE_BINARY_DIR}/)
-
 set(SETUP_PY_IN "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in")
 set(SETUP_PY    "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(OUTPUT      "${CMAKE_CURRENT_BINARY_DIR}/timestamp")
