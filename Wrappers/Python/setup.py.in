@@ -17,7 +17,7 @@ if  cil_version == '':
     sys.exit(1)
 
 library_include_path = ['@LIBRARY_INC@', '@Boost_INCLUDE_DIRS@']
-library_lib_path = ['@LIBRARY_LIB@']
+library_lib_path = ['@CMAKE_BINARY_DIR@/Core', '@LIBRARY_LIB@']
 
 extra_include_dirs = [numpy.get_include()]
 extra_library_dirs = []
