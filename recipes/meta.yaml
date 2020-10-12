@@ -4,6 +4,7 @@ package:
 
 
 build:
+  skip: True # [py==38 and np==115]
   preserve_egg_dir: False
   script_env:
     - CIL_VERSION   
