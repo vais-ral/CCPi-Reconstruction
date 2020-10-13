@@ -1,0 +1,38 @@
+package:
+  name: ccpi-reconstruction
+  version: {{ environ['CIL_VERSION'] }}
+
+
+build:
+  skip: True # [py==38 and np==115]
+  preserve_egg_dir: False
+  script_env:
+    - CIL_VERSION   
+#  number: 0
+    
+requirements:
+  build:
+    - python
+    - numpy  {{ numpy }}
+    - setuptools
+    - boost {{ boost }}
+    - boost-cpp {{ boost }}
+    - cython
+    - libtiff
+    - cmake =3.16
+    - vc 14 # [win] 
+
+
+  run:
+    - python
+    - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
+    - boost
+    - libtiff
+    - h5py
+    - scipy
+
+about:
+  home: http://www.ccpi.ac.uk
+  license:  Apache v 2.0
+  summary: 'CCPi Toolbox'
+

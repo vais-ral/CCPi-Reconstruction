@@ -882,10 +882,10 @@ voxel_data CCPi::Nikon_XTek::initialise_phantom_volume(real_1d &h_pixels, real_1
   }	
   
   real_1d hp = get_h_pixels();
-  for(int i=0;i<h_pixels.size();i++)
+  for(unsigned int i=0;i<h_pixels.size();i++)
 	  h_pixels[i] = hp[i];
   real_1d vp = get_v_pixels();
-  for(int i=0;i<v_pixels.size();i++)
+  for(unsigned int i=0;i<v_pixels.size();i++)
 	  v_pixels[i] = vp[i];
   
   return x;

@@ -11,25 +11,14 @@ import platform
 import sys
 
 cil_version=os.environ['CIL_VERSION']
+
 if  cil_version == '':
     print("Please set the environmental variable CIL_VERSION")
     sys.exit(1)
 
-library_include_path = []
-library_lib_path = []
-try:
-    library_include_path = [ os.environ['LIBRARY_INC'] ]
-    library_lib_path = [ os.environ['LIBRARY_LIB'] ]
-except:
-    if platform.system() == 'Windows':
-        pass
-    else:
-        try:
-           library_include_path = [ os.environ['PREFIX']+'/include' ]
-           library_lib_path = [ os.environ['PREFiX']+'/lib' ]
-        except:
-           pass
-    pass
+library_include_path = ['@LIBRARY_INC@', '@Boost_INCLUDE_DIRS@']
+library_lib_path = ['@CMAKE_BINARY_DIR@/Core', '@LIBRARY_LIB@']
+
 extra_include_dirs = [numpy.get_include()]
 extra_library_dirs = []
 extra_compile_args = []
@@ -37,26 +26,20 @@ extra_link_args = []
 extra_libraries = []
 
 if platform.system() == 'Windows':
-   extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', 
-   '/openmp','/DHAS_TIFF','/DCCPiReconstructionIterative_EXPORTS']   
-   extra_include_dirs += ["..\\..\\Core\\src\\","..\\..\\Core\\src\\Algorithms","..\\..\\Core\\src\\Readers", "."]
-   extra_include_dirs += library_include_path
-   extra_library_dirs += library_lib_path
-   extra_libraries    += ['tiff' , 'cilrec']
-   if sys.version_info.major == 3 :   
-       extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@"]
-   else:
-       extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@"]   
+    extra_compile_args += ['/DWIN32','/EHsc','/DBOOST_ALL_NO_LIB', 
+    '/openmp','/DHAS_TIFF','/DCCPiReconstructionIterative_EXPORTS']   
+    extra_include_dirs += ["..\\..\\Core\\src\\","..\\..\\Core\\src\\Algorithms","..\\..\\Core\\src\\Readers", "."]
+    extra_include_dirs += library_include_path
+    extra_library_dirs += library_lib_path
+    extra_libraries    += ['tiff' , 'cilrec']
+    extra_libraries    += ['@BOOST_PYTHON_LIB@','@BOOST_NUMPY_LIB@'] 
 else:
-   extra_include_dirs += ["../../Core/src/","../../Core/src/Algorithms","../../Core/src/Readers", "."]
-   extra_include_dirs += library_include_path
-   extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined','-DHAS_TIFF','-DCCPiReconstructionIterative_EXPORTS']  
-   extra_libraries    += ['tiff' , 'cilrec'] 
-   #if sys.version_info.major == 3 :
-   extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@",'gomp']
-   #else:
-   #    extra_libraries += ["@BOOST_PYTHON_LIB@", "@BOOST_NUMPY_LIB@",'gomp']
-
+    extra_include_dirs += ["../../Core/src/","../../Core/src/Algorithms","../../Core/src/Readers", "."]
+    extra_include_dirs += library_include_path
+    extra_library_dirs += library_lib_path
+    extra_compile_args += ['-fopenmp','-O2', '-funsigned-char', '-Wall','-Wl,--no-undefined','-DHAS_TIFF','-DCCPiReconstructionIterative_EXPORTS']  
+    extra_libraries    += ['tiff' , 'cilrec'] 
+    extra_libraries    += ['@BOOST_PYTHON_LIB@','@BOOST_NUMPY_LIB@','gomp']
 
 setup(
   name='ccpi-reconstruction',

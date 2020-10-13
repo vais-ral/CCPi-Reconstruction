@@ -50,7 +50,7 @@ if(WIN32)
   message("library lib: ${LIBRARY_LIB}")
   
 elseif(UNIX)
-   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF -DCCPiReconstructionIterative_EXPORTS")  
+   set (FLAGS "-fopenmp -O2 -funsigned-char -Wall  -Wl,--no-undefined -DHAS_TIFF ")  
    set (EXTRA_LIBRARIES 
 		"tiff"
 		"gomp"
